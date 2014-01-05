@@ -12,7 +12,6 @@ import fuji.primitive;
 import fuji.view;
 import fuji.matrix;
 
-
 class Game
 {
 	void InitFileSystem()
@@ -36,7 +35,13 @@ class Game
 		pDefaultStates = MFStateBlock_CreateDefault();
 
 		// create the renderer with a single layer that clears before rendering
-		MFRenderLayerDescription layers[] = [ MFRenderLayerDescription("Scene".ptr) ];
+		MFRenderLayerDescription layers[] = [
+			MFRenderLayerDescription("background"),
+			MFRenderLayerDescription("game"),
+			MFRenderLayerDescription("ui"),
+			MFRenderLayerDescription("menu")
+		];
+
 		pRenderer = MFRenderer_Create(layers, pDefaultStates, null);
 		MFRenderer_SetCurrent(pRenderer);
 
@@ -65,7 +70,7 @@ class Game
 
 	MFInitParams initParams;
 
-	///
+	// singleton stuff...
 	static @property Game Instance() { if(instance is null) instance = new Game; return instance; }
 
 	static extern (C) void Static_InitFileSystem()
@@ -96,6 +101,6 @@ class Game
 
 private:
 	__gshared Game instance;
-	__gshared MFRenderer *pRenderer = null;
-	__gshared MFStateBlock *pDefaultStates = null;
+	MFRenderer *pRenderer;
+	MFStateBlock *pDefaultStates;
 }
