@@ -1,72 +1,11 @@
 module db.song;
 
 import db.instrument;
+import db.sequence;
 
 import fuji.material;
 import fuji.sound;
 
-enum Difficulty
-{
-	Easy,
-	Medium,
-	Hard,
-	Expert,
-
-	Count
-}
-
-enum GuitarNotes
-{
-	Green,
-	Red,
-	Yellow,
-	Blue,
-	Orange,
-	Open
-}
-
-enum GuitarNoteFlags
-{
-	HOPO,	// hammer-on/pull-off
-	Tap,	// tap note
-	Solo,	// rock band solo keys
-	Slide	// guitar hero slider
-}
-
-enum DrumNotes
-{				// RB kit		GH kit
-	Snare,		//   R			  R
-	Tom1,		//   Y			  B
-	Tom2,		//   B			  B/G?
-	Tom3,		//   G			  G
-	Hat,		//   Y			  Y
-	Spash,		//   B			  Y/O?
-	Crash,		//   B/G?		  Y/O?
-	Ride,		//   G			  O
-	Kick,
-}
-
-enum DrumNoteFlags
-{
-	DoubleKick,	// double kick notes are hidden in single-kick mode
-	OpenHat		// interesting if drum kit has a hat pedal
-}
-
-enum DanceNotes
-{
-	Left,
-	Up,
-	Down,
-	Right,
-	UpLeft,
-	UpRight,
-	Left2,
-	Up2,
-	Down2,
-	Right2,
-	UpLeft2,
-	UpRight2
-}
 
 enum SyncEventType
 {
@@ -75,14 +14,9 @@ enum SyncEventType
 	TimeSignature
 }
 
-enum EventType
+enum SongEventType
 {
-	Note,
 	Event,
-	StarPower,
-	FreeStyle,
-	LeftPlayer,		// GH1/2 co-op mode
-	RightPlayer		// GH1/2 co-op mode
 }
 
 struct SyncEvent
@@ -94,32 +28,18 @@ struct SyncEvent
 	int bpm;		// in thousandths of a beat per minute
 }
 
-struct Event
+struct SongEvent
 {
 	EventType event;
 
 	long time;		// the physical time of the note (in microseconds)
 	int tick;		// in ticks
 
-	int key;
-	int param;		// for a note, this is the sustain
 	string stringParam;
-	uint flags;
-
-	// temp runtime data
-	int played;
 }
 
 class Song
 {
-	struct Track
-	{
-		int difficulty;
-		int numDoubleKicks; // keep a counter so we know if the drums have double kicks or not
-
-		Event[] notes;
-	}
-
 	this(string filename = null)
 	{
 	}
@@ -193,8 +113,8 @@ class Song
 	int resolution;
 
 	SyncEvent[] sync;	// song sync stuff
-	Event[] events;		// general song events, specials, etc
-	Track[Difficulty.Count*Instrument.Count] tracks;
+	SongEvent[] events;	// general song events (effects, lighting, etc?)
+	Sequence[Difficulty.Count*Instrument.Count] tracks;
 
 	MFAudioStream *pStream;
 	MFAudioStream *pGuitar;

@@ -1,25 +1,13 @@
 module db.player;
 
+import db.profile;
 import db.instrument;
 import db.song;
 
-struct Score
-{
-	int Score(Instrument instrument, Difficulty difficulty)
-	{
-		return Difficulty.Count*instrument + difficulty;
-	}
-
-private:
-	int[Difficulty.Count*Instrument.Count] score;
-}
 
 class Player
 {
-	// TODO: manage user profiles somehow...
-	// FaceBook connect? Google accounts? Steam? OpenFeint? Etc...
-
-	string name;
+	Profile profile;
 
 	Instrument instrument;
 
@@ -27,8 +15,6 @@ class Player
 	int audioInput;	// audio input device id
 	int midiInput;	// midi input device id
 
-	Score[string] scores;
-
-	// TODO: visual stuff?
-	// colours, models, etc...
+	// TODO: I would like to support a feature where a player can play multiple instruments at once
+	// UI would perhaps visualise the instruments available, players would tag themselves onto whichever one(s) they intend to play
 }
