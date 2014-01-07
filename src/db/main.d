@@ -16,13 +16,12 @@ version(Windows)
 
 	    try
 	    {
-			rt_init();
-//	        Runtime.initialize();
+			Game game = Game.Instance;
 
-	        result = myWinMain(hInstance, hPrevInstance, lpCmdLine, nCmdShow);
+			game.initParams.hInstance = hInstance;
+			game.initParams.pCommandLine = lpCmdLine;
 
-			rt_term();
-//	        Runtime.terminate();
+			result = Start();
 	    }
 	    catch (Throwable o)		// catch any uncaught exceptions
 	    {
@@ -31,19 +30,6 @@ version(Windows)
 	    }
 
 	    return result;
-	}
-
-	int myWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
-	{
-		/* ... insert user code here ... */
-//		throw new Exception("not implemented");
-
-		Game game = Game.Instance;
-
-		game.initParams.hInstance = hInstance;
-		game.initParams.pCommandLine = lpCmdLine;
-
-		return Start();
 	}
 }
 else
@@ -54,13 +40,12 @@ else
 
 	    try
 	    {
-			rt_init();
-//	        Runtime.initialize();
+			Game game = Game.Instance;
 
-	        result = myMain(args);
+//			game.initParams.argc = cast(int)args.length;
+//			game.initParams.argv = ...we have a problem! (not important for now)
 
-			rt_term();
-//	        Runtime.terminate();
+			result = Start();
 	    }
 	    catch (Throwable o)		// catch any uncaught exceptions
 	    {
@@ -68,18 +53,6 @@ else
 	    }
 
 	    return result;
-	}
-
-	int myMain(string args[])
-	{
-		/* ... insert user code here ... */
-//		throw new Exception("not implemented");
-
-		Game game = Game.Instance;
-
-//		game.initParams.pCommandLine = lpCmdLine;
-
-		return Start();
 	}
 }
 
