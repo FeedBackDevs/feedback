@@ -16,12 +16,16 @@ version(Windows)
 
 	    try
 	    {
+			rt_init();
+
 			Game game = Game.Instance;
 
 			game.initParams.hInstance = hInstance;
 			game.initParams.pCommandLine = lpCmdLine;
 
 			result = Start();
+
+			rt_term();
 	    }
 	    catch (Throwable o)		// catch any uncaught exceptions
 	    {
