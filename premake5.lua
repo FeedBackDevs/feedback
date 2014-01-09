@@ -10,10 +10,10 @@ solution "FeedBack"
 
 	-- include the fuji project...
 --	fujiDll = true
-	dofile  "../Fuji/Fuji/Project/fujiproj.lua"
+	dofile  "../fuji/Fuji/Project/fujiproj.lua"
 
 	-- include the Haku project...
---	dofile "../Fuji/Haku/Project/hakuproj.lua"
+--	dofile "../fuji/Haku/Project/hakuproj.lua"
 
 	project "FeedBack"
 		kind "WindowedApp"
@@ -22,8 +22,8 @@ solution "FeedBack"
 		files { "src/**.d" }
 		files { "../Fuji/dist/include/d2/fuji/**.d" }
 
-		includedirs { "../Fuji/dist/include/d2/" }
-		libdirs { "../Fuji/dist/lib/x64" }
+		includedirs { "../fuji/dist/include/d2/" }
+		libdirs { "../fuji/dist/lib/x64" }
 
 		links { "Fuji" }
 
@@ -34,5 +34,6 @@ solution "FeedBack"
 		configuration { "windows" }
 			links { "Gdi32.lib", "Ole32.lib", "oleaut32.lib" }
 
-		dofile "../Fuji/dist/Project/fujiconfig.lua"
---		dofile "../Fuji/dist/Project/hakuconfig.lua"
+		dofile "../fuji/dist/Project/fujiconfig.lua"
+--		dofile "../fuji/dist/Project/hakuconfig.lua"
+
