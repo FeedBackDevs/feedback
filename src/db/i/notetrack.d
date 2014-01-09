@@ -20,7 +20,7 @@ enum Orientation
 interface NoteTrack
 {
 	@property Orientation orientation();
-	@property Instrument[] supportedInstruments();
+	@property InstrumentType instrumentType();
 
 	void Draw(long offset, Sequence notes);
 }

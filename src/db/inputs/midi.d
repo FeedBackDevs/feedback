@@ -5,7 +5,7 @@ import db.instrument;
 
 class Midi : InputDevice
 {
-	this(int midiDeviceId, Instrument instrument)
+	this(int midiDeviceId, InstrumentType instrument)
 	{
 		deviceId = midiDeviceId;
 

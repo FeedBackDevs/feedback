@@ -11,10 +11,9 @@ class GHDrums : NoteTrack
 		return Orientation.Tall;
 	}
 
-	@property Instrument[] supportedInstruments()
+	@property InstrumentType instrumentType()
 	{
-		// supports the 3 guitar tracks
-		return [ Instrument.Drums ];
+		return InstrumentType.Drums;
 	}
 
 	void Draw(long offset, Sequence notes)

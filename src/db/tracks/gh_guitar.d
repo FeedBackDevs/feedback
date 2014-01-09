@@ -11,10 +11,9 @@ class GHGuitar : NoteTrack
 		return Orientation.Tall;
 	}
 
-	@property Instrument[] supportedInstruments()
+	@property InstrumentType instrumentType()
 	{
-		// supports the 3 guitar tracks
-		return [ Instrument.LeadGuitar, Instrument.RhythmGuitar, Instrument.Bass ];
+		return InstrumentType.GuitarController;
 	}
 
 	void Draw(long offset, Sequence notes)

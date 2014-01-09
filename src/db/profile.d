@@ -1,6 +1,5 @@
 module db.profile;
 
-import db.instrument;
 import db.sequence;
 
 
@@ -12,12 +11,12 @@ struct Score
 		int numPlays;
 	}
 
-	int Score(Instrument instrument, Difficulty difficulty)
+	int Score(Part part, Difficulty difficulty)
 	{
-		return Difficulty.Count*instrument + difficulty;
+		return Difficulty.Count*part + difficulty;
 	}
 
-	Record[Difficulty.Count*Instrument.Count] score;
+	Record[Difficulty.Count*Part.Count] score;
 }
 
 class Profile

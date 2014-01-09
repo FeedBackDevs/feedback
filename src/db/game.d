@@ -30,6 +30,12 @@ class Game
 		mountData.pMountpoint = "cache";
 		mountData.pPath = MFFile_SystemPath("data/cache");
 		MFFileSystem_Mount(hNative, mountData);
+
+		// songs mounted separately, remocated to a network drive for instance
+		mountData.flags = MFMountFlags.DontCacheTOC;
+		mountData.pMountpoint = "songs";
+		mountData.pPath = MFFile_SystemPath("data/Songs");
+		MFFileSystem_Mount(hNative, mountData);
 	}
 
 	void Init()
@@ -54,6 +60,20 @@ class Game
 		MFRenderLayerSet layerSet;
 		layerSet.pSolidLayer = pLayer;
 		MFRenderer_SetRenderLayerSet(pRenderer, &layerSet);
+
+		// TODO: the following stuff should all be asynchronous with a loading screen:
+
+		// TODO: load local settings
+
+		// TODO: auto-detect instruments (controllers, midi/audio devices)
+
+
+		songLibrary = new SongLibrary;
+		songLibrary.Scan();
+
+
+		// HACK: pick the first song and start it as a test
+		//...
 	}
 
 	void Deinit()

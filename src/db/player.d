@@ -2,7 +2,7 @@ module db.player;
 
 import db.i.inputdevice;
 import db.profile;
-import db.instrument;
+import db.sequence;
 import db.song;
 
 class Player
@@ -11,7 +11,7 @@ class Player
 
 	struct Input
 	{
-		Instrument instrument;
+		Part part;
 		InputDevice device;
 	}
 

@@ -1,36 +1,9 @@
 module db.instrument;
 
+
 // list of instruments i've encountered in various music games
 // obviously, many of these would not be supported (... at first?) ;)
 // options to keep in mind when writing code or making UI choices
-enum Instrument
-{
-	Unknown,		// if the instrument type is unknown, or has not been assigned
-
-	LeadGuitar,		// lead guiutar
-	RhythmGuitar,	// rhythm guitar
-	Bass,			// bass guitar
-	Drums,			// drums
-	Vox,			// lead vocals
-	Vox2,			// secondary/backing vocals
-	Keys,			// keyboard
-	ProGuitar,		// pro guitar
-	DJ,				// DJ hero
-
-	// Bemani games
-	Dance,			// dance mat
-	DanceDouble,	// double dance mat
-	DanceSolo,		// dance mat
-	Pump,			// pump it up
-	Beatmania,		// beatmania controller
-
-	// Silly (fun!) shit
-	Conga,			// ie, Donkey Conga
-	Taiko,			// http://www.screwattack.com/sites/default/files/image/images/News/2012/0402/261_560635649740_23911393_36125747_3873_n.jpg
-
-	Count
-}
-
 enum InstrumentType
 {
 	Unknown,
