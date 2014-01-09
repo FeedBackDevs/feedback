@@ -1,7 +1,7 @@
 module db.i.notetrack;
 
+import db.instrument;
 import db.sequence;
-
 
 // screen real-estate will be dynamically divided depending on the number of players, and the instruments in the game
 // well written note tracks should attempt to fill the screen space given
@@ -20,6 +20,7 @@ enum Orientation
 interface NoteTrack
 {
 	@property Orientation orientation();
+	@property Instrument[] supportedInstruments();
 
 	void Draw(long offset, Sequence notes);
 }

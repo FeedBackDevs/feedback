@@ -6,13 +6,18 @@ import db.sequence;
 
 struct Score
 {
+	struct Record
+	{
+		int score;
+		int numPlays;
+	}
+
 	int Score(Instrument instrument, Difficulty difficulty)
 	{
 		return Difficulty.Count*instrument + difficulty;
 	}
 
-private:
-	int[Difficulty.Count*Instrument.Count] score;
+	Record[Difficulty.Count*Instrument.Count] score;
 }
 
 class Profile

@@ -5,8 +5,10 @@ module db.instrument;
 // options to keep in mind when writing code or making UI choices
 enum Instrument
 {
+	Unknown,		// if the instrument type is unknown, or has not been assigned
+
 	LeadGuitar,		// lead guiutar
-	RythmGuitar,	// rhythm guitar
+	RhythmGuitar,	// rhythm guitar
 	Bass,			// bass guitar
 	Drums,			// drums
 	Vox,			// lead vocals
@@ -22,12 +24,35 @@ enum Instrument
 	Pump,			// pump it up
 	Beatmania,		// beatmania controller
 
-	// silly (fun!) shit
+	// Silly (fun!) shit
 	Conga,			// ie, Donkey Conga
 	Taiko,			// http://www.screwattack.com/sites/default/files/image/images/News/2012/0402/261_560635649740_23911393_36125747_3873_n.jpg
 
 	Count
 }
+
+enum InstrumentType
+{
+	Unknown,
+
+	GuitarController,	// guitatr controller
+	Drums,				// drums
+	Vocals,				// vocals
+	Keyboard,			// keyboard
+	Guitar,				// (real) guitar
+	DJ,					// DJ controller
+
+	// Bemani
+	Dance,				// dance controller
+	Beatmania,			// 
+
+	// Silly
+	Conga,
+	Taiko,
+
+	Count
+}
+
 
 // guitar controller
 enum GuitarNotes
@@ -38,6 +63,12 @@ enum GuitarNotes
 	Blue,
 	Orange,
 	Open
+}
+
+enum GuitarProperties
+{
+	HasSolo,
+	HasSlider
 }
 
 enum GuitarNoteFlags
@@ -83,4 +114,11 @@ enum DanceNotes
 	Right2,
 	UpLeft2,
 	UpRight2
+}
+
+enum DanceProperties
+{
+	HasDancePads,	// Up, Down, Left, Right
+	HasSoloPads,	// UpLeft, UpRight
+	HasPumpPads		// UpLeft, UpRight, DownLeft, DownRight, Center
 }

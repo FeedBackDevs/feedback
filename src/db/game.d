@@ -8,9 +8,11 @@ import fuji.fs.native;
 import fuji.render;
 import fuji.renderstate;
 import fuji.material;
-import fuji.primitive;
 import fuji.view;
 import fuji.matrix;
+
+import db.songlibrary;
+import db.player;
 
 class Game
 {
@@ -68,9 +70,15 @@ class Game
 	{
 	}
 
+	// data
 	MFInitParams initParams;
 
-	// singleton stuff...
+	SongLibrary songLibrary;
+
+	Player[] players;
+
+
+	// singleton stuff
 	static @property Game Instance() { if(instance is null) instance = new Game; return instance; }
 
 	static extern (C) void Static_InitFileSystem()
