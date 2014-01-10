@@ -23,18 +23,18 @@ class Game
 		mountData.priority = MFMountPriority.Normal;
 		mountData.flags = MFMountFlags.FlattenDirectoryStructure | MFMountFlags.Recursive;
 		mountData.pMountpoint = "data";
-		mountData.pPath = MFFile_SystemPath("data/");
+		mountData.pPath = MFFile_SystemPath("data/".ptr);
 		MFFileSystem_Mount(hNative, mountData);
 
 		mountData.flags = MFMountFlags.DontCacheTOC;
 		mountData.pMountpoint = "cache";
-		mountData.pPath = MFFile_SystemPath("data/cache");
+		mountData.pPath = MFFile_SystemPath("data/cache".ptr);
 		MFFileSystem_Mount(hNative, mountData);
 
 		// songs mounted separately, remocated to a network drive for instance
 		mountData.flags = MFMountFlags.DontCacheTOC;
 		mountData.pMountpoint = "songs";
-		mountData.pPath = MFFile_SystemPath("data/Songs");
+		mountData.pPath = MFFile_SystemPath("data/Songs".ptr);
 		MFFileSystem_Mount(hNative, mountData);
 	}
 

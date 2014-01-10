@@ -1,6 +1,7 @@
 module db.song;
 
 import db.sequence;
+import db.tools.midifile;
 
 import fuji.material;
 import fuji.sound;
@@ -41,6 +42,11 @@ class Song
 {
 	this(string filename = null)
 	{
+	}
+
+	this(MIDIFile midi)
+	{
+		//...
 	}
 
 	~this()
