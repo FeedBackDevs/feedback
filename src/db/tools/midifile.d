@@ -95,7 +95,6 @@ class MIDIFile
 	{
 		ubyte[] file = MFFileSystem_Load(filename);
 		scope(exit) MFHeap_Free(file); // this should happen whether or not the base constructor throws
-
 		this(file);
 	}
 
@@ -160,12 +159,12 @@ class MIDIFile
 									static int sequence = 0;
 
 									if(!bytes)
-										ev.sequenceNumber.sequence = sequence++;
+										ev.sequenceNumber = sequence++;
 									else
 									{
 										ushort seq = event.getFrontAs!ushort;
 										MFEndian_BigToHost(&seq);
-										ev.sequenceNumber.sequence = cast(int)seq;
+										ev.sequenceNumber = cast(int)seq;
 									}
 									break;
 								}
@@ -179,7 +178,7 @@ class MIDIFile
 							case PatchName:
 							case PortName:
 								{
-									ev.text.buffer = (cast(const(char)[])event).idup;
+									ev.text = (cast(const(char)[])event).idup;
 									break;
 								}
 							case EndOfTrack:
@@ -297,7 +296,78 @@ class MIDIFile
 		}
 	}
 
-	string name;
+	void WriteText(string filename)
+	{
+		import std.conv;
+		import std.digest.digest;
+
+		string file = .format("MIDI\r\nformat = %d\r\nresolution = %d\r\n", format, ticksPerBeat);
+		foreach(i, t; tracks)
+		{
+			file ~= .format("Track %d\r\n", i);
+			foreach(e; t)
+			{
+				file ~= .format("  %06d %s: ", e.tick, (cast(MIDIEventType)e.type).to!string);
+
+				switch(e.type)
+				{
+					case MIDIEventType.Custom:
+						file ~= .format("%s ", (cast(MIDIEvents)e.subType).to!string);
+
+						switch(e.subType) with(MIDIEvents)
+						{
+							case MIDIEvents.SequenceNumber:
+								file ~= .format("%d", e.sequenceNumber);
+								break;
+							case Text:
+							case Copyright:
+							case TrackName:
+							case Instrument:
+							case Lyric:
+							case Marker:
+							case CuePoint:
+							case PatchName:
+							case PortName:
+								file ~= .format("%s", e.text);
+								break;
+							case EndOfTrack:
+								break;
+							case Tempo:
+								file ~= .format("%f (%d) ", e.tempo.BPM, e.tempo.microsecondsPerBeat);
+								break;
+							case SMPTE:
+								file ~= .format("%d:%d:%d:%d:%d", e.smpte.hours, e.smpte.minutes, e.smpte.seconds, e.smpte.frames, e.smpte.subFrames);
+								break;
+							case TimeSignature:
+								file ~= .format("%d %d %d %d", e.timeSignature.numerator, e.timeSignature.denominator, e.timeSignature.clocks, e.timeSignature.d);
+								break;
+							case KeySignature:
+								file ~= .format("%d %d", e.keySignature.sf, e.keySignature.minor);
+								break;
+							case Custom:
+								file ~= toHexString(e.custom.data);
+								break;
+							default:
+								break;
+						}
+
+						break;
+					case MIDIEventType.SYSEX:
+						// write hex bytes
+						break;
+					case MIDIEventType.Note:
+						file ~= .format("%x %d, %d, %d", e.note.event, e.note.channel, e.note.note, e.note.velocity);
+						break;
+					default:
+						break;
+				}
+
+				file ~= "\r\n";
+			}
+		}
+
+		MFFileSystem_Save(filename, cast(ubyte[])file);
+	}
 
 	int format;
 	int ticksPerBeat;
@@ -307,20 +377,17 @@ class MIDIFile
 
 struct MIDIEvent
 {
+	bool isEvent(MIDIEvents e)
+	{
+		return type == MIDIEventType.Custom && subType == e;
+	}
+
 	struct Note
 	{
 		int event;
 		int channel;
 		int note;
 		int velocity;
-	}
-	struct SequenceNumber
-	{
-		int sequence;
-	}
-	struct Text
-	{
-		string buffer;
 	}
 	struct Tempo
 	{
@@ -355,8 +422,8 @@ struct MIDIEvent
 	union
 	{
 		Note note;
-		SequenceNumber sequenceNumber;
-		Text text;
+		int sequenceNumber;
+		string text;
 		Tempo tempo;
 		SMPTE smpte;
 		TimeSignature timeSignature;

@@ -15,6 +15,7 @@ enum Part
 	Vox2,			// secondary/backing vocals
 	Keys,			// keyboard
 	ProGuitar,		// pro guitar
+	ProDrums,		// pro drums
 	DJ,				// DJ hero
 
 	// Bemani games
@@ -41,11 +42,21 @@ enum Difficulty
 	Count
 }
 
+enum NumSequences = Difficulty.Count*Part.Count;
+
+int sequenceIndex(Part part, Difficulty difficulty)
+{
+	return Difficulty.Count*part + difficulty;
+}
+
 enum EventType
 {
+	Unknown,
+
 	Note,
 	Event,
 	StarPower,
+	Overdrive,
 	FreeStyle,
 	LeftPlayer,		// GH1/2 co-op mode
 	RightPlayer		// GH1/2 co-op mode
@@ -55,7 +66,6 @@ struct Event
 {
 	EventType event;
 
-	long time;		// the physical time of the note (in microseconds)
 	int tick;		// in ticks
 
 	int key;
@@ -64,12 +74,19 @@ struct Event
 	uint flags;
 
 	// temp runtime data
+	long time;		// the physical time of the note (in microseconds)
 	int played;
 }
 
 class Sequence
 {
-	Part instrument;
+	this(Part part, Difficulty difficulty)
+	{
+		this.part = part;
+		this.difficulty = difficulty;
+	}
+
+	Part part;
 	Difficulty difficulty;
 
 	int difficultyMeter;	// from 1 - 10

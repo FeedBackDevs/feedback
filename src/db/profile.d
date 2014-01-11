@@ -13,10 +13,10 @@ struct Score
 
 	int Score(Part part, Difficulty difficulty)
 	{
-		return Difficulty.Count*part + difficulty;
+		return score[sequenceIndex(part, difficulty)].score;
 	}
 
-	Record[Difficulty.Count*Part.Count] score;
+	Record[NumSequences] score;
 }
 
 class Profile
