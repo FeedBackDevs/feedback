@@ -43,6 +43,12 @@ struct SongEvent
 	string event;
 }
 
+struct Variation
+{
+	string name;
+	Sequence[] difficulties;
+}
+
 class Song
 {
 	this(string filename = null)
@@ -51,6 +57,8 @@ class Song
 
 	this(MIDIFile midi)
 	{
+		immutable auto difficulties = [ "Easy", "Medium", "Hard", "Expert" ];
+
 		enum GHVersion { Unknown, GH, GH2, GH3, GHWT, GHA, GHM, GH5, GHWoR, BH, RB, RB2, RB3 }
 		GHVersion ghVer;
 
@@ -67,30 +75,31 @@ class Song
 			assert(name.isEvent(MIDIEvents.TrackName), "Expected track name");
 
 			Part part;
+			string variation = "Default";
+			ptrdiff_t v = -1;
 
 			// detect which track we're looking at
 			if(i == 0)
 			{
+				MFDebug_Log(2, "Track: SYNC".ptr);
 				id = name.text;
 			}
 			else
 			{
+				MFDebug_Log(2, "Track: " ~ name.text);
+
 				switch(name.text)
 				{
 					case "T1 GEMS":
 						ghVer = GHVersion.GH;
 						part = Part.LeadGuitar;
 						break;
-					case "PART GUITAR":	part = Part.LeadGuitar; break;
-					case "PART DRUMS":	part = Part.Drums; break;
-					case "PART RHYTHM":	part = Part.RhythmGuitar; break;
-					case "PART BASS":	part = Part.Bass; break;
-					case "PART GUITAR COOP":
-						// TODO: present in GH2 songs, what should we do with this?
-						// we should probably support 'variants' for parts...
-						// this way it is also possible to support songs that appeared in different versions of GH/RB games.
-						continue;
-					case "PART VOCALS":	part = Part.Vox; break;
+					case "PART GUITAR":			part = Part.LeadGuitar; break;
+					case "PART GUITAR COOP":	part = Part.LeadGuitar; variation = "Co-op"; break;
+					case "PART RHYTHM":			part = Part.RhythmGuitar; break;
+					case "PART BASS":			part = Part.Bass; break;
+					case "PART DRUMS":			part = Part.Drums; break;
+					case "PART VOCALS":			part = Part.Vox; break;
 					case "EVENTS":
 						break;
 					case "VENUE":
@@ -123,8 +132,19 @@ class Song
 
 				if(part != Part.Unknown)
 				{
-					foreach(d; Difficulty.Easy .. Difficulty.Count)
-						tracks[sequenceIndex(part, d)] = new Sequence(part, d);
+					v = variations[part].length;
+					variations[part] ~= Variation(variation);
+
+					// Note: Vox track only has one difficulty...
+					variations[part][v].difficulties = new Sequence[part == Part.Vox ? 1 : difficulties.length];
+					foreach(j, ref d; variations[part][v].difficulties)
+					{
+						d = new Sequence;
+						d.part = part;
+						d.variation = variation;
+						d.difficulty = part == Part.Vox ? "Default" : difficulties[j];
+						d.difficultyMeter = 0; // TODO: I think we can pull this from songs.ini?
+					}
 				}
 			}
 
@@ -157,33 +177,51 @@ class Song
 						case Text:
 							string text = e.text;
 							if(text[0] == '[' && text[$-1] == ']')
+							{
+								// it's an event
 								text = text[1..$-1];
 
-							// it's an event
-							string event = e.text[1..$-1];
-							if(part == Part.Unknown)
-							{
-								// stash it in the events track
-								SongEvent ev;
-								ev.type = SongEventType.Event;
-								ev.tick = e.tick;
-								ev.event = e.text;
-								events ~= ev;
-							}
-							else
-							{
-								// stash it in the part (all difficulties)
-								Event ev;
-								ev.event = EventType.Event;
-								ev.tick = e.tick;
-								ev.stringParam = e.text;
+								string event = e.text[1..$-1];
+								if(part == Part.Unknown)
+								{
+									// stash it in the events track
+									SongEvent ev;
+									ev.type = SongEventType.Event;
+									ev.tick = e.tick;
+									ev.event = e.text;
+									events ~= ev;
+								}
+								else
+								{
+									// stash it in the part (all difficulties)
+									Event ev;
+									ev.event = EventType.Event;
+									ev.tick = e.tick;
+									ev.stringParam = e.text;
 
-								foreach(d; Difficulty.Easy .. Difficulty.Count)
-									tracks[sequenceIndex(part, d)].notes ~= ev;
+									foreach(seq; variations[part][v].difficulties)
+										seq.notes ~= ev;
+								}
+							}
+							else if(part == Part.Vox)
+							{
+								// Note: some songs seem to use strings without [] instead of lyrics
+								goto case Lyric;
 							}
 							break;
 						case Lyric:
-							// TODO: lyrics for vox track...
+							if(part != Part.Vox)
+							{
+								MFDebug_Warn(2, "Lyrics not on Vox track?!".ptr);
+								continue;
+							}
+
+							Event ev;
+							ev.event = EventType.Lyric;
+							ev.tick = e.tick;
+							ev.stringParam = e.text;
+
+							variations[part][v].difficulties[0].notes ~= ev;
 							break;
 						case EndOfTrack:
 							// TODO: should we validate that the track actually ends?
@@ -204,19 +242,19 @@ class Song
 							ev.tick = e.tick;
 
 							// if it within a difficulty bracket?
-							Difficulty difficulty = Difficulty.Count;
+							int difficulty = -1;
 							if(e.note.note >= 60 && e.note.note < 72)
-								difficulty = Difficulty.Easy;
+								difficulty = 0;
 							else if(e.note.note >= 72 && e.note.note < 84)
-								difficulty = Difficulty.Medium;
+								difficulty = 1;
 							else if(e.note.note >= 84 && e.note.note < 96)
-								difficulty = Difficulty.Hard;
+								difficulty = 2;
 							else if(e.note.note >= 96 && e.note.note < 108)
-								difficulty = Difficulty.Expert;
+								difficulty = 3;
 
-							if(difficulty < Difficulty.Count)
+							if(difficulty != -1)
 							{
-								int[Difficulty.Count] offset = [ 60, 72, 84, 96 ];
+								int[4] offset = [ 60, 72, 84, 96 ];
 								int note = e.note.note - offset[difficulty];
 
 								if(note <= 4)
@@ -231,7 +269,7 @@ class Song
 								else if(note == 10)
 									ev.event = EventType.RightPlayer;
 
-								tracks[sequenceIndex(part, difficulty)].notes ~= ev;
+								variations[part][v].difficulties[difficulty].notes ~= ev;
 							}
 							else
 							{
@@ -250,13 +288,14 @@ class Song
 
 								if(ev.event != EventType.Unknown)
 								{
-									foreach(d; Difficulty.Easy .. Difficulty.Count)
-										tracks[sequenceIndex(part, d)].notes ~= ev;
+									foreach(seq; variations[part][v].difficulties)
+										seq.notes ~= ev;
 								}
 							}
 							break;
 
 						case Part.Vox:
+							// TODO: read vox...
 							break;
 
 						default:
@@ -369,7 +408,7 @@ class Song
 
 	SyncEvent[] sync;		// song sync stuff
 	SongEvent[] events;		// general song events (effects, lighting, etc?)
-	Sequence[NumSequences] tracks;
+	Variation[][Part.Count] variations;
 
 	MFMaterial *pFretboard;
 

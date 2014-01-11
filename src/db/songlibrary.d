@@ -91,6 +91,7 @@ class SongLibrary
 					case "album":	song.album = value; break;
 					case "year":	song.year = value; break;
 					case "genre":	song.genre = value; break;
+					case "frets":	song.charterName = value; break;
 					default:
 						// unknown values become arbitrary params
 						song.params[key.idup] = value;
@@ -108,7 +109,7 @@ class SongLibrary
 			string filename = f.filename.toLower;
 			if(std.algorithm.canFind(imageTypes, filename.extension))
 			{
-				switch(f.filename.stripExtension)
+				switch(filename.stripExtension)
 				{
 					case "album":		song.cover = f.filename; break;
 					case "background":	song.background = f.filename; break;
@@ -117,7 +118,7 @@ class SongLibrary
 			}
 			else if(std.algorithm.canFind(musicTypes, filename.extension))
 			{
-				switch(f.filename.stripExtension)
+				switch(filename.stripExtension)
 				{
 					case "preview":		song.previewFilename = f.filename; break;
 					case "song":		song.songFilename = f.filename; break;

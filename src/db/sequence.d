@@ -32,29 +32,13 @@ enum Part
 	Count
 }
 
-enum Difficulty
-{
-	Easy,
-	Medium,
-	Hard,
-	Expert,
-
-	Count
-}
-
-enum NumSequences = Difficulty.Count*Part.Count;
-
-int sequenceIndex(Part part, Difficulty difficulty)
-{
-	return Difficulty.Count*part + difficulty;
-}
-
 enum EventType
 {
 	Unknown,
 
 	Note,
 	Event,
+	Lyric,
 	StarPower,
 	Overdrive,
 	FreeStyle,
@@ -80,15 +64,10 @@ struct Event
 
 class Sequence
 {
-	this(Part part, Difficulty difficulty)
-	{
-		this.part = part;
-		this.difficulty = difficulty;
-	}
-
 	Part part;
-	Difficulty difficulty;
 
+	string variation;
+	string difficulty;
 	int difficultyMeter;	// from 1 - 10
 
 	Event[] notes;

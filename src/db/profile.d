@@ -11,12 +11,13 @@ struct Score
 		int numPlays;
 	}
 
-	int Score(Part part, Difficulty difficulty)
+	int Score(Part part, int variation, int difficulty)
 	{
-		return score[sequenceIndex(part, difficulty)].score;
+		return variations[part][variation][difficulty].score;
 	}
 
-	Record[NumSequences] score;
+	// [numDifficulties][numVariations][Part.Count]
+	Record[][][Part.Count] variations;
 }
 
 class Profile

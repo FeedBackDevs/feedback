@@ -16,8 +16,10 @@ enum InstrumentType
 	DJ,					// DJ controller
 
 	// Bemani
+	// NOTE: Guitar Freak, Drum Mania, and Keyboardmania can be factored into the existing parts
 	Dance,				// dance controller
 	Beatmania,			// 
+	PNM,				// Pop'n Music
 
 	// Silly
 	Conga,
