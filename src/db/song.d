@@ -6,7 +6,31 @@ import db.tools.midifile;
 import fuji.material;
 import fuji.sound;
 
-import std.conv;
+import std.conv : to;
+import std.string : toStringz;
+
+// music files (many of these may or may not be available for different songs)
+enum MusicFiles
+{
+	Preview,		// the backing track (often includes vocals)
+	Song,			// backing track with crowd sing-along (sing-along, for star-power mode/etc.)
+	SongWithCrowd,	// discreet vocal track
+	Vocals,			// crowd-sing-along, for star-power/etc.
+	Crowd,
+	Guitar,
+	Rhythm,
+	Bass,
+	Keys,
+	Drums,			// drums mixed to a single track
+
+	// paths to music for split drums (guitar hero world tour songs split the drums into separate tracks)
+	Kick,
+	Snare,
+	Cymbals,		// all cymbals
+	Toms,			// all toms
+
+	Count
+}
 
 enum SyncEventType
 {
@@ -81,12 +105,12 @@ class Song
 			// detect which track we're looking at
 			if(i == 0)
 			{
-				MFDebug_Log(2, "Track: SYNC".ptr);
+				MFDebug_Log(3, "Track: SYNC".ptr);
 				id = name.text;
 			}
 			else
 			{
-				MFDebug_Log(2, "Track: " ~ name.text);
+				MFDebug_Log(3, "Track: " ~ name.text);
 
 				switch(name.text)
 				{
@@ -312,26 +336,86 @@ class Song
 
 	~this()
 	{
+		// release the resources
+		Release();
 	}
 
 	void SaveChart()
 	{
+		// TODO: develop a format for the note chart files...
 	}
 
-	void Play(long time)
+	void Prepare()
 	{
+		if(cover)
+			pCover = MFMaterial_Create((songPath ~ cover).toStringz);
+		if(background)
+			pBackground = MFMaterial_Create((songPath ~ background).toStringz);
+		if(fretboard)
+			pFretboard = MFMaterial_Create((songPath ~ fretboard).toStringz);
+
+		foreach(i, m; musicFiles)
+		{
+			if(m && i != MusicFiles.Preview)
+			{
+				pMusic[i] = MFSound_CreateStream((songPath ~ m).toStringz, MFAudioStreamFlags.QueryLength | MFAudioStreamFlags.AllowSeeking);
+				MFSound_PlayStream(pMusic[i], MFPlayFlags.BeginPaused);
+				pVoices[i] = MFSound_GetStreamVoice(pMusic[i]);
+//				MFSound_SetPlaybackRate(pVoices[i], 1.0f); // TODO: we can use this to speed/slow the song...
+			}
+		}
 	}
 
-	void Stop()
+	void Release()
 	{
+		foreach(ref s; pMusic)
+		{
+			if(s)
+			{
+				MFSound_DestroyStream(s);
+				s = null;
+			}
+		}
+
+		if(pCover)
+		{
+			MFMaterial_Release(pCover);
+			pCover = null;
+		}
+		if(pBackground)
+		{
+			MFMaterial_Release(pBackground);
+			pBackground = null;
+		}
+		if(pFretboard)
+		{
+			MFMaterial_Release(pFretboard);
+			pFretboard = null;
+		}
 	}
 
-	void SetVolume(float volume)
+	void Pause(bool bPause)
 	{
+		foreach(s; pMusic)
+			if(s)
+				MFSound_PauseStream(s, bPause);
 	}
 
-	void SetPan(float pan)
+	void Seek(float offsetInSeconds)
 	{
+		foreach(s; pMusic)
+			if(s)
+				MFSound_SeekStream(s, offsetInSeconds);
+	}
+
+	void SetVolume(Part part, float volume)
+	{
+		// TODO: figure how parts map to playing streams
+	}
+
+	void SetPan(Part part, float pan)
+	{
+		// TODO: figure how parts map to playing streams
 	}
 
 	int GetLastNoteTick()
@@ -366,63 +450,38 @@ class Song
 	string artist;
 	string album;
 	string year;
-	string sourcePackageName;	// where did the song come from? (eg, "Rock Band II", "Guitar Hero Metallica", "Rush DLC", etc)
+	string sourcePackageName;		// where did the song come from? (eg, "Rock Band II", "Guitar Hero Metallica", "Rush DLC", etc)
 	string charterName;
 
-	string cover;			// cover image
-	string background;		// background image
-	string fretboard;		// custom fretboard graphic
+	string cover;					// cover image
+	string background;				// background image
+	string fretboard;				// custom fretboard graphic
 
-	string tags;			// string tags for sorting/filtering
+	string tags;					// string tags for sorting/filtering
 	string genre;
-	string mediaType;		// media type for pfx theme purposes (cd/casette/vinyl/etc)
+	string mediaType;				// media type for pfx theme purposes (cd/casette/vinyl/etc)
 
-	string[string] params;	// optional key-value pairs (much data taken from the original .ini files, might be useful in future)
+	string[string] params;			// optional key-value pairs (much data taken from the original .ini files, might be useful in future)
 
-	// paths to music files (many of these may or may not be available for different songs)
-	string previewFilename;
-	string songFilename;			// the backing track (often includes vocals)
-	string songWithCrowdFilename;	// backing track with crowd sing-along (sing-along, for star-power mode/etc.)
-	string vocalsFilename;			// discreet vocal track
-	string crowdFilename;			// crowd-sing-along, for star-power/etc.
-	string guitarFilename;
-	string rhythmFilename;
-	string bassFilename;
-	string keysFilename;
-	string drumsFilename;			// drums mixed to a single track
-
-	// paths to music for split drums (guitar hero world tour songs split the drums into separate tracks)
-	string kickFilename;
-	string snareFilename;
-	string cymbalsFilename;	// all cymbals
-	string tomsFilename;	// all toms
+	string[MusicFiles.Count] musicFiles;
 
 	// multitrack support? (Rock Band uses .mogg files; multitrack ogg files)
 //	string multitrackFilename;		// multitrack filename (TODO: this will take some work...)
 //	Instrument[] trackAssignment;	// assignment of each track to parts
 
 	// song data
-	long startOffset;		// starting offset, in microseconds
-
 	int resolution;
 
-	SyncEvent[] sync;		// song sync stuff
-	SongEvent[] events;		// general song events (effects, lighting, etc?)
+	long startOffset;				// starting offset, in microseconds
+
+	SyncEvent[] sync;				// song sync stuff
+	SongEvent[] events;				// general song events (effects, lighting, etc?)
 	Variation[][Part.Count] variations;
 
+	MFMaterial *pCover;
+	MFMaterial *pBackground;
 	MFMaterial *pFretboard;
 
-	MFAudioStream *pSong;
-	MFAudioStream *pSongWithCrowd;
-	MFAudioStream *pVocals;
-	MFAudioStream *pCrowd;
-	MFAudioStream *pGuitar;
-	MFAudioStream *pRhythm;
-	MFAudioStream *pBass;
-	MFAudioStream *pKeys;
-	MFAudioStream *pDrums;
-	MFAudioStream *pKick;
-	MFAudioStream *pSnare;
-	MFAudioStream *pCymbals;
-	MFAudioStream *pToms;
+	MFAudioStream*[MusicFiles.Count] pMusic;
+	MFVoice*[MusicFiles.Count] pVoices;
 }

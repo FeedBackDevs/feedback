@@ -72,8 +72,17 @@ class Game
 		songLibrary.Scan();
 
 
-		// HACK: pick the first song and start it as a test
-		//...
+		foreach(s; songLibrary.songs)
+			MFDebug_Log(2, s.songPath ~ s.name ~ s.artist);
+
+		// HACK: pick the first song and play it as a test
+		if(songLibrary.songs != null)
+		{
+			currentSong = songLibrary.songs[0];
+			currentSong.Prepare();
+
+			currentSong.Pause(false);
+		}
 	}
 
 	void Deinit()
@@ -96,6 +105,8 @@ class Game
 	SongLibrary songLibrary;
 
 	Player[] players;
+
+	Song currentSong;
 
 
 	// singleton stuff

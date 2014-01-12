@@ -6,7 +6,8 @@ import fuji.filesystem;
 import fuji.heap;
 import fuji.dbg;
 
-import db.song;
+public import db.song;
+import db.sequence;
 import db.tools.midifile;
 
 class SongLibrary
@@ -103,8 +104,8 @@ class SongLibrary
 		// search for the music and other stuff...
 		foreach(f; dirEntries(path ~ "*", SpanMode.shallow))
 		{
-			immutable imageTypes = [ ".png", ".jpg", ".jpeg", ".tga", ".dds", ".bmp" ];
-			immutable musicTypes = [ ".ogg", ".mp3", ".flac", ".wav" ];
+			static immutable imageTypes = [ ".png", ".jpg", ".jpeg", ".tga", ".dds", ".bmp" ];
+			static immutable musicTypes = [ ".ogg", ".mp3", ".flac", ".wav" ];
 
 			string filename = f.filename.toLower;
 			if(std.algorithm.canFind(imageTypes, filename.extension))
@@ -118,22 +119,19 @@ class SongLibrary
 			}
 			else if(std.algorithm.canFind(musicTypes, filename.extension))
 			{
-				switch(filename.stripExtension)
+//				static immutable musicFileNames = [ "preview": MusicFiles.Preview ];
+
+				string filepart = filename.stripExtension;
+				if(filepart[] == "rhythm")
 				{
-					case "preview":		song.previewFilename = f.filename; break;
-					case "song":		song.songFilename = f.filename; break;
-					case "song+crowd":	song.songWithCrowdFilename = f.filename; break;
-					case "vocals":		song.vocalsFilename = f.filename; break;
-					case "crowd":		song.crowdFilename = f.filename; break;
-					case "guitar":		song.guitarFilename = f.filename; break;
-					case "rhythm":		song.bassFilename = f.filename; break;
-					case "drums":		song.drumsFilename = f.filename; break;
-					case "drums_1":		song.kickFilename = f.filename; break;
-					case "drums_2":		song.snareFilename = f.filename; break;
-					case "drums_3":		song.cymbalsFilename = f.filename; break;
-					case "drums_4":		song.tomsFilename = f.filename; break;
-					default:
+					// 'rhythm.ogg' is also be used for bass
+					if(song.variations[Part.RhythmGuitar])
+						song.musicFiles[MusicFiles.Rhythm] = f.filename;
+					else
+						song.musicFiles[MusicFiles.Bass] = f.filename;
 				}
+				else if(filepart in musicFileNames)
+					song.musicFiles[musicFileNames[filepart]] = f.filename;
 			}
 		}
 
@@ -142,4 +140,25 @@ class SongLibrary
 
 	// TODO: database...
 	Song[] songs;
+}
+
+// HACK: workaround since we can't initialise static AA's
+__gshared immutable MusicFiles[string] musicFileNames;
+shared static this()
+{
+	musicFileNames =
+	[
+		"preview":		MusicFiles.Preview,
+		"song":			MusicFiles.Song,
+		"song+crowd":	MusicFiles.Vocals,
+		"vocals":		MusicFiles.Vocals,
+		"crowd":		MusicFiles.Crowd,
+		"guitar":		MusicFiles.Guitar,
+		"rhythm":		MusicFiles.Rhythm,
+		"drums":		MusicFiles.Drums,
+		"drums_1":		MusicFiles.Kick,
+		"drums_2":		MusicFiles.Snare,
+		"drums_3":		MusicFiles.Cymbals,
+		"drums_4":		MusicFiles.Toms
+	];
 }
