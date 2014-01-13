@@ -13,6 +13,7 @@ import fuji.matrix;
 
 import db.songlibrary;
 import db.player;
+import db.instrument;
 
 class Game
 {
@@ -66,8 +67,9 @@ class Game
 		// TODO: load local settings
 
 		// TODO: auto-detect instruments (controllers, midi/audio devices)
+		DetectInstruments();
 
-
+		// TODO: scan for dongs (we should cache this data...)
 		songLibrary = new SongLibrary;
 		songLibrary.Scan();
 
