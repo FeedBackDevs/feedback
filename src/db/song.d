@@ -442,6 +442,11 @@ class Song
 		// TODO: figure how parts map to playing streams
 	}
 
+	bool IsPartPresent(Part part)
+	{
+		return variations[part] != null;
+	}
+
 	int GetLastNoteTick()
 	{
 		// find the last event in the song
