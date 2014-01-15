@@ -48,6 +48,8 @@ enum EventType
 
 struct Event
 {
+	alias EventType = .EventType;
+
 	EventType event;
 
 	int tick;		// in ticks

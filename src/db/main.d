@@ -23,12 +23,7 @@ version(Windows)
 			game.initParams.hInstance = hInstance;
 			game.initParams.pCommandLine = lpCmdLine;
 
-			// TODO: investigate why we can't statically link
-			// BUG: https://d.puremagic.com/issues/show_bug.cgi?id=11910
-//			gDefaults.input.useXInput = false;
-
-			MFDefaults *pDefaults = MFSystem_GetDefaults();
-			pDefaults.input.useXInput = false;
+			gDefaults.input.useXInput = false;
 
 			result = Start();
 

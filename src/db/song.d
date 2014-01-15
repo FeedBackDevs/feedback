@@ -8,6 +8,8 @@ import fuji.sound;
 
 import std.conv : to;
 import std.string : toStringz;
+import std.range : empty, back;
+import std.algorithm : max;
 
 // music files (many of these may or may not be available for different songs)
 enum MusicFiles
@@ -34,6 +36,8 @@ enum MusicFiles
 
 enum SyncEventType
 {
+	Unknown,
+
 	BPM,
 	Anchor,
 	TimeSignature
@@ -41,11 +45,15 @@ enum SyncEventType
 
 enum SongEventType
 {
+	Unknown,
+
 	Event,
 }
 
 struct SyncEvent
 {
+	alias EventType = SyncEventType;
+
 	SyncEventType event;
 
 	long time;		// the real-time of the note (in microseconds)
@@ -59,12 +67,14 @@ struct SyncEvent
 
 struct SongEvent
 {
-	SongEventType type;
+	alias EventType = SongEventType;
+
+	SongEventType event;
 
 	long time;		// the physical time of the note (in microseconds)
 	int tick;		// in ticks
 
-	string event;
+	string text;
 }
 
 struct Variation
@@ -210,9 +220,9 @@ class Song
 								{
 									// stash it in the events track
 									SongEvent ev;
-									ev.type = SongEventType.Event;
+									ev.event = SongEventType.Event;
 									ev.tick = e.tick;
-									ev.event = e.text;
+									ev.text = e.text;
 									events ~= ev;
 								}
 								else
@@ -347,6 +357,7 @@ class Song
 
 	void Prepare()
 	{
+		// load song data
 		if(cover)
 			pCover = MFMaterial_Create((songPath ~ cover).toStringz);
 		if(background)
@@ -354,14 +365,27 @@ class Song
 		if(fretboard)
 			pFretboard = MFMaterial_Create((songPath ~ fretboard).toStringz);
 
+		// prepare the music streams
 		foreach(i, m; musicFiles)
 		{
 			if(m && i != MusicFiles.Preview)
 			{
 				pMusic[i] = MFSound_CreateStream((songPath ~ m).toStringz, MFAudioStreamFlags.QueryLength | MFAudioStreamFlags.AllowSeeking);
 				MFSound_PlayStream(pMusic[i], MFPlayFlags.BeginPaused);
+
 				pVoices[i] = MFSound_GetStreamVoice(pMusic[i]);
 //				MFSound_SetPlaybackRate(pVoices[i], 1.0f); // TODO: we can use this to speed/slow the song...
+			}
+		}
+
+		// calculate the note times for all tracks
+		CalculateNoteTimes(events, 0);
+		foreach(p; variations)
+		{
+			foreach(v; p)
+			{
+				foreach(d; v.difficulties)
+					CalculateNoteTimes(d.notes, 0);
 			}
 		}
 	}
@@ -420,26 +444,164 @@ class Song
 
 	int GetLastNoteTick()
 	{
-		return 0;
+		// find the last event in the song
+		int lastTick = sync.empty ? 0 : sync.back.tick;
+		foreach(p; variations)
+		{
+			foreach(v; p)
+			{
+				foreach(d; v.difficulties)
+					lastTick = max(lastTick, d.notes.empty ? 0 : d.notes.back.tick);
+			}
+		}
+		return lastTick;
 	}
 
 	int GetStartBPM()
 	{
-		return 0;
+		foreach(e; sync)
+		{
+			if(e.tick != 0)
+				break;
+			if(e.event == SyncEventType.BPM || e.event == SyncEventType.Anchor)
+				return e.bpm;
+		}
+		return 120000;
 	}
 
-	void CalculateNoteTimes(int stream, int startTick)
+	long CalcTime(int tick, long microsecondsPerBeat)
 	{
+		return (cast(long)tick*microsecondsPerBeat)/resolution;
+	}
+
+	void CalculateNoteTimes(E)(E[] stream, int startTick)
+	{
+		int offset = 0;
+		int currentBPM = GetStartBPM();
+		long microsecondsPerBeat = 60_000_000_000 / currentBPM;
+		long playTime = startOffset;
+		long tempoTime = 0;
+
+		foreach(si, ref sev; sync)
+		{
+			if(sev.event == SyncEventType.BPM || sev.event == SyncEventType.Anchor)
+			{
+				tempoTime = CalcTime(sev.tick - offset, microsecondsPerBeat);
+
+				// calculate event time (if event is not an anchor)
+				if(sev.event != SyncEventType.Anchor)
+					sev.time = playTime + tempoTime;
+
+				// calculate note times
+				ptrdiff_t note = stream.GetNextEvent(offset);
+				if(note != -1)
+				{
+					for(; note < stream.length && stream[note].tick < sev.tick; ++note)
+						stream[note].time = playTime + CalcTime(stream[note].tick - offset, microsecondsPerBeat);
+				}
+
+				// increment play time to BPM location
+				if(sev.event == SyncEventType.Anchor)
+					playTime = sev.time;
+				else
+					playTime += tempoTime;
+
+				// find if next event is an anchor or not
+				for(auto i = si + 1; i < sync.length && sync[i].event != SyncEventType.BPM; ++i)
+				{
+					if(sync[i].event == SyncEventType.Anchor)
+					{
+						// if it is, we need to calculate the BPM for this interval
+						long timeDifference = sync[i].time - sev.time;
+						int tickDifference = sync[i].tick - sev.tick;
+						sev.bpm = cast(int)(60_000_000_000 / ((timeDifference*cast(long)resolution) / cast(long)tickDifference));
+						break;
+					}
+				}
+
+				// update BPM and microsecondsPerBeat
+				currentBPM = sev.bpm;
+				microsecondsPerBeat = 60_000_000_000 / currentBPM;
+
+				offset = sev.tick;
+			}
+			else
+			{
+				sev.time = playTime + CalcTime(sev.tick - offset, microsecondsPerBeat);
+			}
+		}
+
+		// calculate remaining note times
+		ptrdiff_t note = stream.GetNextEvent(offset);
+		if(note != -1)
+		{
+			for(; note < stream.length; ++note)
+				stream[note].time = playTime + CalcTime(stream[note].tick - offset, microsecondsPerBeat);
+		}
 	}
 
 	long CalculateTimeOfTick(int tick)
 	{
-		return 0;
+		int offset, currentBPM;
+		long time;
+
+		SyncEvent *pEv = GetMostRecentSyncEvent(tick);
+		if(pEv)
+		{
+			time = pEv.time;
+			offset = pEv.tick;
+			currentBPM = pEv.bpm;
+		}
+		else
+		{
+			time = startOffset;
+			offset = 0;
+			currentBPM = GetStartBPM();
+		}
+
+		if(offset < tick)
+			time += CalcTime(tick - offset, 60_000_000_000 / currentBPM);
+
+		return time;
 	}
 
-	int CalculateTickAtTime(long time, int *pBPM = null)
+	SyncEvent* GetMostRecentSyncEvent(int tick)
 	{
-		return 0;
+		auto e = sync.GetMostRecentEvent(tick, SyncEventType.BPM, SyncEventType.Anchor);
+		return e < 0 ? null : &sync[e];
+	}
+
+	SyncEvent* GetMostRecentSyncEventTime(long time)
+	{
+		auto e = sync.GetMostRecentEventByTime(time, SyncEventType.BPM, SyncEventType.Anchor);
+		return e < 0 ? null : &sync[e];
+	}
+
+	int CalculateTickAtTime(long time, int *pBPM)
+	{
+		int currentBPM;
+		long lastEventTime;
+		int lastEventOffset;
+
+		SyncEvent *e = GetMostRecentSyncEventTime(time);
+
+		if(e)
+		{
+			lastEventTime = e.time;
+			lastEventOffset = e.tick;
+			currentBPM = e.bpm;
+		}
+		else
+		{
+			lastEventTime = startOffset;
+			lastEventOffset = 0;
+			currentBPM = GetStartBPM();
+		}
+
+		if(pBPM)
+			*pBPM = currentBPM;
+
+		return lastEventOffset + cast(int)((time - lastEventTime) * cast(long)(currentBPM * resolution) / 60_000_000_000);
 	}
 
 	// data...
@@ -484,4 +646,155 @@ class Song
 
 	MFAudioStream*[MusicFiles.Count] pMusic;
 	MFVoice*[MusicFiles.Count] pVoices;
+}
+
+
+// Binary search on the events
+// before: true = return event one before requested time, false = return event one after requested time
+// type: "tick", "time" to search by tick or by time
+private ptrdiff_t GetEventForOffset(bool before, bool byTime, E)(E[] events, long offset)
+{
+	enum member = byTime ? "time" : "tick";
+
+	if(events.empty)
+		return -1;
+
+	// get the top bit
+	size_t i = events.length, topBit = 0;
+	while((i >>= 1))
+		++topBit;
+	i = topBit = 1 << topBit;
+
+	// binary search bitchez!!
+	ptrdiff_t target = -1;
+	while(topBit)
+	{
+		if(i >= events.length) // if it's an invalid index
+		{
+			i = (i & ~topBit) | topBit>>1;
+		}
+		else if(mixin("events[i]." ~ member) == offset)
+		{
+			// return the first in sequence
+			while(i > 0 && mixin("events[i-1]." ~ member) == mixin("events[i]." ~ member))
+				--i;
+			return i;
+		}
+		else if(mixin("events[i]." ~ member) > offset)
+		{
+			static if(!before)
+				target = i;
+			i = (i & ~topBit) | topBit>>1;
+		}
+		else
+		{
+			static if(before)
+				target = i;
+			i |= topBit>>1;
+		}
+		topBit >>= 1;
+	}
+
+	return target;
+}
+
+private template AllIs(Ty, T...)
+{
+	static if(T.length == 0)
+		enum AllIs = true;
+	else
+		enum AllIs = is(T[0] == Ty) && AllIs!(T[1..$], Ty);
+}
+
+// skip over events of specified types
+ptrdiff_t SkipEvents(bool reverse = false, E, Types...)(E[] events, size_t e, Types types) if(AllIs!(E.EventType, Types))
+{
+	outer: for(; (reverse && e >= 0) || (!reverse && e < events.length); e += reverse ? -1 : 1)
+	{
+		foreach(t; types)
+		{
+			if(events[e].event == t)
+				continue outer;
+		}
+		return e;
+	}
+	return -1;
+}
+
+// skip events until we find one we're looking for
+ptrdiff_t SkipToEvents(bool reverse = false, E, Types...)(E[] events, size_t e, Types types) if(AllIs!(E.EventType, Types))
+{
+	for(; (reverse && e >= 0) || (!reverse && e < events.length); e += reverse ? -1 : 1)
+	{
+		foreach(t; types)
+		{
+			if(events[e].event == t)
+				return e;
+		}
+	}
+	return -1;
+}
+
+// get all events at specified tick
+E[] EventsAt(E)(E[] events, int tick)
+{
+	ptrdiff_t i = events.GetEventForOffset!(false, false)(tick);
+	if(i != tick)
+		return null;
+	auto e = i;
+	while(e < events.length-1 && events[e+1].tick == events[e].tick)
+		++e;
+	return events[i..e+1];
+}
+
+ptrdiff_t FindEvent(E, ET = E.EventType)(E[] events, ET type, int tick, int key = 0)
+{
+	// find the events at the requested offset
+	auto ev = events.EventsAt(tick);
+	if(!ev)
+		return -1;
+
+	// match the other conditions
+	foreach(ref e; ev)
+	{
+		if(!type || e.event == type)
+		{
+			static if(__traits(hasMember, E, "key")) // SyncEvent's don't have a 'key'.
+			{
+				if(e.key == key)
+					return &e - events.ptr;
+			}
+			else
+				return &e - events.ptr; // return it as an index (TODO: should this return a ref instead?)
+		}
+	}
+	return -1;
+}
+
+private ptrdiff_t GetEvent(bool reverse, bool byTime, E, Types...)(E[] events, long offset, Types types) if(AllIs!(E.EventType, Types))
+{
+	ptrdiff_t e = events.GetEventForOffset!(reverse, byTime)(offset);
+	if(e < 0 || Types.length == 0)
+		return e;
+	return events.SkipToEvents!reverse(e, types);
+}
+
+ptrdiff_t GetNextEvent(E, Types...)(E[] events, int tick, Types types) if(AllIs!(E.EventType, Types))
+{
+	return events.GetEvent!(false, false)(tick, types);
+}
+
+ptrdiff_t GetNextEventByTime(E, Types...)(E[] events, long time, Types types) if(AllIs!(E.EventType, Types))
+{
+	return events.GetEvent!(false, true)(time, types);
+}
+
+ptrdiff_t GetMostRecentEvent(E, Types...)(E[] events, int tick, Types types) if(AllIs!(E.EventType, Types))
+{
+	return events.GetEvent!(true, false)(tick, types);
+}
+
+ptrdiff_t GetMostRecentEventByTime(E, Types...)(E[] events, long time, Types types) if(AllIs!(E.EventType, Types))
+{
+	return events.GetEvent!(true, true)(time, types);
 }
