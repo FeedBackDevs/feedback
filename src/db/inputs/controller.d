@@ -61,24 +61,17 @@ class Controller : InputDevice
 		// TODO: detect other types of controllers from other games...
 	}
 
-	@property InstrumentType instrumentType() { return instrument; }
-	@property InputEvent[] events() { return stream; }
+	override @property InstrumentType instrumentType() { return instrument; }
 
-	void Update()
+	override void Update()
 	{
 		// read controller, populate events
-	}
-
-	void Clear(long until)
-	{
-		// clear all events before 'until'
 	}
 
 	int controllerId;
 	InstrumentType instrument;
 	uint features;
 
-	InputEvent[] stream;
 }
 
 Controller[] DetectControllers()

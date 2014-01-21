@@ -53,15 +53,12 @@ struct Event
 	EventType event;
 
 	int tick;		// in ticks
+	long time;		// the physical time of the note (in microseconds)
 
 	int key;
 	int param;		// for a note, this is the sustain
 	string stringParam;
 	uint flags;
-
-	// temp runtime data
-	long time;		// the physical time of the note (in microseconds)
-	int played;
 }
 
 class Sequence

@@ -13,6 +13,8 @@ class DrumsScoreKeeper : ScoreKeeper
 
 	override void Update()
 	{
+		inputDevice.Update();
+
 		// TODO: read drum triggers from input stream, match against sequence
 		// drums are the easiest, so we'll start with that one
 	}

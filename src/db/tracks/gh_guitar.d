@@ -2,7 +2,8 @@ module db.tracks.gh_guitar;
 
 import db.i.notetrack;
 import db.instrument;
-import db.sequence;
+import db.performance;
+import db.renderer;
 
 class GHGuitar : NoteTrack
 {
@@ -16,7 +17,11 @@ class GHGuitar : NoteTrack
 		return InstrumentType.GuitarController;
 	}
 
-	void Draw(long offset, Sequence notes)
+	void Update()
+	{
+	}
+
+	void Draw(ref MFRect vp, long offset, Performer performer)
 	{
 		// TODO: receive a viewport where we should render
 

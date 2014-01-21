@@ -5,21 +5,16 @@ import fuji.system;
 import fuji.filesystem;
 import fuji.fs.native;
 
-import fuji.render;
-import fuji.renderstate;
-import fuji.material;
-import fuji.view;
-import fuji.matrix;
-
+import db.renderer;
 import db.songlibrary;
-import db.sequence;
 import db.instrument;
 import db.player;
 import db.profile;
+import db.performance;
+import db.sequence;
 
 import db.i.inputdevice;
-import db.i.notetrack;
-import db.i.scorekeeper;
+
 
 class Game
 {
@@ -47,26 +42,7 @@ class Game
 
 	void Init()
 	{
-		pDefaultStates = MFStateBlock_CreateDefault();
-
-		// create the renderer with a single layer that clears before rendering
-		MFRenderLayerDescription layers[] = [
-			MFRenderLayerDescription("background"),
-			MFRenderLayerDescription("game"),
-			MFRenderLayerDescription("ui"),
-			MFRenderLayerDescription("menu")
-		];
-
-		pRenderer = MFRenderer_Create(layers, pDefaultStates, null);
-		MFRenderer_SetCurrent(pRenderer);
-
-		MFRenderLayer *pLayer = MFRenderer_GetLayer(pRenderer, 0);
-		MFVector clearColour = MFVector(0.0f, 0.0f, 0.2f, 1.0f);
-		MFRenderLayer_SetClear(pLayer, MFRenderClearFlags.All, clearColour);
-
-		MFRenderLayerSet layerSet;
-		layerSet.pSolidLayer = pLayer;
-		MFRenderer_SetRenderLayerSet(pRenderer, &layerSet);
+		renderer = new Renderer;
 
 		// TODO: the following stuff should all be asynchronous with a loading screen:
 
@@ -83,93 +59,67 @@ class Game
 		int i = 0;
 		foreach(input; inputs)
 		{
-			if(input.instrumentType != InstrumentType.GuitarController || input.instrumentType != InstrumentType.Drums)
+			if(input.instrumentType != InstrumentType.GuitarController && input.instrumentType != InstrumentType.Drums)
 				continue;
 
 			Player player = new Player;
-			players ~= player;
 
 			player.profile = new Profile;
 			player.profile.name = "Player " ~ to!string(i++);
 
 			player.input.device = input;
-			if(input.instrumentType != InstrumentType.GuitarController)
+			if(input.instrumentType == InstrumentType.GuitarController)
 				player.input.part = Part.LeadGuitar;
-			else
+			else if(input.instrumentType == InstrumentType.Drums)
 				player.input.part = Part.Drums;
+
+			players ~= player;
 		}
 
-		// HACK: pick the first song and play it as a test
-		if(songLibrary.songs != null)
+		// HACK: create a performance of the first song in the library
+		if(songLibrary.songs.length != 0)
 		{
-			currentSong = songLibrary.songs[0];
-			currentSong.Prepare();
-
-			currentSong.Pause(false);
+			performance = new Performance(songLibrary.songs[0], players);
+			performance.Begin();
 		}
-
-		// create and arrange the performers for 'currentSong'
-		// Note: Players whose parts are unavailable in the song will not have performers created
-		performers = null;
-		foreach(p; players)
-		{
-			if(currentSong.IsPartPresent(p.input.part))
-			{
-				// TODO: create a performer for the player...
-				// Note: note track should be chosen accorting to the instrument type, and player preference for theme/style (GH/RB/Bemani?)
-				Performer performer;
-				performer.player = p;
-				performer.sequence = currentSong.variations[p.input.part][0].difficulties.back;
-//				performer.noteTrack = new THE KIND THAT MATCHES;
-//				performer.scoreKeeper = new ScoreKeeper(performer.sequence, p.input.device);
-				performers ~= performer;
-			}
-		}
-
-		// TODO: arrange the performers to best utilise the available screen space...
-		//... this is kinda hard!
 	}
 
 	void Deinit()
 	{
-		MFRenderer_Destroy(pRenderer);
-		MFStateBlock_Destroy(pDefaultStates);
+		renderer.Destroy();
 	}
 
 	void Update()
 	{
-		// TODO: update the performers...
+		if(performance)
+			performance.Update();
 	}
 
 	void Draw()
 	{
-		// TODO: draw the background
-
-		// TODO: draw the performers
+		if(performance)
+		{
+			performance.Draw();
+		}
+		else
+		{
+			// where are we? in menus and stuff?
+		}
 
 		// TODO: Draw the UI
+		renderer.SetCurrentLayer(RenderLayers.UI);
 	}
 
 	// data
 	MFInitParams initParams;
 
+	Renderer renderer;
+
 	SongLibrary songLibrary;
 
 	Player[] players;
 
-	Song currentSong;
-
-	// a performer is an active player/'performer'.
-	struct Performer
-	{
-		MFRect screenSpace;
-		Player player;
-		Sequence sequence;
-		NoteTrack noteTrack;
-		ScoreKeeper scoreKeeper;
-	}
-
-	Performer performers[];
+	Performance performance;
 
 	// singleton stuff
 	static @property Game Instance() { if(instance is null) instance = new Game; return instance; }
@@ -202,6 +152,4 @@ class Game
 
 private:
 	__gshared Game instance;
-	MFRenderer *pRenderer;
-	MFStateBlock *pDefaultStates;
 }

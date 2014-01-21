@@ -7,7 +7,6 @@ import fuji.material;
 import fuji.sound;
 
 import std.conv : to;
-import std.string : toStringz;
 import std.range : empty, back;
 import std.algorithm : max;
 
@@ -60,7 +59,7 @@ struct SyncEvent
 	int tick;		// in ticks
 	union
 	{
-		int bpm;		// in thousandths of a beat per minute
+		uint usPerBeat;
 		int timeSignature;
 	}
 }
@@ -203,7 +202,7 @@ class Song
 							SyncEvent se;
 							se.event = SyncEventType.BPM;
 							se.tick = e.tick;
-							se.bpm = cast(int)(e.tempo.BPM * 1000.0); // TODO: this is lossy! fix this later...
+							se.usPerBeat = e.tempo.microsecondsPerBeat;
 							sync ~= se;
 							break;
 
@@ -462,28 +461,23 @@ class Song
 		return lastTick;
 	}
 
-	int GetStartBPM()
+	int GetStartUsPB()
 	{
 		foreach(e; sync)
 		{
 			if(e.tick != 0)
 				break;
 			if(e.event == SyncEventType.BPM || e.event == SyncEventType.Anchor)
-				return e.bpm;
+				return e.usPerBeat;
 		}
-		return 120000;
-	}
 
-	long CalcTime(int tick, long microsecondsPerBeat)
-	{
-		return (cast(long)tick*microsecondsPerBeat)/resolution;
+		return 60000000/120; // microseconds per beat
 	}
 
 	void CalculateNoteTimes(E)(E[] stream, int startTick)
 	{
 		int offset = 0;
-		int currentBPM = GetStartBPM();
-		long microsecondsPerBeat = 60_000_000_000 / currentBPM;
+		uint microsecondsPerBeat = GetStartUsPB();
 		long playTime = startOffset;
 		long tempoTime = 0;
 
@@ -491,7 +485,7 @@ class Song
 		{
 			if(sev.event == SyncEventType.BPM || sev.event == SyncEventType.Anchor)
 			{
-				tempoTime = CalcTime(sev.tick - offset, microsecondsPerBeat);
+				tempoTime = cast(long)(sev.tick - offset)*microsecondsPerBeat/resolution;
 
 				// calculate event time (if event is not an anchor)
 				if(sev.event != SyncEventType.Anchor)
@@ -502,7 +496,7 @@ class Song
 				if(note != -1)
 				{
 					for(; note < stream.length && stream[note].tick < sev.tick; ++note)
-						stream[note].time = playTime + CalcTime(stream[note].tick - offset, microsecondsPerBeat);
+						stream[note].time = playTime + cast(long)(stream[note].tick - offset)*microsecondsPerBeat/resolution;
 				}
 
 				// increment play time to BPM location
@@ -519,20 +513,19 @@ class Song
 						// if it is, we need to calculate the BPM for this interval
 						long timeDifference = sync[i].time - sev.time;
 						int tickDifference = sync[i].tick - sev.tick;
-						sev.bpm = cast(int)(60_000_000_000 / ((timeDifference*cast(long)resolution) / cast(long)tickDifference));
+						sev.usPerBeat = cast(uint)(timeDifference*resolution/tickDifference);
 						break;
 					}
 				}
 
-				// update BPM and microsecondsPerBeat
-				currentBPM = sev.bpm;
-				microsecondsPerBeat = 60_000_000_000 / currentBPM;
+				// update microsecondsPerBeat
+				microsecondsPerBeat = sev.usPerBeat;
 
 				offset = sev.tick;
 			}
 			else
 			{
-				sev.time = playTime + CalcTime(sev.tick - offset, microsecondsPerBeat);
+				sev.time = playTime + cast(long)(sev.tick - offset)*microsecondsPerBeat/resolution;
 			}
 		}
 
@@ -541,13 +534,13 @@ class Song
 		if(note != -1)
 		{
 			for(; note < stream.length; ++note)
-				stream[note].time = playTime + CalcTime(stream[note].tick - offset, microsecondsPerBeat);
+				stream[note].time = playTime + cast(long)(stream[note].tick - offset)*microsecondsPerBeat/resolution;
 		}
 	}
 
 	long CalculateTimeOfTick(int tick)
 	{
-		int offset, currentBPM;
+		int offset, currentUsPB;
 		long time;
 
 		SyncEvent *pEv = GetMostRecentSyncEvent(tick);
@@ -555,17 +548,17 @@ class Song
 		{
 			time = pEv.time;
 			offset = pEv.tick;
-			currentBPM = pEv.bpm;
+			currentUsPB = pEv.usPerBeat;
 		}
 		else
 		{
 			time = startOffset;
 			offset = 0;
-			currentBPM = GetStartBPM();
+			currentUsPB = GetStartUsPB();
 		}
 
 		if(offset < tick)
-			time += CalcTime(tick - offset, 60_000_000_000 / currentBPM);
+			time += cast(long)(tick - offset)*currentUsPB/resolution;
 
 		return time;
 	}
@@ -582,9 +575,9 @@ class Song
 		return e < 0 ? null : &sync[e];
 	}
 
-	int CalculateTickAtTime(long time, int *pBPM)
+	int CalculateTickAtTime(long time, int *pUsPerBeat = null)
 	{
-		int currentBPM;
+		uint currentUsPerBeat;
 		long lastEventTime;
 		int lastEventOffset;
 
@@ -594,19 +587,19 @@ class Song
 		{
 			lastEventTime = e.time;
 			lastEventOffset = e.tick;
-			currentBPM = e.bpm;
+			currentUsPerBeat = e.usPerBeat;
 		}
 		else
 		{
 			lastEventTime = startOffset;
 			lastEventOffset = 0;
-			currentBPM = GetStartBPM();
+			currentUsPerBeat = GetStartUsPB();
 		}
 
-		if(pBPM)
-			*pBPM = currentBPM;
+		if(pUsPerBeat)
+			*pUsPerBeat = currentUsPerBeat;
 
-		return lastEventOffset + cast(int)((time - lastEventTime) * cast(long)(currentBPM * resolution) / 60_000_000_000);
+		return lastEventOffset + cast(int)((time - lastEventTime)*resolution/currentUsPerBeat);
 	}
 
 	// data...
@@ -645,9 +638,9 @@ class Song
 	SongEvent[] events;				// general song events (effects, lighting, etc?)
 	Variation[][Part.Count] variations;
 
-	MFMaterial *pCover;
-	MFMaterial *pBackground;
-	MFMaterial *pFretboard;
+	MFMaterial* pCover;
+	MFMaterial* pBackground;
+	MFMaterial* pFretboard;
 
 	MFAudioStream*[MusicFiles.Count] pMusic;
 	MFVoice*[MusicFiles.Count] pVoices;
@@ -712,7 +705,7 @@ private template AllIs(Ty, T...)
 }
 
 // skip over events of specified types
-ptrdiff_t SkipEvents(bool reverse = false, E, Types...)(E[] events, size_t e, Types types) if(AllIs!(E.EventType, Types))
+ptrdiff_t SkipEvents(bool reverse = false, E, Types...)(E[] events, ptrdiff_t e, Types types) if(AllIs!(E.EventType, Types))
 {
 	outer: for(; (reverse && e >= 0) || (!reverse && e < events.length); e += reverse ? -1 : 1)
 	{
@@ -727,7 +720,7 @@ ptrdiff_t SkipEvents(bool reverse = false, E, Types...)(E[] events, size_t e, Ty
 }
 
 // skip events until we find one we're looking for
-ptrdiff_t SkipToEvents(bool reverse = false, E, Types...)(E[] events, size_t e, Types types) if(AllIs!(E.EventType, Types))
+ptrdiff_t SkipToEvents(bool reverse = false, E, Types...)(E[] events, ptrdiff_t e, Types types) if(AllIs!(E.EventType, Types))
 {
 	for(; (reverse && e >= 0) || (!reverse && e < events.length); e += reverse ? -1 : 1)
 	{

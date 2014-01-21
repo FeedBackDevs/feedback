@@ -1,7 +1,9 @@
 module db.i.syncsource;
 
-interface SyncSource
+class SyncSource
 {
-	@property long now();
-	@property long resolution();
+	@property long now() { return clock * 1000000 / resolution; }
+
+	abstract @property long clock();
+	abstract @property long resolution();
 }

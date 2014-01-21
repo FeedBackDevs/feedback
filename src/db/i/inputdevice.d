@@ -1,7 +1,9 @@
 module db.i.inputdevice;
 
 import db.instrument;
+import db.i.syncsource;
 
+import std.range;
 
 struct InputEvent
 {
@@ -11,12 +13,25 @@ struct InputEvent
 	int velocity;		// velocity or amplitude. 0 on note up events
 }
 
-interface InputDevice
+class InputDevice
 {
-	@property InstrumentType instrumentType();
+	abstract @property InstrumentType instrumentType();
 
-	@property InputEvent[] events();
+	@property InputEvent[] events() { return stream; }
 
-	void Update();			// NOTE: may be run on a high-frequency thread
-	void Clear(long until);	// clear input events <= the given offset
+	void Begin(SyncSource sync)
+	{
+		this.sync = sync;
+	}
+
+	abstract void Update();	// NOTE: may be run on a high-frequency thread
+
+	void Clear(long until)
+	{
+		while(!stream.empty && stream[0].timestamp < until)
+			stream.popFront();
+	}
+
+	SyncSource sync;
+	InputEvent[] stream;
 }

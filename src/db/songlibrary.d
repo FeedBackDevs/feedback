@@ -1,7 +1,5 @@
 module db.songlibrary;
 
-import std.string;
-
 import fuji.filesystem;
 import fuji.heap;
 import fuji.dbg;
@@ -9,6 +7,8 @@ import fuji.dbg;
 public import db.song;
 import db.sequence;
 import db.tools.midifile;
+
+import std.string;
 
 class SongLibrary
 {

@@ -192,7 +192,6 @@ class MIDIFile
 									ev.tempo.microsecondsPerBeat = event[0] << 16;
 									ev.tempo.microsecondsPerBeat |= event[1] << 8;
 									ev.tempo.microsecondsPerBeat |= event[2];
-									ev.tempo.BPM = cast(float)(60000000.0/cast(double)ev.tempo.microsecondsPerBeat);
 									break;
 								}
 							case SMPTE:
@@ -333,7 +332,7 @@ class MIDIFile
 							case EndOfTrack:
 								break;
 							case Tempo:
-								file ~= .format("%f (%d) ", e.tempo.BPM, e.tempo.microsecondsPerBeat);
+								file ~= .format("%f (%d) ", 60000000.0 / e.tempo.microsecondsPerBeat, e.tempo.microsecondsPerBeat);
 								break;
 							case SMPTE:
 								file ~= .format("%d:%d:%d:%d:%d", e.smpte.hours, e.smpte.minutes, e.smpte.seconds, e.smpte.frames, e.smpte.subFrames);
@@ -391,7 +390,6 @@ struct MIDIEvent
 	}
 	struct Tempo
 	{
-		float BPM;
 		int microsecondsPerBeat;
 	}
 	struct SMPTE

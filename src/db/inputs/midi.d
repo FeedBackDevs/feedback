@@ -13,20 +13,13 @@ class Midi : InputDevice
 		// this needs to be configured; mini triggers mapped to inputs
 	}
 
-	@property InstrumentType instrumentType() { return instrument; }
-	@property InputEvent[] events() { return stream; }
+	override @property InstrumentType instrumentType() { return instrument; }
 
-	void Update()
+	override void Update()
 	{
 		// read midi stream, populate events
 	}
 
-	void Clear(long until)
-	{
-		// clear all events before 'until'
-	}
-
 	int deviceId;
 	InstrumentType instrument;
-	InputEvent[] stream;
 }

@@ -7,6 +7,8 @@ import db.song;
 
 class Player
 {
+	@property InputDevice device() { return input.device; }
+
 	Profile profile;
 
 	struct Input
