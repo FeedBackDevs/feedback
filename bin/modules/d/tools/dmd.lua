@@ -8,7 +8,7 @@
 
 	local project = premake.project
 	local config = premake.config
-	
+
 --
 -- Set default tools
 --
@@ -48,24 +48,24 @@
 
 
 -- /////////////////////////////////////////////////////////////////////////
--- dmd + GCC toolchain						
+-- dmd + GCC toolchain
 -- /////////////////////////////////////////////////////////////////////////
 
 --
 -- dmd.gcc flags
 --
 
-	tdmd.gcc.sysflags = 
+	tdmd.gcc.sysflags =
 	{
 		universal = {
 			flags    = "",
-			ldflags  = "", 
+			ldflags  = "",
 		},
-		x32 = { 
+		x32 = {
 			flags    = "-m32",
-			ldflags  = "-L-L/usr/lib", 
+			ldflags  = "-L-L/usr/lib",
 		},
-		x64 = { 
+		x64 = {
 			flags    = "-m64",
 			ldflags  = "-L-L/usr/lib64",
 		}
@@ -242,20 +242,20 @@
 
 
 -- /////////////////////////////////////////////////////////////////////////
--- tdmd + OPTLINK toolchain						
+-- tdmd + OPTLINK toolchain
 -- /////////////////////////////////////////////////////////////////////////
 
-	tdmd.optlink.sysflags = 
+	tdmd.optlink.sysflags =
 	{
 		universal = {
 			flags    = "",
-			ldflags  = "", 
+			ldflags  = "",
 		},
-		x32 = { 
+		x32 = {
 			flags    = "",
-			ldflags  = "", 
+			ldflags  = "",
 		},
-		x64 = { 
+		x64 = {
 			flags    = "",
 			ldflags  = "",
 		}
@@ -372,4 +372,29 @@
 		premake.tools.dmd = tdmd.gcc
 		premake.tools.dmd.sysflags = tdmd.gcc.sysflags
 	end
-	
+
+	local dmd = premake.tools.dmd
+
+
+--
+-- Retrieves the executable command name for a tool, based on the
+-- provided configuration and the operating environment.
+--
+-- @param cfg
+--    The configuration to query.
+-- @param tool
+--    The tool to fetch, one of "dc" for the D compiler, or "ar" for the static linker.
+-- @return
+--    The executable command name for a tool, or nil if the system's
+--    default value should be used.
+--
+
+	dmd.tools = {
+		-- dmd will probably never support any foreign architectures...?
+	}
+
+	function dmd.gettoolname(cfg, tool)
+		local names = dmd.tools[cfg.architecture] or dmd.tools[cfg.system] or {}
+		local name = names[tool]
+		return name or dmd[tool]
+	end

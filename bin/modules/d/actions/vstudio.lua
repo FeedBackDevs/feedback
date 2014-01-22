@@ -26,7 +26,7 @@
 
 			premake.override(vs, "onproject", function(oldfn, prj)
 				oldfn(prj)
-				if premake.project.isd(prj) then
+				if project.isd(prj) then
 					premake.generate(prj, ".visualdproj", visuald.generate)
 				end
 			end)

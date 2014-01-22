@@ -20,9 +20,9 @@ solution "FeedBack"
 		language "D"
 
 		files { "src/**.d" }
-		files { "../Fuji/dist/include/d2/fuji/**.d" }
+		files { "../fuji/dist/include/d2/fuji/**.d" }
 
-		includedirs { "../fuji/dist/include/d2/" }
+		includedirs { "src/", "../fuji/dist/include/d2/" }
 		libdirs { "../fuji/dist/lib/x64" }
 
 		links { "Fuji" }

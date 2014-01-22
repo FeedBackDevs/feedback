@@ -9,7 +9,7 @@
 	local ldc = premake.tools.ldc
 	local project = premake.project
 	local config = premake.config
-	
+
     local d = premake.extensions.d
 
 
@@ -44,17 +44,17 @@
 -- Map platforms to flags
 --
 
-	ldc.sysflags = 
+	ldc.sysflags =
 	{
 		universal = {
 			flags    = "",
-			ldflags  = "", 
+			ldflags  = "",
 		},
-		x32 = { 
+		x32 = {
 			flags    = "-m32",
-			ldflags  = "-L-L/usr/lib", 
+			ldflags  = "-L-L/usr/lib",
 		},
-		x64 = { 
+		x64 = {
 			flags    = "-m64",
 			ldflags  = "-L-L/usr/lib64",
 		}
@@ -163,7 +163,7 @@
 			if not link.project.externalname then
 				local linkinfo = config.getlinkinfo(link)
 				if link.kind == premake.STATICLIB then
-					-- Don't use "-l" flag when linking static libraries; instead use 
+					-- Don't use "-l" flag when linking static libraries; instead use
 					-- path/libname.a to avoid linking a shared library of the same
 					-- name if one is present
 					table.insert(result, project.getrelative(cfg.project, linkinfo.abspath))
@@ -221,3 +221,26 @@
 		return sysflags.cfgsettings
 	end
 
+
+--
+-- Retrieves the executable command name for a tool, based on the
+-- provided configuration and the operating environment.
+--
+-- @param cfg
+--    The configuration to query.
+-- @param tool
+--    The tool to fetch, one of "dc" for the D compiler, or "ar" for the static linker.
+-- @return
+--    The executable command name for a tool, or nil if the system's
+--    default value should be used.
+--
+
+	ldc.tools = {
+		-- I think this is pointless; LDC uses compile flags to choose target architecture no?
+	}
+
+	function ldc.gettoolname(cfg, tool)
+		local names = ldc.tools[cfg.architecture] or ldc.tools[cfg.system] or {}
+		local name = names[tool]
+		return name or ldc[tool]
+	end

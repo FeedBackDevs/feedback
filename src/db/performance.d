@@ -13,6 +13,10 @@ import db.i.notetrack;
 import db.i.scorekeeper;
 import db.i.syncsource;
 
+import db.tracks.gh_drums;
+import db.scorekeepers.drums;
+import db.sync.systime;
+
 class Performer
 {
 	this(Performance performance, Player player, Sequence sequence)
@@ -25,8 +29,8 @@ class Performer
 		// Note: note track should be chosen accorting to the instrument type, and player preference for theme/style (GH/RB/Bemani?)
 		if(player.input.part == Part.Drums)
 		{
-			noteTrack = new db.tracks.gh_drums.GHDrums(performance.song);
-			scoreKeeper = new db.scorekeepers.drums.DrumsScoreKeeper(sequence, player.input.device);
+			noteTrack = new GHDrums(performance.song);
+			scoreKeeper = new DrumsScoreKeeper(sequence, player.input.device);
 		}
 	}
 
@@ -76,7 +80,7 @@ class Performance
 
 		ArrangePerformers();
 
-		sync = new db.sync.systime.SystemTimer;
+		sync = new SystemTimer;
 	}
 
 	~this()
