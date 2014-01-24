@@ -14,7 +14,9 @@ import db.i.scorekeeper;
 import db.i.syncsource;
 
 import db.tracks.gh_drums;
+import db.tracks.gh_guitar;
 import db.scorekeepers.drums;
+import db.scorekeepers.guitar;
 import db.sync.systime;
 
 class Performer
@@ -27,7 +29,12 @@ class Performer
 
 		// HACK: hardcoded classes for the moment...
 		// Note: note track should be chosen accorting to the instrument type, and player preference for theme/style (GH/RB/Bemani?)
-		if(player.input.part == Part.Drums)
+		if(player.input.part == Part.LeadGuitar)
+		{
+			noteTrack = new GHGuitar(performance.song);
+			scoreKeeper = new GuitarScoreKeeper(sequence, player.input.device);
+		}
+		else if(player.input.part == Part.Drums)
 		{
 			noteTrack = new GHDrums(performance.song);
 			scoreKeeper = new DrumsScoreKeeper(sequence, player.input.device);
@@ -75,7 +82,7 @@ class Performance
 		foreach(p; players)
 		{
 			if(song.IsPartPresent(p.input.part))
-				performers ~= new Performer(this, p, song.variations[p.input.part][0].difficulties.back);
+				performers ~= new Performer(this, p, song.parts[p.input.part].variations[0].difficulties.back);
 		}
 
 		ArrangePerformers();
@@ -98,7 +105,7 @@ class Performance
 
 		// HACK: just arrange horizontally for now...
 		MFRect r = void;
-		MFDisplay_GetNativeRes(&r);
+		MFDisplay_GetDisplayRect(&r);
 		r.width /= performers.length;
 		foreach(i, p; performers)
 		{

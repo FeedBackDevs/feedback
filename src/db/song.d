@@ -9,6 +9,10 @@ import fuji.sound;
 import std.conv : to;
 import std.range : empty, back;
 import std.algorithm : max;
+import std.string;
+
+
+enum GHVersion { Unknown, GH, GH2, GH3, GHWT, GHA, GHM, GH5, GHWoR, BH, RB, RB2, RB3 }
 
 // music files (many of these may or may not be available for different songs)
 enum MusicFiles
@@ -33,53 +37,17 @@ enum MusicFiles
 	Count
 }
 
-enum SyncEventType
+struct SongPart
 {
-	Unknown,
-
-	BPM,
-	Anchor,
-	TimeSignature
-}
-
-enum SongEventType
-{
-	Unknown,
-
-	Event,
-}
-
-struct SyncEvent
-{
-	alias EventType = SyncEventType;
-
-	SyncEventType event;
-
-	long time;		// the real-time of the note (in microseconds)
-	int tick;		// in ticks
-	union
-	{
-		uint usPerBeat;
-		int timeSignature;
-	}
-}
-
-struct SongEvent
-{
-	alias EventType = SongEventType;
-
-	SongEventType event;
-
-	long time;		// the physical time of the note (in microseconds)
-	int tick;		// in ticks
-
-	string text;
+	Part part;
+	Event[] events;			// events for the entire part (animation, etc)
+	Variation[] variations;	// variations for the part (different versions, instrument variations (4/5/pro drums, etc), customs...
 }
 
 struct Variation
 {
 	string name;
-	Sequence[] difficulties;
+	Sequence[] difficulties;	// sequences for each difficulty
 }
 
 class Song
@@ -88,14 +56,29 @@ class Song
 	{
 	}
 
-	this(MIDIFile midi)
+	GHVersion DetectVersion(MIDIFile midi)
+	{
+		foreach(i, t; midi.tracks)
+		{
+			auto name = t.getFront();
+			while(!name.isEvent(MIDIEvents.TrackName))
+				name = t.getFront();
+
+			if(name.text[] == "T1 GEMS")
+				return GHVersion.GH;
+		}
+
+		return GHVersion.Unknown;
+	}
+
+	this(MIDIFile midi, GHVersion ghVer = GHVersion.Unknown)
 	{
 		immutable auto difficulties = [ "Easy", "Medium", "Hard", "Expert" ];
 
-		enum GHVersion { Unknown, GH, GH2, GH3, GHWT, GHA, GHM, GH5, GHWoR, BH, RB, RB2, RB3 }
-		GHVersion ghVer;
-
 		assert(midi.format == 1, "Unsupported midi format!");
+
+		if(ghVer == GHVersion.Unknown)
+			ghVer = DetectVersion(midi);
 
 		resolution = midi.ticksPerBeat;
 
@@ -108,6 +91,7 @@ class Song
 			assert(name.isEvent(MIDIEvents.TrackName), "Expected track name");
 
 			Part part;
+			bool bIsEventTrack = true;
 			string variation = "Default";
 			ptrdiff_t v = -1;
 
@@ -124,53 +108,55 @@ class Song
 				switch(name.text)
 				{
 					case "T1 GEMS":
-						ghVer = GHVersion.GH;
-						part = Part.LeadGuitar;
-						break;
-					case "PART GUITAR":			part = Part.LeadGuitar; break;
-					case "PART GUITAR COOP":	part = Part.LeadGuitar; variation = "Co-op"; break;
-					case "PART RHYTHM":			part = Part.RhythmGuitar; break;
-					case "PART BASS":			part = Part.Bass; break;
-					case "PART DRUMS":			part = Part.Drums; break;
-					case "PART VOCALS":			part = Part.Vox; break;
+					case "PART GUITAR":			part = Part.LeadGuitar; bIsEventTrack = false; break;
+					case "PART GUITAR COOP":	part = Part.LeadGuitar; variation = "Co-op"; bIsEventTrack = false; break;
+					case "PART RHYTHM":			part = Part.RhythmGuitar; bIsEventTrack = false; break;
+					case "PART BASS":			part = Part.Bass; bIsEventTrack = false; break;
+					case "PART DRUMS":			part = Part.Drums; bIsEventTrack = false; break;
+					case "PART VOCALS":			part = Part.Vox; bIsEventTrack = false; break;
 					case "EVENTS":
 						break;
 					case "VENUE":
 						break;
 					case "BAND SINGER":
 						// Contains text events that control the animation state of the band singer.
-						continue;
+						part = Part.Vox;
+						break;
 					case "BAND BASS":
 						// Contains text events that control the animation state of the band bassist.
 						// If the co-op track is rhythm guitar, this track will also contain fret hand animation note data for the bassist in the same format as the lead guitar track.
-						continue;
+						part = Part.Bass;
+						break;
 					case "BAND DRUMS":
 						// Contains text events that control the animation state of the band drummer.
-						continue;
+						part = Part.Drums;
+						break;
 					case "BAND KEYS":
 						// Contains text events that control the animation state of the band keyboard player.
-						continue;
+						part = Part.Keys;
+						break;
 					case "TRIGGERS":
 						// GH1 + GH2: The contents of this track are not known.
-						continue;
+						break;
 					case "ANIM":
 						// GH1: This track contains events used to control the animation of the hands of the guitarist.
-						continue;
+						part = Part.LeadGuitar;
+						break;
 					case "BEAT":
 						// This track counts the beats, 'on' on 1's, 'off's on other beats.
-						continue;
+						break;
 					default:
 						MFDebug_Warn(2, "Unknown track: " ~ name.text);
 				}
 
-				if(part != Part.Unknown)
+				if(part != Part.Unknown && !bIsEventTrack)
 				{
-					v = variations[part].length;
-					variations[part] ~= Variation(variation);
+					v = parts[part].variations.length;
+					parts[part].variations ~= Variation(variation);
 
 					// Note: Vox track only has one difficulty...
-					variations[part][v].difficulties = new Sequence[part == Part.Vox ? 1 : difficulties.length];
-					foreach(j, ref d; variations[part][v].difficulties)
+					parts[part].variations[v].difficulties = new Sequence[part == Part.Vox ? 1 : difficulties.length];
+					foreach(j, ref d; parts[part].variations[v].difficulties)
 					{
 						d = new Sequence;
 						d.part = part;
@@ -182,8 +168,13 @@ class Song
 			}
 
 			// parse the events
-			foreach(e; t)
+			MIDIEvent*[128] currentNotes;
+			Event*[128] currentEvents;
+			foreach(ref e; t)
 			{
+				Event ev;
+				ev.tick = e.tick;
+
 				if(e.type == MIDIEventType.Custom)
 				{
 					switch(e.subType) with(MIDIEvents)
@@ -192,152 +183,279 @@ class Song
 						case TimeSignature:
 							assert(e.timeSignature.denominator == 2 && e.timeSignature.clocks == 24 && e.timeSignature.d == 8, "Unexpected!");
 
-							SyncEvent se;
-							se.event = SyncEventType.TimeSignature;
-							se.tick = e.tick;
-							se.timeSignature = e.timeSignature.numerator;
-							sync ~= se;
+							ev.event = EventType.TimeSignature;
+							ev.ts.numerator = e.timeSignature.numerator;
+							sync ~= ev;
 							break;
 						case Tempo:
-							SyncEvent se;
-							se.event = SyncEventType.BPM;
-							se.tick = e.tick;
-							se.usPerBeat = e.tempo.microsecondsPerBeat;
-							sync ~= se;
+							ev.event = EventType.BPM;
+							ev.bpm.usPerBeat = e.tempo.microsecondsPerBeat;
+							sync ~= ev;
 							break;
 
 						// other track events
 						case Text:
-							string text = e.text;
+							string text = e.text.strip;
 							if(text[0] == '[' && text[$-1] == ']')
 							{
 								// it's an event
 								text = text[1..$-1];
-
-								string event = e.text[1..$-1];
-								if(part == Part.Unknown)
-								{
-									// stash it in the events track
-									SongEvent ev;
-									ev.event = SongEventType.Event;
-									ev.tick = e.tick;
-									ev.text = e.text;
-									events ~= ev;
-								}
-								else
-								{
-									// stash it in the part (all difficulties)
-									Event ev;
-									ev.event = EventType.Event;
-									ev.tick = e.tick;
-									ev.stringParam = e.text;
-
-									foreach(seq; variations[part][v].difficulties)
-										seq.notes ~= ev;
-								}
 							}
-							else if(part == Part.Vox)
+							else if(part == Part.Vox && !bIsEventTrack)
 							{
 								// Note: some songs seem to use strings without [] instead of lyrics
 								goto case Lyric;
+							}
+
+							if(part == Part.Unknown)
+							{
+								// stash it in the events track
+								ev.event = EventType.Event;
+								ev.text = text;
+								events ~= ev;
+							}
+							else
+							{
+								// stash it in the part (all difficulties)
+								ev.event = EventType.Event;
+								ev.text = text;
+								parts[part].events ~= ev;
 							}
 							break;
 						case Lyric:
 							if(part != Part.Vox)
 							{
-								MFDebug_Warn(2, "Lyrics not on Vox track?!".ptr);
+								MFDebug_Warn(2, "[" ~ name.text ~ "] Lyrics not on Vox track?!");
 								continue;
 							}
 
-							Event ev;
 							ev.event = EventType.Lyric;
-							ev.tick = e.tick;
-							ev.stringParam = e.text;
+							ev.text = e.text;
 
-							variations[part][v].difficulties[0].notes ~= ev;
+							// Note: keeping lyrics in variation means we can support things like 'misheard lyric' variations ;)
+							parts[part].variations[v].difficulties[0].notes ~= ev;
 							break;
 						case EndOfTrack:
 							// TODO: should we validate that the track actually ends?
 							break;
 						default:
-							MFDebug_Warn(2, "Unexpected event: " ~ to!string(e.subType));
+							MFDebug_Warn(2, "[" ~ name.text ~ "] Unexpected event: " ~ to!string(e.subType));
 					}
+					continue;
 				}
-				else if(e.type == MIDIEventType.Note)
+
+				if(e.type != MIDIEventType.NoteOff && e.type != MIDIEventType.NoteOn)
 				{
-					switch(part)
+					MFDebug_Warn(2, "[" ~ name.text ~ "] Unexpected event: " ~ to!string(e.type));
+					continue;
+				}
+				if(e.type == MIDIEventType.NoteOff || (e.type == MIDIEventType.NoteOn && e.note.velocity == 0))
+				{
+					if(currentNotes[e.note.note] == null)
 					{
-						case Part.LeadGuitar:
-						case Part.RhythmGuitar:
-						case Part.Bass:
-						case Part.Drums:
-							Event ev;
-							ev.tick = e.tick;
+						MFDebug_Warn(2, "[" ~ name.text ~ "] Note already up: " ~ to!string(e.note.note));
+						continue;
+					}
 
-							// if it within a difficulty bracket?
-							int difficulty = -1;
-							if(e.note.note >= 60 && e.note.note < 72)
-								difficulty = 0;
-							else if(e.note.note >= 72 && e.note.note < 84)
-								difficulty = 1;
-							else if(e.note.note >= 84 && e.note.note < 96)
-								difficulty = 2;
-							else if(e.note.note >= 96 && e.note.note < 108)
-								difficulty = 3;
+					int duration = e.tick - currentNotes[e.note.note].tick;
 
-							if(difficulty != -1)
+					// Note: allegedly, in GH1, notes less than 161 length were rejected...
+//					if(ghVer == GHVersion.GH && duration < 161 && !bIsEventTrack && currentEvents[e.note.note])
+//					{
+//						MFDebug_Warn(2, "[" ~ name.text ~ "] Note is invalid, must be removed: " ~ to!string(e.note.note));
+//					}
+
+					// Note: 240 (1/8th) seems like an established minimum sustain
+					if(duration >= 240 && currentEvents[e.note.note])
+						currentEvents[e.note.note].duration = duration;
+
+					currentNotes[e.note.note] = null;
+					currentEvents[e.note.note] = null;
+					continue;
+				}
+				if(e.type == MIDIEventType.NoteOn)
+				{
+					if(currentNotes[e.note.note] != null)
+						MFDebug_Warn(2, "[" ~ name.text ~ "] Note already down: " ~ to!string(e.note.note));
+
+					currentNotes[e.note.note] = &e;
+				}
+				if(bIsEventTrack)
+				{
+/*
+					// TODO: event track notes mean totally different stuff (scene/player animation, etc)
+					ev.event = EventType.MIDI;
+					ev.midi.type = e.type;
+					ev.midi.subType = e.subType;
+					ev.midi.channel = e.note.channel;
+					ev.midi.note = e.note.note;
+					ev.midi.velocity = e.note.velocity;
+					if(part != Part.Unknown)
+					{
+						parts[part].events ~= ev;
+						currentEvents[e.note.note] = &parts[part].events.back;
+					}
+					else
+					{
+						events ~= ev;
+						currentEvents[e.note.note] = &events.back;
+					}
+*/
+					continue;
+				}
+
+				switch(part)
+				{
+					case Part.LeadGuitar:
+					case Part.RhythmGuitar:
+					case Part.Bass:
+					case Part.Drums:
+						// if it within a difficulty bracket?
+						int difficulty = -1;
+						if(e.note.note >= 60 && e.note.note < 72)
+							difficulty = 0;
+						else if(e.note.note >= 72 && e.note.note < 84)
+							difficulty = 1;
+						else if(e.note.note >= 84 && e.note.note < 96)
+							difficulty = 2;
+						else if(e.note.note >= 96 && e.note.note < 108)
+							difficulty = 3;
+
+						if(difficulty != -1)
+						{
+							int[4] offset = [ 60, 72, 84, 96 ];
+							int note = e.note.note - offset[difficulty];
+
+							if(note <= 4)
 							{
-								int[4] offset = [ 60, 72, 84, 96 ];
-								int note = e.note.note - offset[difficulty];
-
-								if(note <= 4)
-								{
-									ev.event = EventType.Note;
-									ev.key = e.note.note - 60;
-								}
-								else if(note == 7)
-									ev.event = EventType.StarPower;
-								else if(note == 9)
-									ev.event = EventType.LeftPlayer;
-								else if(note == 10)
-									ev.event = EventType.RightPlayer;
-
-								variations[part][v].difficulties[difficulty].notes ~= ev;
+								ev.event = EventType.Note;
+								ev.note.key = note;
+							}
+							else if(note == 5)
+							{
+								// forced strum
+							}
+							else if(note == 6)
+							{
+								// forced pick
+							}
+							else if(note == 7)
+							{
+								ev.event = EventType.Special;
+								ev.special = SpecialType.StarPower;
+							}
+							else if(note == 9)
+							{
+								ev.event = EventType.Special;
+								ev.special = SpecialType.LeftPlayer;
+							}
+							else if(note == 10)
+							{
+								ev.event = EventType.Special;
+								ev.special = SpecialType.RightPlayer;
 							}
 							else
+								MFDebug_Warn(2, "[" ~ name.text ~ "] Unknown " ~ to!string(part) ~ " note: " ~ to!string(note));
+
+							if(ev.event != EventType.Unknown)
 							{
-								// events here are not difficulty specific, and apply to all difficulties
-								switch(ev.key)
-								{
-//									case 108: ev.event = EventType.; break; // singer mouth open/close
-//									case 110: ev.event = ???; break;		// unknown event added to GH2
-									case 116: ev.event = EventType.Overdrive; break;
-									case 124: ev.event = EventType.FreeStyle; break;
-									default:
-										// TODO: there are still a bunch of unknown notes...
-//										MFDebug_Warn(2, "Unknown note: " ~ to!string(part) ~ " " ~ to!string(e.note.note));
-										break;
-								}
-
-								if(ev.event != EventType.Unknown)
-								{
-									foreach(seq; variations[part][v].difficulties)
-										seq.notes ~= ev;
-								}
+								parts[part].variations[v].difficulties[difficulty].notes ~= ev;
+								currentEvents[e.note.note] = &parts[part].variations[v].difficulties[difficulty].notes.back;
 							}
-							break;
+						}
+						else
+						{
+							// events here are not difficulty specific, and apply to all difficulties
+							switch(e.note.note)
+							{
+//								case 12-15:								// RB: h2h camera cuts and focus notes
+//								case 40-59:								// RB - guitar/bass: fret animation
+//								case 24-27, 30-31, 34-42, 46-51:		// RB - drums: animation 
 
-						case Part.Vox:
-							// TODO: read vox...
-							break;
+								case 108:
+									// GH1: singer mouth open/close
+									if(ghVer == GHVersion.GH)
+									{
+										// TODO: this needs to be an event with duration...
+										ev.event = EventType.Event;
+										ev.text = "open_mouth";
+										parts[Part.Vox].events ~= ev;
+										currentEvents[e.note.note] = &parts[Part.Vox].events.back;
+										continue;
+									}
+									goto default;
 
-						default:
-							// TODO: there are still many notes in unknown parts...
-							break;
-					}
+//								case 110: ev.event = ???; break;		// GH2: unknown guitar event
+
+								case 110: .. case 112:
+									// RB: tom's instead of cymbals
+									if(part == Part.Drums)
+									{
+										// TODO: change the RBG cymbals to tom's
+
+										// HACK: add them as separate notes so we can visualise them...
+										ev.event = EventType.Note;
+										ev.note.key = 5 + e.note.note-110;
+										foreach(seq; parts[Part.Drums].variations[v].difficulties)
+										{
+											seq.notes ~= ev;
+											currentEvents[e.note.note] = &seq.notes.back;	// TODO: *FIXME* this get's overwritten 4 times, and only the last one will get sustain!
+										}
+										continue;
+									}
+									goto default;
+
+								case 116:
+									ev.event = EventType.Special;
+									ev.special = SpecialType.Overdrive;
+									foreach(seq; parts[part].variations[v].difficulties)
+									{
+										seq.notes ~= ev;
+										currentEvents[e.note.note] = &seq.notes.back;	// TODO: *FIXME* this get's overwritten 4 times, and only the last one will get sustain!
+									}
+									break;
+
+								case 120:	// RB: drum fills
+								case 121:
+								case 122:
+								case 123:
+									// Note: Freestyle always triggers all notes from 120-124, so we'll ignore 120-123.
+									break;
+								case 124:
+									ev.event = EventType.Special;
+									ev.special = SpecialType.FreeStyle;
+									foreach(seq; parts[part].variations[v].difficulties)
+									{
+										seq.notes ~= ev;
+										currentEvents[e.note.note] = &seq.notes.back;	// TODO: *FIXME* this get's overwritten 4 times, and only the last one will get sustain!
+									}
+									break;
+
+								default:
+									// TODO: there are still a bunch of unknown notes...
+//									MFDebug_Warn(2, "Unknown note: " ~ to!string(part) ~ " " ~ to!string(e.note.note));
+									ev.event = EventType.MIDI;
+									ev.midi.type = e.type;
+									ev.midi.subType = e.subType;
+									ev.midi.channel = e.note.channel;
+									ev.midi.note = e.note.note;
+									ev.midi.velocity = e.note.velocity;
+
+									parts[part].events ~= ev;
+									currentEvents[e.note.note] = &parts[part].events.back;
+									continue;
+							}
+						}
+						break;
+
+					case Part.Vox:
+						// TODO: read vox...
+						break;
+
+					default:
+						// TODO: there are still many notes in unknown parts...
+						break;
 				}
-				else
-					MFDebug_Warn(2, "Invalid event type: " ~ to!string(e.type));
 			}
 		}
 	}
@@ -379,9 +497,9 @@ class Song
 
 		// calculate the note times for all tracks
 		CalculateNoteTimes(events, 0);
-		foreach(p; variations)
+		foreach(ref p; parts)
 		{
-			foreach(v; p)
+			foreach(ref v; p.variations)
 			{
 				foreach(d; v.difficulties)
 					CalculateNoteTimes(d.notes, 0);
@@ -443,16 +561,16 @@ class Song
 
 	bool IsPartPresent(Part part)
 	{
-		return variations[part] != null;
+		return parts[part].variations != null;
 	}
 
 	int GetLastNoteTick()
 	{
 		// find the last event in the song
 		int lastTick = sync.empty ? 0 : sync.back.tick;
-		foreach(p; variations)
+		foreach(ref p; parts)
 		{
-			foreach(v; p)
+			foreach(ref v; p.variations)
 			{
 				foreach(d; v.difficulties)
 					lastTick = max(lastTick, d.notes.empty ? 0 : d.notes.back.tick);
@@ -467,8 +585,8 @@ class Song
 		{
 			if(e.tick != 0)
 				break;
-			if(e.event == SyncEventType.BPM || e.event == SyncEventType.Anchor)
-				return e.usPerBeat;
+			if(e.event == EventType.BPM || e.event == EventType.Anchor)
+				return e.bpm.usPerBeat;
 		}
 
 		return 60000000/120; // microseconds per beat
@@ -483,12 +601,12 @@ class Song
 
 		foreach(si, ref sev; sync)
 		{
-			if(sev.event == SyncEventType.BPM || sev.event == SyncEventType.Anchor)
+			if(sev.event == EventType.BPM || sev.event == EventType.Anchor)
 			{
 				tempoTime = cast(long)(sev.tick - offset)*microsecondsPerBeat/resolution;
 
 				// calculate event time (if event is not an anchor)
-				if(sev.event != SyncEventType.Anchor)
+				if(sev.event != EventType.Anchor)
 					sev.time = playTime + tempoTime;
 
 				// calculate note times
@@ -500,26 +618,26 @@ class Song
 				}
 
 				// increment play time to BPM location
-				if(sev.event == SyncEventType.Anchor)
+				if(sev.event == EventType.Anchor)
 					playTime = sev.time;
 				else
 					playTime += tempoTime;
 
 				// find if next event is an anchor or not
-				for(auto i = si + 1; i < sync.length && sync[i].event != SyncEventType.BPM; ++i)
+				for(auto i = si + 1; i < sync.length && sync[i].event != EventType.BPM; ++i)
 				{
-					if(sync[i].event == SyncEventType.Anchor)
+					if(sync[i].event == EventType.Anchor)
 					{
 						// if it is, we need to calculate the BPM for this interval
 						long timeDifference = sync[i].time - sev.time;
 						int tickDifference = sync[i].tick - sev.tick;
-						sev.usPerBeat = cast(uint)(timeDifference*resolution/tickDifference);
+						sev.bpm.usPerBeat = cast(uint)(timeDifference*resolution/tickDifference);
 						break;
 					}
 				}
 
 				// update microsecondsPerBeat
-				microsecondsPerBeat = sev.usPerBeat;
+				microsecondsPerBeat = sev.bpm.usPerBeat;
 
 				offset = sev.tick;
 			}
@@ -543,12 +661,12 @@ class Song
 		int offset, currentUsPB;
 		long time;
 
-		SyncEvent *pEv = GetMostRecentSyncEvent(tick);
+		Event *pEv = GetMostRecentSyncEvent(tick);
 		if(pEv)
 		{
 			time = pEv.time;
 			offset = pEv.tick;
-			currentUsPB = pEv.usPerBeat;
+			currentUsPB = pEv.bpm.usPerBeat;
 		}
 		else
 		{
@@ -563,15 +681,15 @@ class Song
 		return time;
 	}
 
-	SyncEvent* GetMostRecentSyncEvent(int tick)
+	Event* GetMostRecentSyncEvent(int tick)
 	{
-		auto e = sync.GetMostRecentEvent(tick, SyncEventType.BPM, SyncEventType.Anchor);
+		auto e = sync.GetMostRecentEvent(tick, EventType.BPM, EventType.Anchor);
 		return e < 0 ? null : &sync[e];
 	}
 
-	SyncEvent* GetMostRecentSyncEventTime(long time)
+	Event* GetMostRecentSyncEventTime(long time)
 	{
-		auto e = sync.GetMostRecentEventByTime(time, SyncEventType.BPM, SyncEventType.Anchor);
+		auto e = sync.GetMostRecentEventByTime(time, EventType.BPM, EventType.Anchor);
 		return e < 0 ? null : &sync[e];
 	}
 
@@ -581,13 +699,13 @@ class Song
 		long lastEventTime;
 		int lastEventOffset;
 
-		SyncEvent *e = GetMostRecentSyncEventTime(time);
+		Event *e = GetMostRecentSyncEventTime(time);
 
 		if(e)
 		{
 			lastEventTime = e.time;
 			lastEventOffset = e.tick;
-			currentUsPerBeat = e.usPerBeat;
+			currentUsPerBeat = e.bpm.usPerBeat;
 		}
 		else
 		{
@@ -634,9 +752,9 @@ class Song
 
 	long startOffset;				// starting offset, in microseconds
 
-	SyncEvent[] sync;				// song sync stuff
-	SongEvent[] events;				// general song events (effects, lighting, etc?)
-	Variation[][Part.Count] variations;
+	Event[] sync;					// song sync stuff
+	Event[] events;					// general song/venue events (sections, effects, lighting, etc?)
+	SongPart[Part.Count] parts;
 
 	MFMaterial* pCover;
 	MFMaterial* pBackground;
@@ -650,7 +768,7 @@ class Song
 // Binary search on the events
 // before: true = return event one before requested time, false = return event one after requested time
 // type: "tick", "time" to search by tick or by time
-private ptrdiff_t GetEventForOffset(bool before, bool byTime, E)(E[] events, long offset)
+private ptrdiff_t GetEventForOffset(bool before, bool byTime)(Event[] events, long offset)
 {
 	enum member = byTime ? "time" : "tick";
 
@@ -720,7 +838,7 @@ ptrdiff_t SkipEvents(bool reverse = false, E, Types...)(E[] events, ptrdiff_t e,
 }
 
 // skip events until we find one we're looking for
-ptrdiff_t SkipToEvents(bool reverse = false, E, Types...)(E[] events, ptrdiff_t e, Types types) if(AllIs!(E.EventType, Types))
+ptrdiff_t SkipToEvents(bool reverse = false, Types...)(Event[] events, ptrdiff_t e, Types types) if(AllIs!(EventType, Types))
 {
 	for(; (reverse && e >= 0) || (!reverse && e < events.length); e += reverse ? -1 : 1)
 	{
@@ -734,7 +852,7 @@ ptrdiff_t SkipToEvents(bool reverse = false, E, Types...)(E[] events, ptrdiff_t 
 }
 
 // get all events at specified tick
-E[] EventsAt(E)(E[] events, int tick)
+Event[] EventsAt(Event[] events, int tick)
 {
 	ptrdiff_t i = events.GetEventForOffset!(false, false)(tick);
 	if(i != tick)
@@ -745,7 +863,7 @@ E[] EventsAt(E)(E[] events, int tick)
 	return events[i..e+1];
 }
 
-ptrdiff_t FindEvent(E, ET = E.EventType)(E[] events, ET type, int tick, int key = 0)
+ptrdiff_t FindEvent(Event[] events, EventType type, int tick, int key = -1)
 {
 	// find the events at the requested offset
 	auto ev = events.EventsAt(tick);
@@ -757,19 +875,14 @@ ptrdiff_t FindEvent(E, ET = E.EventType)(E[] events, ET type, int tick, int key 
 	{
 		if(!type || e.event == type)
 		{
-			static if(__traits(hasMember, E, "key")) // SyncEvent's don't have a 'key'.
-			{
-				if(e.key == key)
-					return &e - events.ptr;
-			}
-			else
+			if(key == -1 || e.note.key == key)
 				return &e - events.ptr; // return it as an index (TODO: should this return a ref instead?)
 		}
 	}
 	return -1;
 }
 
-private ptrdiff_t GetEvent(bool reverse, bool byTime, E, Types...)(E[] events, long offset, Types types) if(AllIs!(E.EventType, Types))
+private ptrdiff_t GetEvent(bool reverse, bool byTime, Types...)(Event[] events, long offset, Types types) if(AllIs!(EventType, Types))
 {
 	ptrdiff_t e = events.GetEventForOffset!(reverse, byTime)(offset);
 	if(e < 0 || Types.length == 0)
@@ -777,22 +890,48 @@ private ptrdiff_t GetEvent(bool reverse, bool byTime, E, Types...)(E[] events, l
 	return events.SkipToEvents!reverse(e, types);
 }
 
-ptrdiff_t GetNextEvent(E, Types...)(E[] events, int tick, Types types) if(AllIs!(E.EventType, Types))
+ptrdiff_t GetNextEvent(Types...)(Event[] events, int tick, Types types) if(AllIs!(EventType, Types))
 {
 	return events.GetEvent!(false, false)(tick, types);
 }
 
-ptrdiff_t GetNextEventByTime(E, Types...)(E[] events, long time, Types types) if(AllIs!(E.EventType, Types))
+ptrdiff_t GetNextEventByTime(Types...)(Event[] events, long time, Types types) if(AllIs!(EventType, Types))
 {
 	return events.GetEvent!(false, true)(time, types);
 }
 
-ptrdiff_t GetMostRecentEvent(E, Types...)(E[] events, int tick, Types types) if(AllIs!(E.EventType, Types))
+ptrdiff_t GetMostRecentEvent(Types...)(Event[] events, int tick, Types types) if(AllIs!(EventType, Types))
 {
 	return events.GetEvent!(true, false)(tick, types);
 }
 
-ptrdiff_t GetMostRecentEventByTime(E, Types...)(E[] events, long time, Types types) if(AllIs!(E.EventType, Types))
+ptrdiff_t GetMostRecentEventByTime(Types...)(Event[] events, long time, Types types) if(AllIs!(EventType, Types))
 {
 	return events.GetEvent!(true, true)(time, types);
+}
+
+Event[] Between(Event[] events, int startTick, int endTick)
+{
+	assert(endTick >= startTick, "endTick must be greater than startTick");
+	size_t first = events.GetNextEvent(startTick);
+	size_t last = events.GetNextEvent(endTick+1);
+	if(first == -1)
+		return events[$..$];
+	else if(last == -1)
+		return events[first..$];
+	else
+		return events[first..last];
+}
+
+Event[] BetweenTimes(Event[] events, long startTime, long endTime)
+{
+	assert(endTime >= startTime, "endTime must be greater than startTime");
+	size_t first = events.GetNextEventByTime(startTime);
+	size_t last = events.GetNextEventByTime(endTime+1);
+	if(first == -1)
+		return events[$..$];
+	else if(last == -1)
+		return events[first..$];
+	else
+		return events[first..last];
 }

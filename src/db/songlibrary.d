@@ -125,7 +125,7 @@ class SongLibrary
 				if(filepart[] == "rhythm")
 				{
 					// 'rhythm.ogg' is also be used for bass
-					if(song.variations[Part.RhythmGuitar])
+					if(song.parts[Part.RhythmGuitar].variations)
 						song.musicFiles[MusicFiles.Rhythm] = f.filename;
 					else
 						song.musicFiles[MusicFiles.Bass] = f.filename;

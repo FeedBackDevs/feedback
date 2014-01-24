@@ -8,6 +8,7 @@ import db.instrument;
 import db.performance;
 import db.renderer;
 import db.song;
+import db.sequence;
 
 import core.stdc.math;
 
@@ -15,14 +16,18 @@ class GHDrums : NoteTrack
 {
 	this(Song song)
 	{
-//		asm { int 3; }
+		this.song = song;
 
 		string fb = song.fretboard ? song.fretboard : "fretboard0";
 		fretboard = Material(fb);
-		fretboard.parameters.zread = false;
+		auto params = fretboard.parameters;
+		params.zread = false;
+		params.minfilter["diffuse"] = MFTexFilter.Anisotropic;
+		params.addressu["diffuse"] = MFTexAddressMode.Clamp;
 
 		bar = Material("bar");
 		bar.parameters.zread = false;
+
 		edge = Material("edge");
 		edge.parameters.zread = false;
 	}
@@ -37,15 +42,19 @@ class GHDrums : NoteTrack
 		return InstrumentType.Drums;
 	}
 
+	@property float laneWidth()
+	{
+		return fretboardWidth / numLanes;
+	}
+
 	void Update()
 	{
 	}
 
 	void Draw(ref MFRect vp, long offset, Performer performer)
 	{
-		float time = offset * (1.0f/1_000_000.0f);
-
-		Song song = performer.performance.song;
+		// HACK: horrible rendering code!
+		// stolen from the old C++ feedback, but it'll do for now...
 
 		MFView_Push();
 
@@ -67,39 +76,28 @@ class GHDrums : NoteTrack
 		}
 
 		// capture the view stateblock
-		MFStateBlock* pViewState = MFStateBlock_Clone(MFView_GetViewState());
+		MFStateBlock* pViewState = cast(MFStateBlock*)MFView_GetViewState();
 		MFStateBlock_SetViewport(pViewState, vp);
 
+		// calculate some variables
+		float columnWidth = fretboardWidth / numLanes;
+		float halfFB = fretboardWidth*0.5f;
+		float ringBorder = 0.1f;
 
-		// HACK: horrible way to render!
-		// stolen from the old C++ feedback, but it'll do for now...
+		long topTime, bottomTime;
+		GetVisibleRange(offset, null, null, &bottomTime, &topTime);
+
+		// draw the track surface
 		MFMaterial_SetMaterial(fretboard);
 		MFPrimitive(PrimType.TriStrip, 0);
 
-		int start = -4;
-		int end = 60;
-		int fadeStart = end - 10;
-
-		float fretboardRepeat = 15.0f;
-		float fretboardWidth = 7.0f;
-
-		float columnWidth = fretboardWidth / 5.0f;
-		float ringBorder = 0.1f;
-
-		// draw the fretboard...
 		MFBegin(((end-start) / 4) * 2 + 2);
 		MFSetColourV(MFVector.white);
 
-		float halfFB = fretboardWidth*0.5f;
-
-		enum float scrollSpeed = 12;
-
-		float scrollOffset = time*scrollSpeed;
-		float topTime = time + end/scrollSpeed;
-		float bottomTime = time + start/scrollSpeed;
+		float scrollOffset = offset*scrollSpeed * (1.0f/1_000_000.0f);
+		float textureOffset = fmodf(scrollOffset, fretboardRepeat);
 
 		int a;
-		float textureOffset = fmodf(scrollOffset, fretboardRepeat);
 		for(a=start; a<=end; a+=4)
 		{
 			float z = cast(float)a;
@@ -131,10 +129,10 @@ class GHDrums : NoteTrack
 
 		MFMaterial_SetMaterial(edge);
 		MFPrimitive(PrimType.TriStrip, 0);
-		MFBegin(34);
+		MFBegin(10 + 6*(numLanes-1));
 
 		MFSetColour(0.0f, 0.0f, 0.0f, 0.3f);
-		for(int col=1; col<5; col++)
+		for(int col=1; col<numLanes; col++)
 		{
 			if(col > 1)
 				MFSetPosition(-halfFB + columnWidth*cast(float)col - 0.02f, 0.0f, cast(float)end);
@@ -182,12 +180,12 @@ class GHDrums : NoteTrack
 		MFMaterial_SetMaterial(bar);
 		MFPrimitive(PrimType.TriStrip, 0);
 
-		int bottomTick = song.CalculateTickAtTime(cast(long)(bottomTime*1_000_000.0f));
+		int bottomTick = song.CalculateTickAtTime(bottomTime);
 		int res = song.resolution;
 		int ticks = bHalfFrets ? res/2 : res;
 		int fretBeat = bottomTick + ticks - 1;
 		fretBeat -= fretBeat % ticks;
-		float fretTime = song.CalculateTimeOfTick(fretBeat) * (1.0f/1_000_000.0f);
+		long fretTime = song.CalculateTimeOfTick(fretBeat);
 
 		while(fretTime < topTime)
 		{
@@ -196,10 +194,10 @@ class GHDrums : NoteTrack
 
 			if(!halfBeat)
 			{
-				ptrdiff_t lastTS = song.sync.GetMostRecentEvent(fretBeat, SyncEventType.TimeSignature);
+				ptrdiff_t lastTS = song.sync.GetMostRecentEvent(fretBeat, EventType.TimeSignature);
 
 				if(lastTS != -1)
-					bar = ((fretBeat - song.sync[lastTS].tick) % (song.sync[lastTS].timeSignature*res)) == 0;
+					bar = ((fretBeat - song.sync[lastTS].tick) % (song.sync[lastTS].ts.numerator*res)) == 0;
 				else if(fretBeat == 0)
 					bar = true;
 			}
@@ -207,7 +205,7 @@ class GHDrums : NoteTrack
 			float bw = bar ? barWidth : barWidth*0.5f;
 			MFBegin(4);
 
-			float position = (fretTime - time) * scrollSpeed;
+			float position = (fretTime - offset)*scrollSpeed * (1.0f/1_000_000.0f);
 
 			if(!halfBeat)
 				MFSetColourV(MFVector.white);
@@ -228,11 +226,54 @@ class GHDrums : NoteTrack
 			MFEnd();
 
 			fretBeat += ticks;
-			fretTime = song.CalculateTimeOfTick(fretBeat) * (1.0f/1_000_000.0f);
+			fretTime = song.CalculateTimeOfTick(fretBeat);
 		}
 
-		MFView_Pop();
+		// draw the notes
+		auto notes = performer.sequence.notes.BetweenTimes(bottomTime, topTime);
+		__gshared immutable MFVector colours[8] = [ MFVector(1,0,1,1), MFVector.red, MFVector(1,1,0,1), MFVector.blue, MFVector.green, MFVector(1,1,0,1), MFVector.blue, MFVector.green ];
+		foreach(ref e; notes)
+		{
+			if(e.event != EventType.Note)
+				continue;
 
+			// HACK: don't render notes for which we have no lanes!
+			if(e.note.key > numLanes)
+				continue;
+
+			MFVector pos;
+			float noteWidth, noteDepth, noteHeight;
+
+			if(e.note.key == 0)	// bass drum is big
+			{
+				pos = GetPosForTime(offset, e.time, RelativePosition.Center);
+				noteWidth = fretboardWidth*0.48f;
+				noteDepth = columnWidth*0.1f;
+				noteHeight = columnWidth*0.1f;
+			}
+			else
+			{
+				pos = GetPosForTime(offset, e.time, Lane(e.note.key - 1));
+				noteWidth = columnWidth*0.3f;
+				noteDepth = columnWidth*0.3f;
+				noteHeight = columnWidth*0.2f;
+			}
+
+
+
+			if(e.duration > 0)
+			{
+				MFVector end = GetPosForTick(offset, e.tick + e.duration, RelativePosition.Center);
+
+				auto b1 = MFVector(pos.x - noteWidth*0.3f, 0, end.z);
+				auto b2 = MFVector(pos.x + noteWidth*0.3f, noteHeight*0.05f, pos.z);
+				MFPrimitive_DrawBox(b1, b2, colours[e.note.key], MFMatrix.identity, false);
+			}
+
+			auto b1 = MFVector(pos.x - noteWidth, 0, pos.z - noteDepth);
+			auto b2 = MFVector(pos.x + noteWidth, noteHeight, pos.z + noteDepth);
+			MFPrimitive_DrawBox(b1, b2, colours[e.note.key], MFMatrix.identity, false);
+		}
 
 /*
 		struct vertex
@@ -254,9 +295,110 @@ class GHDrums : NoteTrack
 
 		auto vb = VertexBuffer!vertex(100, MFVertexBufferType.Static, "Hello!");
 */
+
+		MFRect rect = MFRect(0, 0, 1920, 1080);
+		MFView_SetOrtho(&rect);
+
+		auto songEvents = song.events.BetweenTimes(bottomTime, topTime);
+		foreach(ref e; songEvents)
+		{
+			if(e.event != EventType.Event)
+				continue;
+
+			MFVector pos = GetPosForTime(offset, e.time, RelativePosition.Right);
+
+			MFVector r;
+			MFView_TransformPoint3DTo2D(pos, &r);
+			MFFont_DrawTextAnchored(MFFont_GetDebugFont(), e.text.toStringz, r, MFFontJustify.Bottom_Left, 1920.0f, 30.0f, MFVector.white);
+		}
+
+		auto trackEvents = performer.sequence.notes.BetweenTimes(bottomTime, topTime);
+		foreach(ref e; trackEvents)
+		{
+			if(e.event != EventType.Event)
+				continue;
+
+			MFVector pos = GetPosForTime(offset, e.time, RelativePosition.Left);
+
+			MFVector r;
+			MFView_TransformPoint3DTo2D(pos, &r);
+			MFFont_DrawTextAnchored(MFFont_GetDebugFont(), e.text.toStringz, r, MFFontJustify.Bottom_Right, 1920.0f, 30.0f, MFVector.white);
+		}
+
+		MFView_Pop();
 	}
+
+	MFVector GetPosForTick(long offset, int tick, RelativePosition pos)
+	{
+		return GetPosForTime(offset, song.CalculateTimeOfTick(tick), pos);
+	}
+
+	MFVector GetPosForTime(long offset, long time, RelativePosition pos)
+	{
+		MFVector p;
+		p.z = (time-offset)*scrollSpeed*(1.0f/1_000_000.0f);
+		p.x = GetX(pos);
+		return p;
+	}
+
+	void GetVisibleRange(long offset, int* pStartTick, int* pEndTick, long* pStartTime, long* pEndTime)
+	{
+		if(pStartTime || pStartTick)
+		{
+			long startTime = offset + cast(long)start*1_000_000/scrollSpeed;
+			if(pStartTime)
+				*pStartTime = startTime;
+			if(pStartTick)
+				*pStartTick = song.CalculateTickAtTime(startTime);
+		}
+		if(pEndTime || pEndTick)
+		{
+			long endTime = offset + cast(long)end*1_000_000/scrollSpeed;
+			if(pEndTime)
+				*pEndTime = endTime;
+			if(pEndTick)
+				*pEndTick = song.CalculateTickAtTime(endTime);
+		}
+	}
+
+	Song song;
 
 	Material fretboard;
 	Material bar;
 	Material edge;
+
+private:
+	float GetX(RelativePosition pos)
+	{
+		switch(pos) with(RelativePosition)
+		{
+			case Center:
+				return 0;
+			case Left:
+				return -fretboardWidth*0.5f;
+			case Right:
+				return fretboardWidth*0.5f;
+			case Top:
+			case Bottom:
+				assert(false, "GH drums are rendered vertically.");
+			default:
+				int lane = pos - Lane;
+				assert(lane >= 0 && lane < numLanes, "Invalid lane!");
+
+				float laneWidth = fretboardWidth / numLanes;
+				return -fretboardWidth*0.5f + laneWidth*(cast(float)lane + 0.5f); // return the lane center?
+		}
+	}
+
+	// some constants for the fretboard
+	int numLanes = 4;
+
+	int start = -4;
+	int end = 60;
+	int fadeStart = end.init - 10;
+
+	int scrollSpeed = 12;
+
+	float fretboardRepeat = 15.0f;
+	float fretboardWidth = 5.0f;
 }

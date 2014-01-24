@@ -5,6 +5,7 @@ import db.instrument;
 import db.performance;
 
 import fuji.types;
+import fuji.vector;
 
 // screen real-estate will be dynamically divided depending on the number of players, and the instruments in the game
 // well written note tracks should attempt to fill the screen space given
@@ -20,11 +21,33 @@ enum Orientation
 	Huge		// track needs a LOT of screen space (ie, rocksmith guitar track)
 }
 
+enum RelativePosition
+{
+	Center,
+	Left,	// for vertical tracks
+	Right,	// for vertical tracks
+	Top,	// for horizontal tracks
+	Bottom,	// for horizontal tracks
+
+	Lane,	// lane center - add the lane number (or use Lane(n))
+}
+
+RelativePosition Lane(int i) pure nothrow
+{
+	return cast(RelativePosition)(RelativePosition.Lane + i);
+}
+
 interface NoteTrack
 {
 	@property Orientation orientation();
 	@property InstrumentType instrumentType();
 
+	@property float laneWidth();
+
 	void Update();
 	void Draw(ref MFRect vp, long offset, Performer performer);
+
+	MFVector GetPosForTick(long offset, int tick, RelativePosition pos);	// get a world position for the tick
+	MFVector GetPosForTime(long offset, long time, RelativePosition pos);	// get a world position for the time
+	void GetVisibleRange(long offset, int* pStartTick, int* pEndTick, long* pStartTime, long* pEndTime);	// get the range displayed by the track
 }

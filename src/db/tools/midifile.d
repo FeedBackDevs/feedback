@@ -9,20 +9,15 @@ import std.range;
 
 enum MIDIEventType : ubyte
 {
-	Note = 0,
-	SYSEX = 0xF0,
-	Custom = 0xFF
-}
-
-enum MIDINoteEvent : ubyte
-{
 	NoteOff = 0x80,
 	NoteOn = 0x90,
 	KeyAfterTouch = 0xA0,
 	ControlChange = 0xB0,
 	ProgramChange = 0xC0,
 	ChannelAfterTouch = 0xD0,
-	PitchWheel = 0xE0
+	PitchWheel = 0xE0,
+	SYSEX = 0xF0,
+	Custom = 0xFF
 }
 
 enum MIDIEvents : ubyte
@@ -132,6 +127,7 @@ class MIDIFile
 			{
 				const(ubyte)[] track = buffer[0..pTh.length];
 				uint tick = 0;
+				ubyte lastStatus = 0;
 
 				while(!track.empty)
 				{
@@ -219,7 +215,7 @@ class MIDIFile
 								}
 							case Custom:
 								{
-									ev.custom.data = event.idup;
+									ev.data = event.idup;
 									break;
 								}
 							default:
@@ -234,43 +230,35 @@ class MIDIFile
 					{
 						uint bytes = ReadVarLen(track);
 
-						// SYSEX event...
-						MFDebug_Log(2, "Encountered SYSEX event...".ptr);
-
-						track.popFrontN(bytes);
+						// get the SYSEX bytes
+						const(ubyte)[] event = track.getFrontN(bytes);
+						ev.data = event.idup;
 					}
 					else
 					{
-						static ubyte lastStatus = 0;
-
 						if(status < 0x80)
 						{
 							// HACK: stick the last byte we popped back on the front...
 							track = (track.ptr - 1)[0..track.length+1];
 							status = lastStatus;
 						}
-
 						lastStatus = status;
 
 						int eventType = status & 0xF0;
 
 						int param1 = ReadVarLen(track);
 						int param2 = 0;
-						if(eventType != MIDINoteEvent.ProgramChange && eventType != MIDINoteEvent.ChannelAfterTouch)
+						if(eventType != MIDIEventType.ProgramChange && eventType != MIDIEventType.ChannelAfterTouch)
 							param2 = ReadVarLen(track);
 
 						switch(eventType)
 						{
-							case MIDINoteEvent.NoteOn:
-							case MIDINoteEvent.NoteOff:
+							case MIDIEventType.NoteOn:
+							case MIDIEventType.NoteOff:
 								{
-									ev.note.event = status & 0xF0;
 									ev.note.channel = status & 0x0F;
 									ev.note.note = param1;
 									ev.note.velocity = param2;
-
-									ev.subType = status;
-									status = MIDIEventType.Note;
 									break;
 								}
 							default:
@@ -284,7 +272,9 @@ class MIDIFile
 					{
 						ev.tick = tick;
 						ev.delta = delta;
-						ev.type = status;
+						ev.type = status != 0xFF ? status & 0xF0 : status;
+						if(status != 0xFF)
+							ev.subType = status & 0x0F;
 
 						tracks[t] ~= ev;
 					}
@@ -332,7 +322,7 @@ class MIDIFile
 							case EndOfTrack:
 								break;
 							case Tempo:
-								file ~= .format("%f (%d) ", 60000000.0 / e.tempo.microsecondsPerBeat, e.tempo.microsecondsPerBeat);
+								file ~= .format("%d (%fbpm) ", e.tempo.microsecondsPerBeat, 60000000.0 / e.tempo.microsecondsPerBeat);
 								break;
 							case SMPTE:
 								file ~= .format("%d:%d:%d:%d:%d", e.smpte.hours, e.smpte.minutes, e.smpte.seconds, e.smpte.frames, e.smpte.subFrames);
@@ -344,7 +334,7 @@ class MIDIFile
 								file ~= .format("%d %d", e.keySignature.sf, e.keySignature.minor);
 								break;
 							case Custom:
-								file ~= toHexString(e.custom.data);
+								file ~= toHexString(e.data);
 								break;
 							default:
 								break;
@@ -352,12 +342,10 @@ class MIDIFile
 
 						break;
 					case MIDIEventType.SYSEX:
-						// write hex bytes
-						break;
-					case MIDIEventType.Note:
-						file ~= .format("%x %d, %d, %d", e.note.event, e.note.channel, e.note.note, e.note.velocity);
+						file ~= toHexString(e.data);
 						break;
 					default:
+						file ~= .format("[%d] %d, %d", e.note.channel, e.note.note, e.note.velocity);
 						break;
 				}
 
@@ -383,8 +371,7 @@ struct MIDIEvent
 
 	struct Note
 	{
-		int event;
-		int channel;
+		ubyte channel;
 		int note;
 		int velocity;
 	}
@@ -407,15 +394,11 @@ struct MIDIEvent
 		ubyte sf;
 		ubyte minor;
 	}
-	struct Custom
-	{
-		immutable(ubyte)[] data;
-	}
 
 	uint tick;
 	uint delta;
-	uint type;
-	uint subType;
+	ubyte type;
+	ubyte subType;
 
 	union
 	{
@@ -426,7 +409,7 @@ struct MIDIEvent
 		SMPTE smpte;
 		TimeSignature timeSignature;
 		KeySignature keySignature;
-		Custom custom;
+		immutable(ubyte)[] data;
 	}
 }
 

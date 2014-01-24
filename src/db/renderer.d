@@ -9,6 +9,7 @@ public import fuji.primitive;
 public import fuji.material;
 public import fuji.model;
 public import fuji.matrix;
+public import fuji.font;
 
 public import db.game;
 

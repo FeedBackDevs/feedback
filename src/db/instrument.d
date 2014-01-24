@@ -52,9 +52,7 @@ enum GuitarProperties
 enum GuitarNoteFlags
 {
 	HOPO,	// hammer-on/pull-off
-	Tap,	// tap note
-	Solo,	// rock band solo keys
-	Slide	// guitar hero slider
+	Tap		// tap note
 }
 
 // drums

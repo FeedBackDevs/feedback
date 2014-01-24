@@ -36,29 +36,71 @@ enum EventType
 {
 	Unknown,
 
+	BPM,
+	Anchor,
+	TimeSignature,
+
 	Note,
-	Event,
-	Lyric,
+	Special,		// special sections
+	Event,			// text events
+	Lyric,			// lyrics
+	Section,		// song section names
+	Lighting,		// lighting events
+	DirectedCut,	// directed camera cut
+	MIDI,			// raw midi event (for stuff we haven't decoded yet)
+}
+
+enum SpecialType
+{
 	StarPower,
 	Overdrive,
 	FreeStyle,
+	Solo,			// RB solo keys
+	Slide,			// GH4 slider
 	LeftPlayer,		// GH1/2 co-op mode
 	RightPlayer		// GH1/2 co-op mode
 }
 
 struct Event
 {
-	alias EventType = .EventType;
+	long time;		// the physical time of the note (in microseconds)
+
+	int tick;		// in ticks
+	int duration;	// note duration
 
 	EventType event;
 
-	int tick;		// in ticks
-	long time;		// the physical time of the note (in microseconds)
+	struct BPM
+	{
+		int usPerBeat;
+	}
+	struct TimeSig
+	{
+		int numerator;
+	}
+	struct Note
+	{
+		int key;
+		uint flags;
+	}
+	struct MIDI
+	{
+		ubyte type;
+		ubyte subType;
+		ubyte channel;
+		int note;
+		int velocity;
+	}
 
-	int key;
-	int param;		// for a note, this is the sustain
-	string stringParam;
-	uint flags;
+	union
+	{
+		BPM bpm;
+		TimeSig ts;
+		Note note;
+		SpecialType special;
+		MIDI midi;
+		string text;
+	}
 }
 
 class Sequence
