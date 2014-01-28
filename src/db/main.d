@@ -64,13 +64,14 @@ else
 
 int Start()
 {
-	MFRect failure;
-	MFDisplay_GetNativeRes(&failure);
+	gDefaults.midi.useMidi = true;
 
 	Game game = Game.Instance;
 
 	game.initParams.hideSystemInfo = false;
 
+//	MFRect failure;
+//	MFDisplay_GetNativeRes(&failure);
 //	game.initParams.display.displayRect.width = failure.width;
 //	game.initParams.display.displayRect.height = failure.height;
 //	game.initParams.display.bFullscreen = true;

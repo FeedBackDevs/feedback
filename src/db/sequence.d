@@ -77,6 +77,7 @@ struct Event
 	struct TimeSig
 	{
 		int numerator;
+		int denominator;
 	}
 	struct Note
 	{

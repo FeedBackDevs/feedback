@@ -24,6 +24,10 @@ class InputDevice
 		this.sync = sync;
 	}
 
+	void End()
+	{
+	}
+
 	abstract void Update();	// NOTE: may be run on a high-frequency thread
 
 	void Clear(long until)

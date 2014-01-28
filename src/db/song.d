@@ -181,10 +181,11 @@ class Song
 					{
 						// sync track events
 						case TimeSignature:
-							assert(e.timeSignature.denominator == 2 && e.timeSignature.clocks == 24 && e.timeSignature.d == 8, "Unexpected!");
+							assert(e.timeSignature.clocks == 24 && e.timeSignature.d == 8, "Unexpected!");
 
 							ev.event = EventType.TimeSignature;
 							ev.ts.numerator = e.timeSignature.numerator;
+							ev.ts.denominator = 1 << e.timeSignature.denominator;
 							sync ~= ev;
 							break;
 						case Tempo:
