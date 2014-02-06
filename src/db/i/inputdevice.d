@@ -5,12 +5,21 @@ import db.i.syncsource;
 
 import std.range;
 
+enum InputEventType
+{
+	On,
+	Off,
+	Change,
+}
+
 struct InputEvent
 {
 	long timestamp;
 
-	int note;			// some id for the note, or a midi pitch value
-	int velocity;		// velocity or amplitude. 0 on note up events
+	InputEventType event;
+
+	int key;			// some id for the note, or a midi pitch value
+	float velocity;		// velocity or amplitude. 0 on note up events
 }
 
 class InputDevice
@@ -30,10 +39,15 @@ class InputDevice
 
 	abstract void Update();	// NOTE: may be run on a high-frequency thread
 
-	void Clear(long until)
+	void Clear(long until = -1)
 	{
-		while(!stream.empty && stream[0].timestamp < until)
-			stream.popFront();
+		if(until == -1)
+			stream = null;
+		else
+		{
+			while(!stream.empty && stream[0].timestamp < until)
+				stream.popFront();
+		}
 	}
 
 	SyncSource sync;

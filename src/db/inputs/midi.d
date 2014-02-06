@@ -44,18 +44,19 @@ class Midi : InputDevice
 	{
 		// read midi stream, populate events
 		MFMidiEvent[64] buffer;
-		MFMidiEvent[] events = MFMidi_GetEvents(pMidiInput, buffer[]);
+		MFMidiEvent[] events;
 		while((events = MFMidi_GetEvents(pMidiInput, buffer[])) != null)
 		{
 			foreach(e; events)
 			{
 				// we only care about trigger events...
-				if(e.command == 0x80 || e.command == 0x90)
+				if(e.command >= 0x80 || e.command <= 0xA0)
 				{
 					InputEvent ie;
-					ie.timestamp = cast(long)e.timestamp * sync.resolution / 1000;
-					ie.note = e.data0;
-					ie.velocity = e.command == 0x80 ? 0 : e.data1;
+					ie.timestamp = cast(long)e.timestamp * 1000; // feedback times are microseconds
+					ie.event = (e.command == 0x80 || (e.command == 0x90 && e.data1 == 0)) ? InputEventType.Off : (e.command == 0x90 ? InputEventType.On : InputEventType.Change);
+					ie.key = e.data0;
+					ie.velocity = e.data1 * (1 / 255.0f);
 
 					// TODO: we probably want to apply some map to 'note' for the configured instrument type
 					//...

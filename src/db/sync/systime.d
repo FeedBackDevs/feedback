@@ -6,6 +6,11 @@ import db.i.syncsource;
 
 class SystemTimer : SyncSource
 {
+	this()
+	{
+		freq = MFSystem_GetRTCFrequency();
+	}
+
 	override @property long clock()
 	{
 		return MFSystem_ReadRTC();
@@ -13,6 +18,8 @@ class SystemTimer : SyncSource
 
 	override @property long resolution()
 	{
-		return MFSystem_GetRTCFrequency();
+		return freq;
 	}
+
+	long freq;
 }

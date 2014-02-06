@@ -334,6 +334,8 @@ class Song
 							}
 							else if(note == 5)
 							{
+								// drums orange note... (Phase Shift)
+
 								// forced strum
 							}
 							else if(note == 6)

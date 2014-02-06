@@ -4,6 +4,7 @@ import fuji.fuji;
 import fuji.system;
 import fuji.filesystem;
 import fuji.fs.native;
+import fuji.input;
 
 import db.renderer;
 import db.songlibrary;
@@ -51,6 +52,9 @@ class Game
 		// TODO: scan for dongs (we should cache this data...)
 		songLibrary = new SongLibrary;
 		songLibrary.Scan();
+
+		// enable buffered input
+		MFInput_EnableBufferedInput(true);
 
 		// TODO: auto-detect instruments (controllers, midi/audio devices)
 		InputDevice[] inputs = DetectInstruments();

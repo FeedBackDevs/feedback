@@ -1,8 +1,10 @@
 module db.inputs.controller;
 
 import db.i.inputdevice;
+import db.i.syncsource;
 import db.instrument;
 
+import fuji.system;
 import fuji.input;
 
 enum ControllerFeatures : uint
@@ -63,15 +65,54 @@ class Controller : InputDevice
 
 	override @property InstrumentType instrumentType() { return instrument; }
 
+	override void Begin(SyncSource sync)
+	{
+		super.Begin(sync);
+
+		startTime = MFSystem_ReadRTC();
+	}
+
 	override void Update()
 	{
-		// read controller, populate events
+		ulong syncRes = sync.resolution;
+		ulong rtcFreq = MFSystem_GetRTCFrequency();
+
+		// read midi stream, populate events
+		MFInputEvent[64] buffer;
+		MFInputEvent[] events;
+		while((events = MFInput_GetEvents(MFInputDevice.Gamepad, controllerId, buffer[])) != null)
+		{
+			foreach(e; events)
+			{
+				// we only care about trigger events...
+				if(e.event == MFInputEventType.Change)
+				{
+					InputEvent ie;
+					ie.timestamp = (e.timestamp - startTime) * 1_000_000 / rtcFreq;
+					ie.key = e.input;
+					ie.velocity = e.state;
+
+					if(e.state && !e.prevState)
+						ie.event = InputEventType.On;
+					else if(e.prevState && !e.state)
+						ie.event = InputEventType.Off;
+					else
+						ie.event = InputEventType.Change;
+
+					// TODO: we probably want to apply some map to 'note' for the configured instrument type
+					//...
+
+					stream ~= ie;
+				}
+			}
+		}
 	}
 
 	int controllerId;
 	InstrumentType instrument;
 	uint features;
 
+	ulong startTime;
 }
 
 Controller[] DetectControllers()
