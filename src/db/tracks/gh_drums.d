@@ -3,6 +3,8 @@ module db.tracks.gh_drums;
 import fuji.materials.standard;
 
 import db.i.notetrack;
+import db.i.scorekeeper;
+import db.i.inputdevice;
 import db.i.syncsource;
 import db.instrument;
 import db.performance;
@@ -14,8 +16,9 @@ import core.stdc.math;
 
 class GHDrums : NoteTrack
 {
-	this(Song song)
+	this(Performer performer)
 	{
+		Song song = performer.performance.song;
 		this.song = song;
 
 		string fb = song.fretboard ? song.fretboard : "fretboard0";
@@ -30,6 +33,31 @@ class GHDrums : NoteTrack
 
 		edge = Material("edge");
 		edge.parameters.zread = false;
+
+		InputDevice input = performer.scoreKeeper.inputDevice;
+		if(!(input.features & MFBit!(DrumFeatures.HasCymbals)))
+		{
+			numLanes = 4;
+			laneMap = [ 0, -1, 1, -1, 2, -1, 3, 7 ];
+		}
+		else if(!(input.features & MFBit!(DrumFeatures.Has3Cymbals)))
+		{
+			if(!(input.features & MFBit!(DrumFeatures.Has4Drums)))
+			{
+				numLanes = 5;
+				laneMap = [ 0, 1, -1, -1, 2, 3, 4, 7 ];
+			}
+			else
+			{
+				numLanes = 6;
+				laneMap = [ 0, 1, 2, -1, 3, 4, 5, 7 ];
+			}
+		}
+		else
+		{
+			numLanes = 7;
+			laneMap = [ 0, 1, 2, 3, 4, 5, 6, 7 ];
+		}
 	}
 
 	@property Orientation orientation()
@@ -231,20 +259,26 @@ class GHDrums : NoteTrack
 
 		// draw the notes
 		auto notes = performer.sequence.notes.BetweenTimes(bottomTime, topTime);
-		__gshared immutable MFVector colours[8] = [ MFVector(1,0,1,1), MFVector.red, MFVector(1,1,0,1), MFVector.blue, MFVector.green, MFVector(1,1,0,1), MFVector.blue, MFVector.green ];
+
+		static __gshared immutable MFVector[8] fourColours = [ MFVector.red, MFVector(1,1,0,1), MFVector(1,1,0,1), MFVector.blue, MFVector.blue, MFVector.green, MFVector.green, MFVector(1,0,1,1) ];
+		static __gshared immutable MFVector[8] fiveColours = [ MFVector.red, MFVector(1,1,0,1), MFVector(1,1,0,1), MFVector.blue, MFVector.blue, MFVector(1,0.5,0,1), MFVector.green, MFVector(1,0,1,1) ];
+		immutable MFVector[] colours = numLanes == 5 ? fiveColours : fourColours;
+
 		foreach(ref e; notes)
 		{
 			if(e.event != EventType.Note)
 				continue;
 
-			// HACK: don't render notes for which we have no lanes!
-			if(e.note.key > numLanes)
-				continue;
+			int key = laneMap[e.note.key];
 
+			// HACK: don't render notes for which we have no lanes!
+			if(key == -1)
+				continue;
+ 
 			MFVector pos;
 			float noteWidth, noteDepth, noteHeight;
 
-			if(e.note.key == 0)	// bass drum is big
+			if(key == DrumNotes.Kick)	// bass drum is big
 			{
 				pos = GetPosForTime(offset, e.time, RelativePosition.Center);
 				noteWidth = fretboardWidth*0.48f;
@@ -253,7 +287,7 @@ class GHDrums : NoteTrack
 			}
 			else
 			{
-				pos = GetPosForTime(offset, e.time, Lane(e.note.key - 1));
+				pos = GetPosForTime(offset, e.time, Lane(key - DrumNotes.Snare));
 				noteWidth = columnWidth*0.3f;
 				noteDepth = columnWidth*0.3f;
 				noteHeight = columnWidth*0.2f;
@@ -391,7 +425,8 @@ private:
 	}
 
 	// some constants for the fretboard
-	int numLanes = 4;
+	int numLanes;
+	int[] laneMap;
 
 	int start = -4;
 	int end = 60;

@@ -19,7 +19,8 @@ enum RenderLayers
 	Background,
 	Game,
 	UI,
-	Menu
+	Menu,
+	Debug
 }
 
 class Renderer
@@ -33,7 +34,8 @@ class Renderer
 			MFRenderLayerDescription("background"),
 			MFRenderLayerDescription("game"),
 			MFRenderLayerDescription("ui"),
-			MFRenderLayerDescription("menu")
+			MFRenderLayerDescription("menu"),
+			MFRenderLayerDescription("debug")
 		];
 
 		pRenderer = MFRenderer_Create(layers, pDefaultStates, null);

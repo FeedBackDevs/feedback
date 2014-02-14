@@ -2,6 +2,7 @@ module db.inputs.midi;
 
 import fuji.midi;
 
+import db.tools.log;
 import db.i.inputdevice;
 import db.i.syncsource;
 import db.instrument;
@@ -18,15 +19,13 @@ class Midi : InputDevice
 		// this needs to be configured; mini triggers mapped to inputs
 
 		// HACK: assume keyboard for now?
-		instrument = InstrumentType.Keyboard;
+		instrumentType = InstrumentType.Keyboard;
 	}
 
 	~this()
 	{
 		MFMidi_CloseInput(pMidiInput);
 	}
-
-	override @property InstrumentType instrumentType() { return instrument; }
 
 	override void Begin(SyncSource sync)
 	{
@@ -69,8 +68,6 @@ class Midi : InputDevice
 
 	MFMidiInput* pMidiInput;
 	int deviceId;
-
-	InstrumentType instrument;
 }
 
 Midi[] DetectMidiDevices()

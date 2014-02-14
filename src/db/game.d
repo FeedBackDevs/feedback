@@ -6,6 +6,7 @@ import fuji.filesystem;
 import fuji.fs.native;
 import fuji.input;
 
+import db.tools.log;
 import db.renderer;
 import db.songlibrary;
 import db.instrument;
@@ -112,6 +113,17 @@ class Game
 
 		// TODO: Draw the UI
 		renderer.SetCurrentLayer(RenderLayers.UI);
+
+		// render debug stuff...
+		renderer.SetCurrentLayer(RenderLayers.Debug);
+		MFView_Push();
+
+		MFRect rect = MFRect(0, 0, 1920, 1080);
+		MFView_SetOrtho(&rect);
+
+		DrawLog();
+
+		MFView_Pop();
 	}
 
 	// data

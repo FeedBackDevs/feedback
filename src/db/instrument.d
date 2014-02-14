@@ -34,6 +34,31 @@ enum InstrumentType
 
 
 // guitar controller
+enum GuitarFeatures
+{
+	HasTilt,
+	HasSolo,
+	HasSlider,
+	HasPickupSwitch
+}
+
+enum GuitarInput
+{
+	Green,
+	Red,
+	Yellow,
+	Blue,
+	Orange,
+	Strum,
+	Whammy,
+	Tilt,
+	TriggerSpecial,
+	Switch,
+
+	Solo = 0x10,
+	Slider = 0x20,
+}
+
 enum GuitarNotes
 {
 	Green,
@@ -44,12 +69,6 @@ enum GuitarNotes
 	Open
 }
 
-enum GuitarProperties
-{
-	HasSolo,
-	HasSlider
-}
-
 enum GuitarNoteFlags
 {
 	HOPO,	// hammer-on/pull-off
@@ -57,26 +76,60 @@ enum GuitarNoteFlags
 }
 
 // drums
+enum DrumFeatures
+{
+	Has4Drums,
+	HasCymbals,
+	Has3Cymbals,
+	HasHatPedal,
+	HasRims,
+	HasVelocity,
+	HasCymbalZone
+}
+
+enum DrumInput
+{
+	Snare,
+	Cymbal1,
+	Tom1,
+	Cymbal2,
+	Tom2,
+	Cymbal3,
+	Tom3,
+	Kick,
+	HatPedal,
+
+	Secondary = 0x10,	// rims for drums, bell for cymbals
+}
+
 enum DrumNotes
 {				// RB kit		GH kit
 	Snare,		//   R			  R
-	Tom1,		//   Y			  B
-	Tom2,		//   B			  B/G?
-	Tom3,		//   G			  G
 	Hat,		//   Y			  Y
-	Spash,		//   B			  Y/O?
-	Crash,		//   B/G?		  Y/O?
+	Tom1,		//   Y			  B
+	Crash,		//   B			  Y/O?
+	Tom2,		//   B			  B(/G?)
 	Ride,		//   G			  O
+	Tom3,		//   G			  G
 	Kick,
 }
 
 enum DrumNoteFlags
 {
 	DoubleKick,	// double kick notes are hidden in single-kick mode
-	OpenHat		// interesting if drum kit has a hat pedal
+	OpenHat,	// interesting if drum kit has a hat pedal
+	RimShot,	// if drums have rims
+	CymbalBell,	// if cymbals have zones
 }
 
 // dance mat
+enum DanceFeatures
+{
+	HasDancePads,	// Up, Down, Left, Right
+	HasSoloPads,	// UpLeft, UpRight
+	HasPumpPads		// UpLeft, UpRight, DownLeft, DownRight, Center
+}
+
 enum DanceNotes
 {
 	Left,
@@ -93,12 +146,6 @@ enum DanceNotes
 	UpRight2
 }
 
-enum DanceProperties
-{
-	HasDancePads,	// Up, Down, Left, Right
-	HasSoloPads,	// UpLeft, UpRight
-	HasPumpPads		// UpLeft, UpRight, DownLeft, DownRight, Center
-}
 
 InputDevice[] DetectInstruments()
 {

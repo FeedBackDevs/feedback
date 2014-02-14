@@ -1,7 +1,10 @@
 module db.song;
 
+import db.instrument;
 import db.sequence;
+import db.player;
 import db.tools.midifile;
+import db.scorekeepers.drums;
 
 import fuji.material;
 import fuji.sound;
@@ -37,6 +40,15 @@ enum MusicFiles
 	Count
 }
 
+enum DrumsType
+{
+	Unknown = -1,
+
+	FourDrums = 0,
+	FiveDrums,
+	SevenDrums
+}
+
 struct SongPart
 {
 	Part part;
@@ -52,8 +64,13 @@ struct Variation
 
 class Song
 {
-	this(string filename = null)
+	this()
 	{
+	}
+
+	bool Load(string filename = null)
+	{
+		return false;
 	}
 
 	GHVersion DetectVersion(MIDIFile midi)
@@ -71,11 +88,15 @@ class Song
 		return GHVersion.Unknown;
 	}
 
-	this(MIDIFile midi, GHVersion ghVer = GHVersion.Unknown)
+	bool LoadMidi(MIDIFile midi, GHVersion ghVer = GHVersion.Unknown)
 	{
-		immutable auto difficulties = [ "Easy", "Medium", "Hard", "Expert" ];
+		static __gshared immutable auto difficulties = [ "Easy", "Medium", "Hard", "Expert" ];
 
-		assert(midi.format == 1, "Unsupported midi format!");
+		if(midi.format != 1)
+		{
+			MFDebug_Warn(2, "Unsupported midi format!".ptr);
+			return false;
+		}
 
 		if(ghVer == GHVersion.Unknown)
 			ghVer = DetectVersion(midi);
@@ -88,12 +109,18 @@ class Song
 			while(!name.isEvent(MIDIEvents.TrackName))
 				name = t.getFront();
 
-			assert(name.isEvent(MIDIEvents.TrackName), "Expected track name");
+			if(!name.isEvent(MIDIEvents.TrackName))
+			{
+				MFDebug_Warn(2, "Expected track name.".ptr);
+				return false;
+			}
 
 			Part part;
 			bool bIsEventTrack = true;
 			string variation = "Default";
 			ptrdiff_t v = -1;
+
+			DrumsType drumType = DrumsType.Unknown;
 
 			// detect which track we're looking at
 			if(i == 0)
@@ -164,12 +191,42 @@ class Song
 						d.difficulty = part == Part.Vox ? "Default" : difficulties[j];
 						d.difficultyMeter = 0; // TODO: I think we can pull this from songs.ini?
 					}
+
+					if(part == Part.Drums)
+					{
+						// scan for any notes 100-102 (indicates pro drums)
+						foreach(ref e; t)
+						{
+							if(e.type == MIDIEventType.NoteOn && e.note.note >= 110 && e.note.note <= 112)
+							{
+								drumType = DrumsType.SevenDrums;
+								break;
+							}
+						}
+						if(drumType == DrumsType.Unknown)
+						{
+							// check if 'five_lane_drums' appears in song.ini
+							string* p5Lane = "five_lane_drums" in params;
+							bool b5Lane = p5Lane && (*p5Lane == "1" || icmp(*p5Lane, "true"));
+							if(b5Lane)
+								drumType = DrumsType.FiveDrums;
+							else
+								drumType = DrumsType.FourDrums;
+						}
+
+						// prepend the drums type to the variation name
+						static __gshared immutable string variationNames[] = [ "-4drums", "-5drums", "-7drums" ];
+						parts[part].variations[v].name = parts[part].variations[v].name ~ variationNames[drumType];
+						foreach(d; parts[part].variations[v].difficulties)
+							d.variation = parts[part].variations[v].name;
+					}
 				}
 			}
 
 			// parse the events
 			MIDIEvent*[128] currentNotes;
 			Event*[128] currentEvents;
+			int[3] tomSwitchStart;
 			foreach(ref e; t)
 			{
 				Event ev;
@@ -252,6 +309,34 @@ class Song
 				}
 				if(e.type == MIDIEventType.NoteOff || (e.type == MIDIEventType.NoteOn && e.note.velocity == 0))
 				{
+					if(part == Part.Drums && e.note.note >= 110 && e.note.note <= 112)
+					{
+						// RB: tom's instead of cymbals
+						int start = tomSwitchStart[e.note.note - 110];
+						if(start != 0)
+						{
+							tomSwitchStart[e.note.note - 110] = 0;
+
+							foreach(seq; parts[Part.Drums].variations[v].difficulties)
+							{
+								for(size_t j = seq.notes.length-1; j >= 0 && seq.notes[j].tick >= start; --j)
+								{
+									Event *pEv = &seq.notes[j];
+									if(pEv.event != EventType.Note)
+										continue;
+
+									switch(pEv.note.key)
+									{
+										case DrumNotes.Hat:		pEv.note.key = DrumNotes.Tom1; break;
+										case DrumNotes.Ride:	pEv.note.key = DrumNotes.Tom2; break;
+										case DrumNotes.Crash:	pEv.note.key = DrumNotes.Tom3; break;
+										default:				break;
+									}
+								}
+							}
+						}
+					}
+
 					if(currentNotes[e.note.note] == null)
 					{
 						MFDebug_Warn(2, "[" ~ name.text ~ "] Note already up: " ~ to!string(e.note.note));
@@ -330,13 +415,36 @@ class Song
 							if(note <= 4)
 							{
 								ev.event = EventType.Note;
-								ev.note.key = note;
+								if(part == Part.Drums)
+								{
+									static __gshared immutable int fourDrumMap[5] = [ DrumNotes.Kick, DrumNotes.Snare, DrumNotes.Tom1, DrumNotes.Tom2, DrumNotes.Tom3 ];
+									static __gshared immutable int fiveDrumMap[5] = [ DrumNotes.Kick, DrumNotes.Snare, DrumNotes.Hat, DrumNotes.Tom2, DrumNotes.Tom3 ];
+									static __gshared immutable int sevenDrumMap[5] = [ DrumNotes.Kick, DrumNotes.Snare, DrumNotes.Hat, DrumNotes.Ride, DrumNotes.Crash ];
+
+									switch(drumType)
+									{
+										case DrumsType.FourDrums:	ev.note.key = fourDrumMap[note]; break;
+										case DrumsType.FiveDrums:	ev.note.key = fiveDrumMap[note]; break;
+										case DrumsType.SevenDrums:	ev.note.key = sevenDrumMap[note]; break;
+										default:
+											assert(false, "Unreachable?");
+									}
+								}
+								else
+								{
+									ev.note.key = note;
+								}
 							}
 							else if(note == 5)
 							{
-								// drums orange note... (Phase Shift)
-
-								// forced strum
+								if(part == Part.Drums && drumType == DrumsType.FiveDrums)
+								{
+									ev.note.key = DrumNotes.Ride;
+								}
+								else
+								{
+									// forced strum?
+								}
 							}
 							else if(note == 6)
 							{
@@ -394,16 +502,8 @@ class Song
 									// RB: tom's instead of cymbals
 									if(part == Part.Drums)
 									{
-										// TODO: change the RBG cymbals to tom's
-
-										// HACK: add them as separate notes so we can visualise them...
-										ev.event = EventType.Note;
-										ev.note.key = 5 + e.note.note-110;
-										foreach(seq; parts[Part.Drums].variations[v].difficulties)
-										{
-											seq.notes ~= ev;
-											currentEvents[e.note.note] = &seq.notes.back;	// TODO: *FIXME* this get's overwritten 4 times, and only the last one will get sustain!
-										}
+										// enable cymbal->tom switch
+										tomSwitchStart[e.note.note-110] = e.tick;
 										continue;
 									}
 									goto default;
@@ -461,6 +561,8 @@ class Song
 				}
 			}
 		}
+
+		return true;
 	}
 
 
@@ -536,6 +638,100 @@ class Song
 			MFMaterial_Release(pFretboard);
 			pFretboard = null;
 		}
+	}
+
+	Sequence GetSequence(Player player, string variation, string difficulty)
+	{
+		static Sequence GetDifficulty(Player player, ref Variation variation, string difficulty)
+		{
+			Sequence s = variation.difficulties.back;
+			if(difficulty)
+			{
+				// TODO: should there be some fallback logic if a requested difficulty isn't available?
+				//       can we rank difficulties by magic name strings?
+
+				foreach(d; variation.difficulties)
+				{
+					if(d.difficulty == difficulty)
+					{
+						s = d;
+						break;
+					}
+				}
+			}
+			return s;
+		}
+
+		Part part = player.input.part;
+		if(parts[part].variations.empty)
+			return null;
+
+		Variation var;
+		bool bFound;
+
+		string preferences[];
+		size_t preference;
+
+		// TODO: should there be a magic name for the default variation rather than the first one?
+		//...
+
+		if(part == Part.Drums)
+		{
+			// each drums configuration has a different preference for conversion
+			if(!(player.input.device.features & MFBit!(DrumFeatures.HasCymbals)))
+				preferences = [ "-4drums", "-7drums", "-6drums", "-5drums" ];
+			else if(!(player.input.device.features & MFBit!(DrumFeatures.Has3Cymbals)))
+			{
+				if(!(player.input.device.features & MFBit!(DrumFeatures.Has4Drums)))
+					preferences = [ "-5drums", "-6drums", "-7drums", "-4drums" ];
+				else
+					preferences = [ "-6drums", "-7drums", "-5drums", "-4drums" ];
+			}
+			else
+				preferences = [ "-7drums", "-6drums", "-5drums", "-4drums" ];
+
+			// find the appropriate variation for the player's kit
+			outer: foreach(i, pref; preferences)
+			{
+				foreach(v; parts[part].variations)
+				{
+					if(endsWith(v.name, pref))
+					{
+						if(!variation || (variation && startsWith(v.name, variation)))
+						{
+							var = v;
+							bFound = true;
+							preference = i;
+							break outer;
+						}
+					}
+				}
+			}
+		}
+		else
+		{
+			foreach(v; parts[part].variations)
+			{
+				if(!variation || (variation && v.name == variation))
+				{
+					var = v;
+					bFound = true;
+				}
+			}
+		}
+
+		if(!bFound)
+			return null;
+
+		Sequence s = GetDifficulty(player, var, difficulty);
+
+		if(part == Part.Drums && preference != 0)
+		{
+			// fabricate a sequence for the players kit
+			s = FabricateSequence(this, preferences[0], s);
+		}
+
+		return s;
 	}
 
 	void Pause(bool bPause)

@@ -61,7 +61,7 @@ class SongLibrary
 		MIDIFile midi = new MIDIFile(path ~ "notes.mid");
 //		midi.WriteText(path ~ "midi.txt");
 
-		Song song = new Song(midi);
+		Song song = new Song;
 		song.songPath = path;
 
 		// read song.ini
@@ -100,6 +100,9 @@ class SongLibrary
 				}
 			}
 		}
+
+		// load the midi
+		song.LoadMidi(midi);
 
 		// search for the music and other stuff...
 		foreach(f; dirEntries(path ~ "*", SpanMode.shallow))

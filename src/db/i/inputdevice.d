@@ -24,8 +24,6 @@ struct InputEvent
 
 class InputDevice
 {
-	abstract @property InstrumentType instrumentType();
-
 	@property InputEvent[] events() { return stream; }
 
 	void Begin(SyncSource sync)
@@ -52,4 +50,7 @@ class InputDevice
 
 	SyncSource sync;
 	InputEvent[] stream;
+
+	InstrumentType instrumentType = InstrumentType.Unknown;
+	uint features;
 }

@@ -2,6 +2,16 @@ module db.profile;
 
 import db.sequence;
 
+import fuji.vector;
+
+
+struct Settings
+{
+	MFVector colour = MFVector.red;
+
+	bool bLefty = false;
+	bool bAllDrumLanes = false;
+}
 
 struct Score
 {
@@ -36,8 +46,5 @@ class Profile
 	Score[string] scores;	// scores for songs (by song name)
 
 	// preferences/settings
-	bool bLefty;
-
-	// TODO: visual stuff?
-	// colours, models, etc...
+	Settings settings;
 }

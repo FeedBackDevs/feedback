@@ -1,5 +1,6 @@
 module db.inputs.audio;
 
+import db.tools.log;
 import db.i.inputdevice;
 import db.instrument;
 
@@ -12,8 +13,6 @@ class Audio : InputDevice
 		// this is either vocals, or pro-guitar
 	}
 
-	override @property InstrumentType instrumentType() { return instrument; }
-
 	override void Update()
 	{
 		// read audio stream, process into input sequence...
@@ -22,5 +21,4 @@ class Audio : InputDevice
 	}
 
 	int deviceId;
-	InstrumentType instrument;
 }

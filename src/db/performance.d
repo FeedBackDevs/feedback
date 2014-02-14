@@ -31,13 +31,13 @@ class Performer
 		// Note: note track should be chosen accorting to the instrument type, and player preference for theme/style (GH/RB/Bemani?)
 		if(player.input.part == Part.LeadGuitar)
 		{
-			noteTrack = new GHGuitar(performance.song);
 			scoreKeeper = new GuitarScoreKeeper(sequence, player.input.device);
+			noteTrack = new GHGuitar(this);
 		}
 		else if(player.input.part == Part.Drums)
 		{
-			noteTrack = new GHDrums(performance.song);
 			scoreKeeper = new DrumsScoreKeeper(sequence, player.input.device);
+			noteTrack = new GHDrums(this);
 		}
 	}
 
@@ -81,8 +81,9 @@ class Performance
 		performers = null;
 		foreach(p; players)
 		{
-			if(song.IsPartPresent(p.input.part))
-				performers ~= new Performer(this, p, song.parts[p.input.part].variations[0].difficulties.back);
+			Sequence s = song.GetSequence(p, null, null);
+			if(s)
+				performers ~= new Performer(this, p, s);
 		}
 
 		ArrangePerformers();

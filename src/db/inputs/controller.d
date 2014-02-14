@@ -1,30 +1,12 @@
 module db.inputs.controller;
 
+import db.tools.log;
 import db.i.inputdevice;
 import db.i.syncsource;
 import db.instrument;
 
 import fuji.system;
 import fuji.input;
-
-enum ControllerFeatures : uint
-{
-	// general flags
-	CantDetect = MFBit!0,
-
-	// guitar stuff
-	HasTilt = MFBit!1,
-	HasSolo = MFBit!2,
-	HasPickupSwitch = MFBit!3,
-	HasSlider = MFBit!4,
-
-	// drums stuff
-	Has4Drums = MFBit!5,
-	Has3Drums2Cymbals = MFBit!6,
-	Has4Drums2Cymbals = MFBit!7,
-	Has4Drums3Cymbals = MFBit!8,
-	HasDoubleKick = MFBit!9,
-}
 
 class Controller : InputDevice
 {
@@ -37,24 +19,24 @@ class Controller : InputDevice
 
 		// instruments attached via adapters or proxy drivers can't be detected...
 		if(flags & (MFGamepadFlags.IsAdapter | MFGamepadFlags.IsProxy))
-			features |= ControllerFeatures.CantDetect;
+			bCantDetectFeatures = true;
 
 		if(flags & MFGamepadFlags.IsGuitar)
 		{
-			instrument = InstrumentType.GuitarController;
+			instrumentType = InstrumentType.GuitarController;
 
-			features |= flags & MFGamepadFlags.Guitar_HasTilt ? ControllerFeatures.HasTilt : 0;
-			features |= flags & MFGamepadFlags.Guitar_HasSolo ? ControllerFeatures.HasSolo : 0;
-			features |= flags & MFGamepadFlags.Guitar_HasPickupSwitch ? ControllerFeatures.HasPickupSwitch : 0;
-			features |= flags & MFGamepadFlags.Guitar_HasSlider ? ControllerFeatures.HasSlider : 0;
+			features |= flags & MFGamepadFlags.Guitar_HasTilt ? MFBit!(GuitarFeatures.HasTilt) : 0;
+			features |= flags & MFGamepadFlags.Guitar_HasSolo ? MFBit!(GuitarFeatures.HasSolo) : 0;
+			features |= flags & MFGamepadFlags.Guitar_HasSlider ? MFBit!(GuitarFeatures.HasSlider) : 0;
+			features |= flags & MFGamepadFlags.Guitar_HasPickupSwitch ? MFBit!(GuitarFeatures.HasPickupSwitch) : 0;
 		}
 
 		if(flags & MFGamepadFlags.IsDrums)
 		{
-			instrument = InstrumentType.Drums;
+			instrumentType = InstrumentType.Drums;
 
 			// Note: I think the most we can detect from the USB id's is whether it is meant for GH or RB
-			features |= flags & MFGamepadFlags.Drums_Has5Drums ? ControllerFeatures.Has3Drums2Cymbals : ControllerFeatures.Has4Drums;
+			features |= flags & MFGamepadFlags.Drums_Has5Drums ? MFBit!(DrumFeatures.HasCymbals) : MFBit!(DrumFeatures.Has4Drums);
 
 			// TODO: is it possible to detect RockBand drums with the cymbals attached?
 			// Probably not, we'll probably need to offer UI to specialise the options...
@@ -62,8 +44,6 @@ class Controller : InputDevice
 
 		// TODO: detect other types of controllers from other games...
 	}
-
-	override @property InstrumentType instrumentType() { return instrument; }
 
 	override void Begin(SyncSource sync)
 	{
@@ -74,7 +54,6 @@ class Controller : InputDevice
 
 	override void Update()
 	{
-		ulong syncRes = sync.resolution;
 		ulong rtcFreq = MFSystem_GetRTCFrequency();
 
 		// read midi stream, populate events
@@ -100,17 +79,55 @@ class Controller : InputDevice
 						ie.event = InputEventType.Change;
 
 					// TODO: we probably want to apply some map to 'note' for the configured instrument type
-					//...
+					if(instrumentType == InstrumentType.GuitarController)
+					{
+						// map guitar buttons -> 0-4
+						switch(e.input) with(MFGamepadButton)
+						{
+							case GH_Green:			ie.key = GuitarInput.Green;				break;
+							case GH_Red:			ie.key = GuitarInput.Red;				break;
+							case GH_Yellow:			ie.key = GuitarInput.Yellow;			break;
+							case GH_Blue:			ie.key = GuitarInput.Blue;				break;
+							case GH_Orange:			ie.key = GuitarInput.Orange;			break;
+							case GH_Whammy:			ie.key = GuitarInput.Whammy;			break;
+							case GH_Tilt:			ie.key = GuitarInput.Tilt;				break;
+							case GH_TiltTrigger:	ie.key = GuitarInput.TriggerSpecial;	break;
+							case GH_StrumUp: ..
+							case GH_StrumDown:		ie.key = GuitarInput.Strum;				break;
+//							GH_Roll:
+//							GH_PickupSwitch:
+//							GH_Slider:
+//							GH_Solo:
+							default:
+								continue;
+						}
+					}
+					else if(instrumentType == InstrumentType.Drums)
+					{
+						// map drums buttons -> 0-7
+						switch(e.input) with(MFGamepadButton)
+						{
+							case Drum_Red:		ie.key = DrumInput.Snare;		break;
+							case Drum_Yellow:	ie.key = (features & MFBit!(DrumFeatures.HasCymbals)) ? DrumInput.Cymbal1 : DrumInput.Tom1;		break;
+							case Drum_Blue:		ie.key = DrumInput.Tom2;		break;
+							case Drum_Green:	ie.key = DrumInput.Tom3;		break;
+							case Drum_Cymbal:	ie.key = DrumInput.Cymbal3;		break;
+							case Drum_Kick:		ie.key = DrumInput.Kick;		break;
+							default:
+								continue;
+						}
+					}
 
 					stream ~= ie;
+
+//					WriteLog(format("%6d input %s: %d (%g)", ie.timestamp/1000, to!string(ie.event), ie.key, ie.velocity), MFVector(1,1,1,1));
 				}
 			}
 		}
 	}
 
 	int controllerId;
-	InstrumentType instrument;
-	uint features;
+	bool bCantDetectFeatures;
 
 	ulong startTime;
 }

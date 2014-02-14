@@ -6,7 +6,7 @@ import db.sequence;
 
 import std.signals;
 
-class ScoreKeeper
+abstract class ScoreKeeper
 {
 	this(Sequence sequence, InputDevice input)
 	{
@@ -19,15 +19,16 @@ class ScoreKeeper
 		inputDevice.Begin(sync);
 	}
 
-	abstract void Update();
+	void Update();
 
 	Sequence sequence;
 	InputDevice inputDevice;
 
-	long tolerance = 50;
+	long window = 200;
 
 	// shared
-	mixin Signal!(int, long) noteHit;	// (key, precision) precision is microseconds from the precise note time
-	mixin Signal!(int) noteMiss;		// (key)
+	mixin Signal!(int, long) noteHit;	// (note, precision) precision is microseconds from the precise note time
+	mixin Signal!(int) noteMiss;		// (note)
+	mixin Signal!(int) badNote;			// (note)
 	mixin Signal!(int) trigger;			// (trigger type)
 }

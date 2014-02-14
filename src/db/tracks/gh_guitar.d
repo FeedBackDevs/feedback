@@ -14,8 +14,9 @@ import core.stdc.math;
 
 class GHGuitar : NoteTrack
 {
-	this(Song song)
+	this(Performer performer)
 	{
+		Song song = performer.performance.song;
 		this.song = song;
 
 		string fb = song.fretboard ? song.fretboard : "fretboard2";
