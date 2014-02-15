@@ -54,7 +54,7 @@ class GuitarScoreKeeper : ScoreKeeper
 	{
 		inputDevice.Update();
 
-		long tolerance = window / 2;
+		long tolerance = window*1000 / 2;
 
 		GuitarNote[] expecting = GetNext();
 		if(expecting)

@@ -58,6 +58,9 @@ class GHDrums : NoteTrack
 			numLanes = 7;
 			laneMap = [ 0, 1, 2, 3, 4, 5, 6, 7 ];
 		}
+
+//		numLanes = 7;
+//		laneMap = [ 0, 1, 2, 3, 4, 5, 6, 7 ];
 	}
 
 	@property Orientation orientation()
@@ -262,7 +265,7 @@ class GHDrums : NoteTrack
 
 		static __gshared immutable MFVector[8] fourColours = [ MFVector.red, MFVector(1,1,0,1), MFVector(1,1,0,1), MFVector.blue, MFVector.blue, MFVector.green, MFVector.green, MFVector(1,0,1,1) ];
 		static __gshared immutable MFVector[8] fiveColours = [ MFVector.red, MFVector(1,1,0,1), MFVector(1,1,0,1), MFVector.blue, MFVector.blue, MFVector(1,0.5,0,1), MFVector.green, MFVector(1,0,1,1) ];
-		immutable MFVector[] colours = numLanes == 5 ? fiveColours : fourColours;
+		immutable MFVector[] colours = !(performer.scoreKeeper.inputDevice.features & MFBit!(DrumFeatures.Has4Drums)) ? fiveColours : fourColours;
 
 		foreach(ref e; notes)
 		{

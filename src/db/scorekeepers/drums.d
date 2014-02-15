@@ -39,6 +39,12 @@ Sequence FabricateSequence(Song song, string type, Sequence from)
 	s.difficultyMeter = from.difficultyMeter;
 	s.numDoubleKicks = from.numDoubleKicks;
 
+	string* pFallbackBlue = "drum_fallback_blue" in song.params;
+	bool bFallbackBlue = pFallbackBlue && (*pFallbackBlue == "1" || !icmp(*pFallbackBlue, "true"));
+
+	string* pOrangeIsCrash = "orange_is_crash" in song.params;
+	bool bOrangeIsCrash = pOrangeIsCrash && (*pOrangeIsCrash == "1" || !icmp(*pOrangeIsCrash, "true"));
+
 	int lastTom = DrumNotes.Tom3;
 	int lastCymbal = DrumNotes.Hat;
 
@@ -48,21 +54,41 @@ Sequence FabricateSequence(Song song, string type, Sequence from)
 		s.notes[i] = ev;
 		Event* pEv = &s.notes[i];
 
+//		if(0)
 		if(pEv.event == EventType.Note)
 		{
 			int key = pEv.note.key;
 
 			if(targetDrums == 6 || (targetDrums == 5 && sourceDrums != 4))
 			{
-				// cymbal -> hat/ride
+				if(bOrangeIsCrash)
+				{
+					// cymbal -> ride
+					// ride -> hat/ride
 
-				// crash may be assigned either hat or ride depending what was played recently
-				if(key == DrumNotes.Crash)
-					pEv.note.key = (lastCymbal == DrumNotes.Hat) ? DrumNotes.Ride : DrumNotes.Hat;
+					if(key == DrumNotes.Crash)
+						pEv.note.key = DrumNotes.Ride;
 
-				// we need to remember the last cymbal played
-				if(key == DrumNotes.Hat || key == DrumNotes.Ride)
-					lastCymbal = key;
+					// crash may be assigned either hat or ride depending what was played recently
+					if(key == DrumNotes.Ride)
+						pEv.note.key = (lastCymbal == DrumNotes.Hat) ? DrumNotes.Ride : DrumNotes.Hat;
+
+					// we need to remember the last cymbal played
+					if(key == DrumNotes.Hat || key == DrumNotes.Crash)
+						lastCymbal = key;
+				}
+				else
+				{
+					// cymbal -> hat/ride
+
+					// crash may be assigned either hat or ride depending what was played recently
+					if(key == DrumNotes.Crash)
+						pEv.note.key = (lastCymbal == DrumNotes.Hat) ? DrumNotes.Ride : DrumNotes.Hat;
+
+					// we need to remember the last cymbal played
+					if(key == DrumNotes.Hat || key == DrumNotes.Ride)
+						lastCymbal = key;
+				}
 			}
 
 			if(targetDrums == 5)
@@ -94,9 +120,6 @@ Sequence FabricateSequence(Song song, string type, Sequence from)
 				// if the source has only 2 cymbals, we need to know where to put the ride
 				if(sourceDrums == 5 || sourceDrums == 6)
 				{
-					string* pFallbackBlue = "drum_fallback_blue" in song.params;
-					bool bFallbackBlue = pFallbackBlue && (*pFallbackBlue == "1" || icmp(*pFallbackBlue, "true"));
-
 					// ride -> bFallbackBlue ? tom2 : tom3
 					if(key == DrumNotes.Ride)
 						pEv.note.key = bFallbackBlue ? DrumNotes.Tom2 : DrumNotes.Tom2;
@@ -149,14 +172,21 @@ class DrumsScoreKeeper : ScoreKeeper
 
 		inputDevice.Update();
 
-		long tolerance = window / 2;
+		long tolerance = window*1000 / 2;
 
 		// check for missed notes?
-		while(offset < notes.length && time > notes[offset].time + tolerance)
+		while(offset < notes.length)
 		{
-			WriteLog(format("%6d missed %s: %d", notes[offset].time/1000, to!string(notes[offset].pEv.event), notes[offset].key), MFVector(1,1,1,1));
-			noteMiss.emit(notes[offset].key);
-			++offset;
+			if(notes[offset].bHit)
+				++offset;
+			else if(time > notes[offset].time + tolerance)
+			{
+				WriteLog(format("%6d missed: %d", notes[offset].time/1000, notes[offset].key), MFVector(1,1,1,1));
+				noteMiss.emit(notes[offset].key);
+				++offset;
+			}
+			else
+				break;
 		}
 
 		DrumNote[] expecting = GetNext();
@@ -170,6 +200,8 @@ class DrumsScoreKeeper : ScoreKeeper
 				if(e.event != InputEventType.On)
 					continue;
 
+//				WriteLog(format("%6d input: %d (%g)", e.timestamp/1000, e.key, e.velocity), MFVector(1,1,1,1));
+
 				// consider next note
 				DrumNote[] next = GetNext();
 
@@ -182,18 +214,26 @@ class DrumsScoreKeeper : ScoreKeeper
 				bool bDidHit = false;
 				for(size_t i = offset; i < notes.length && e.timestamp >= notes[i].time - tolerance; ++i)
 				{
+					if(notes[i].bHit)
+						continue;
+
 					if(notes[i].key == note)
 					{
-						WriteLog(format("%6d hit %s: %d (%g)", e.timestamp/1000, to!string(e.event), note, e.velocity), MFVector(1,1,1,1));
-						noteHit.emit(note, e.timestamp - notes[i].time);
+						notes[i].bHit = true;
+
+						long error = e.timestamp - notes[i].time;
+						WriteLog(format("%6d hit: %d (%g) - %d", notes[i].time/1000, note, e.velocity, error/1000), MFVector(1,1,1,1));
+						noteHit.emit(note, error);
 						bDidHit = true;
+
+						if(i == offset)
+							++offset;
 						break;
 					}
 				}
-
 				if(!bDidHit)
 				{
-					WriteLog(format("%6d bad %s: %d (%g)", e.timestamp/1000, to!string(e.event), note, e.velocity), MFVector(1,1,1,1));
+					WriteLog(format("%6d bad: %d (%g)", e.timestamp/1000, note, e.velocity), MFVector(1,1,1,1));
 					badNote.emit(note);
 				}
 			}

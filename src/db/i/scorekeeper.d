@@ -24,7 +24,7 @@ abstract class ScoreKeeper
 	Sequence sequence;
 	InputDevice inputDevice;
 
-	long window = 200;
+	long window = 400; // in milliseconds
 
 	// shared
 	mixin Signal!(int, long) noteHit;	// (note, precision) precision is microseconds from the precise note time

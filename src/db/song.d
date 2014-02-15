@@ -90,7 +90,7 @@ class Song
 
 	bool LoadMidi(MIDIFile midi, GHVersion ghVer = GHVersion.Unknown)
 	{
-		static __gshared immutable auto difficulties = [ "Easy", "Medium", "Hard", "Expert" ];
+		__gshared immutable auto difficulties = [ "Easy", "Medium", "Hard", "Expert" ];
 
 		if(midi.format != 1)
 		{
@@ -207,7 +207,7 @@ class Song
 						{
 							// check if 'five_lane_drums' appears in song.ini
 							string* p5Lane = "five_lane_drums" in params;
-							bool b5Lane = p5Lane && (*p5Lane == "1" || icmp(*p5Lane, "true"));
+							bool b5Lane = p5Lane && (*p5Lane == "1" || !icmp(*p5Lane, "true"));
 							if(b5Lane)
 								drumType = DrumsType.FiveDrums;
 							else
@@ -319,9 +319,10 @@ class Song
 
 							foreach(seq; parts[Part.Drums].variations[v].difficulties)
 							{
-								for(size_t j = seq.notes.length-1; j >= 0 && seq.notes[j].tick >= start; --j)
+								Event[] notes = seq.notes;
+								for(ptrdiff_t j = notes.length-1; j >= 0 && notes[j].tick >= start; --j)
 								{
-									Event *pEv = &seq.notes[j];
+									Event *pEv = &notes[j];
 									if(pEv.event != EventType.Note)
 										continue;
 
@@ -558,6 +559,32 @@ class Song
 					default:
 						// TODO: there are still many notes in unknown parts...
 						break;
+				}
+			}
+
+			if(drumType == DrumsType.SevenDrums)
+			{
+				// green_is_ride instructs that the crash and ride cymbals should be swapped
+				string* pSwapCymbals = "green_is_ride" in params;
+				bool bSwapCymbals = pSwapCymbals && (*pSwapCymbals == "1" || !icmp(*pSwapCymbals, "true"));
+				if(bSwapCymbals)
+				{
+					foreach(ref var; parts[Part.Drums].variations)
+					{
+						foreach(ref d; var.difficulties)
+						{
+							foreach(ref n; d.notes)
+							{
+								if(n.event == EventType.Note)
+								{
+									if(n.note.key == DrumNotes.Crash)
+										n.note.key = DrumNotes.Ride;
+									else if(n.note.key == DrumNotes.Ride)
+										n.note.key = DrumNotes.Crash;
+								}
+							}
+						}
+					}
 				}
 			}
 		}
