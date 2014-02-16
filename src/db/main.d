@@ -23,6 +23,9 @@ version(Windows)
 			game.initParams.hInstance = hInstance;
 			game.initParams.pCommandLine = lpCmdLine;
 
+			gDefaults.plugin.renderPlugin = game.settings.videoDriver;
+			gDefaults.plugin.soundPlugin = game.settings.audioDriver;
+
 			gDefaults.input.useXInput = false;
 
 			result = Start();

@@ -9,6 +9,7 @@ import db.sequence;
 import db.tools.midifile;
 
 import std.string;
+import std.encoding;
 
 class SongLibrary
 {
@@ -51,7 +52,7 @@ class SongLibrary
 		import std.range;
 		import std.path;
 
-		char[] ini = cast(char[])MFFileSystem_Load(file.filepath);
+		void[] ini = MFFileSystem_Load(file.filepath);
 		scope(exit) MFHeap_Free(ini);
 
 		string path = file.directory ~ "/";
@@ -65,7 +66,10 @@ class SongLibrary
 		song.songPath = path;
 
 		// read song.ini
-		foreach(l; ini.splitLines)
+		string text;
+		transcode(cast(Windows1252String)ini, text);
+
+		foreach(l; text.splitLines)
 		{
 			l.strip;
 			if(l.empty)
@@ -82,8 +86,8 @@ class SongLibrary
 				if(equals == -1)
 					continue; // not a key-value pair?
 
-				char[] key = l[0..equals].strip.toLower;
-				string value = l[equals+1..$].strip.idup;
+				string key = l[0..equals].strip.toLower;
+				string value = l[equals+1..$].strip;
 
 				switch(key)
 				{
@@ -95,7 +99,7 @@ class SongLibrary
 					case "frets":	song.charterName = value; break;
 					default:
 						// unknown values become arbitrary params
-						song.params[key.idup] = value;
+						song.params[key] = value;
 						break;
 				}
 			}

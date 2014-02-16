@@ -2,6 +2,7 @@ module db.i.inputdevice;
 
 import db.instrument;
 import db.i.syncsource;
+import db.game;
 
 import std.range;
 
@@ -24,6 +25,8 @@ struct InputEvent
 
 class InputDevice
 {
+	abstract @property long inputTime();
+
 	@property InputEvent[] events() { return stream; }
 
 	void Begin(SyncSource sync)
@@ -53,4 +56,6 @@ class InputDevice
 
 	InstrumentType instrumentType = InstrumentType.Unknown;
 	uint features;
+
+	long deviceLatency;
 }

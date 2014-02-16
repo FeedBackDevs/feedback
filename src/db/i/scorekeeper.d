@@ -21,10 +21,15 @@ abstract class ScoreKeeper
 
 	void Update();
 
+	@property long averageError() { return numErrorSamples ? cumulativeError / numErrorSamples : 0; }
+
 	Sequence sequence;
 	InputDevice inputDevice;
 
-	long window = 400; // in milliseconds
+	long cumulativeError;
+	int numErrorSamples;
+
+	long window = 200; // in milliseconds
 
 	// shared
 	mixin Signal!(int, long) noteHit;	// (note, precision) precision is microseconds from the precise note time

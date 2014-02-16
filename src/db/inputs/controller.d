@@ -4,6 +4,7 @@ import db.tools.log;
 import db.i.inputdevice;
 import db.i.syncsource;
 import db.instrument;
+import db.game;
 
 import fuji.system;
 import fuji.input;
@@ -45,6 +46,11 @@ class Controller : InputDevice
 		// TODO: detect other types of controllers from other games...
 	}
 
+	override @property long inputTime()
+	{
+		return Game.Instance.performance.time - (deviceLatency + Game.Instance.settings.controllerLatency)*1_000;
+	}
+
 	override void Begin(SyncSource sync)
 	{
 		super.Begin(sync);
@@ -67,7 +73,7 @@ class Controller : InputDevice
 				if(e.event == MFInputEventType.Change)
 				{
 					InputEvent ie;
-					ie.timestamp = (e.timestamp - startTime) * 1_000_000 / rtcFreq;
+					ie.timestamp = (e.timestamp - startTime) * 1_000_000 / rtcFreq - (deviceLatency + Game.Instance.settings.controllerLatency)*1_000;
 					ie.key = e.input;
 					ie.velocity = e.state;
 

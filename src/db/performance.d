@@ -146,7 +146,7 @@ class Performance
 		// draw the players
 		Renderer.Instance.SetCurrentLayer(RenderLayers.Game);
 		foreach(p; performers)
-			p.Draw(time);
+			p.Draw(time + (-Game.Instance.settings.audioLatency + Game.Instance.settings.videoLatency)*1_000);
 	}
 
 	Song song;

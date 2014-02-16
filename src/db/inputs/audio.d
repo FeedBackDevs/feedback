@@ -3,6 +3,7 @@ module db.inputs.audio;
 import db.tools.log;
 import db.i.inputdevice;
 import db.instrument;
+import db.game;
 
 class Audio : InputDevice
 {
@@ -11,6 +12,11 @@ class Audio : InputDevice
 		deviceId = audioDeviceId;
 
 		// this is either vocals, or pro-guitar
+	}
+
+	override @property long inputTime()
+	{
+		return Game.Instance.performance.time - (deviceLatency + Game.Instance.settings.micLatency)*1_000;
 	}
 
 	override void Update()

@@ -362,6 +362,9 @@ class GHDrums : NoteTrack
 			MFFont_DrawTextAnchored(MFFont_GetDebugFont(), e.text.toStringz, r, MFFontJustify.Bottom_Right, 1920.0f, 30.0f, MFVector.white);
 		}
 
+		// write average error
+		MFFont_DrawText2(null, 10, 10, 20, MFVector.white, ("error: " ~ to!string(performer.scoreKeeper.averageError/1000)).toStringz);
+
 		MFView_Pop();
 	}
 

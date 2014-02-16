@@ -168,7 +168,8 @@ class DrumsScoreKeeper : ScoreKeeper
 
 	override void Update()
 	{
-		long time = Game.Instance.performance.time;
+		long audioLatency = Game.Instance.settings.audioLatency*1_000;
+		long time = inputDevice.inputTime - audioLatency;
 
 		inputDevice.Update();
 
@@ -189,53 +190,55 @@ class DrumsScoreKeeper : ScoreKeeper
 				break;
 		}
 
-		DrumNote[] expecting = GetNext();
-		if(expecting)
+		foreach(e; inputDevice.events)
 		{
-			foreach(e; inputDevice.events)
-			{
-				if(e.key == DrumInput.HatPedal)
-					hatPos.emit(e.velocity == 0);
+			if(e.key == DrumInput.HatPedal)
+				hatPos.emit(e.velocity == 0);
 
-				if(e.event != InputEventType.On)
+			if(e.event != InputEventType.On)
+				continue;
+
+			// adjust timestamp to compensate for audio latency
+			long timestamp = e.timestamp - audioLatency;
+
+//				WriteLog(format("%6d input: %d (%g)", timestamp/1000, e.key, e.velocity), MFVector(1,1,1,1));
+
+			// consider next note
+			DrumNote[] next = GetNext();
+
+			int note = e.key;
+
+			// hat pedal down events trigger a hat hit
+			if(e.key == DrumInput.HatPedal && e.event == InputEventType.On)
+				note = DrumInput.Cymbal1;
+
+			bool bDidHit = false;
+			for(size_t i = offset; i < notes.length && timestamp >= notes[i].time - tolerance; ++i)
+			{
+				if(notes[i].bHit)
 					continue;
 
-//				WriteLog(format("%6d input: %d (%g)", e.timestamp/1000, e.key, e.velocity), MFVector(1,1,1,1));
-
-				// consider next note
-				DrumNote[] next = GetNext();
-
-				int note = e.key;
-
-				// hat pedal down events trigger a hat hit
-				if(e.key == DrumInput.HatPedal && e.event == InputEventType.On)
-					note = DrumInput.Cymbal1;
-
-				bool bDidHit = false;
-				for(size_t i = offset; i < notes.length && e.timestamp >= notes[i].time - tolerance; ++i)
+				if(notes[i].key == note)
 				{
-					if(notes[i].bHit)
-						continue;
+					notes[i].bHit = true;
 
-					if(notes[i].key == note)
-					{
-						notes[i].bHit = true;
+					long error = timestamp - notes[i].time;
+					cumulativeError += error;
+					++numErrorSamples;
 
-						long error = e.timestamp - notes[i].time;
-						WriteLog(format("%6d hit: %d (%g) - %d", notes[i].time/1000, note, e.velocity, error/1000), MFVector(1,1,1,1));
-						noteHit.emit(note, error);
-						bDidHit = true;
+					WriteLog(format("%6d hit: %d (%g) - %d", notes[i].time/1000, note, e.velocity, error/1000), MFVector(1,1,1,1));
+					noteHit.emit(note, error);
+					bDidHit = true;
 
-						if(i == offset)
-							++offset;
-						break;
-					}
+					if(i == offset)
+						++offset;
+					break;
 				}
-				if(!bDidHit)
-				{
-					WriteLog(format("%6d bad: %d (%g)", e.timestamp/1000, note, e.velocity), MFVector(1,1,1,1));
-					badNote.emit(note);
-				}
+			}
+			if(!bDidHit)
+			{
+				WriteLog(format("%6d bad: %d (%g)", timestamp/1000, note, e.velocity), MFVector(1,1,1,1));
+				badNote.emit(note);
 			}
 		}
 
