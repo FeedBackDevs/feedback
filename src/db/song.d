@@ -117,10 +117,10 @@ class Song
 
 			Part part;
 			bool bIsEventTrack = true;
-			string variation = "Default";
 			ptrdiff_t v = -1;
 
 			DrumsType drumType = DrumsType.Unknown;
+			int keysDifficulty;
 
 			// detect which track we're looking at
 			if(i == 0)
@@ -132,15 +132,33 @@ class Song
 			{
 				MFDebug_Log(3, "Track: " ~ name.text);
 
+				string variation = name.text;
+
 				switch(name.text)
 				{
-					case "T1 GEMS":
+					case "T1 GEMS":				variation = "PART GUITAR"; goto case "PART GUITAR";
 					case "PART GUITAR":			part = Part.LeadGuitar; bIsEventTrack = false; break;
-					case "PART GUITAR COOP":	part = Part.LeadGuitar; variation = "Co-op"; bIsEventTrack = false; break;
+					case "PART GUITAR COOP":	part = Part.LeadGuitar; bIsEventTrack = false; break;
 					case "PART RHYTHM":			part = Part.RhythmGuitar; bIsEventTrack = false; break;
 					case "PART BASS":			part = Part.Bass; bIsEventTrack = false; break;
 					case "PART DRUMS":			part = Part.Drums; bIsEventTrack = false; break;
+					case "PART KEYS":			part = Part.Keys; bIsEventTrack = false; break;
+					case "HARM1":
+					case "HARM2":
 					case "PART VOCALS":			part = Part.Vox; bIsEventTrack = false; break;
+					case "PART REAL_GUITAR":
+					case "PART REAL_GUITAR_22":	part = Part.ProGuitar; bIsEventTrack = false; break;
+					case "PART REAL_BASS":		part = Part.ProBass; bIsEventTrack = false; break;
+					case "PART REAL_KEYS_X":	keysDifficulty = 3; goto case "PART REAL_KEYS";
+					case "PART REAL_KEYS_H":	keysDifficulty = 2; goto case "PART REAL_KEYS";
+					case "PART REAL_KEYS_M":	keysDifficulty = 1; goto case "PART REAL_KEYS";
+					case "PART REAL_KEYS_E":	keysDifficulty = 0; goto case "PART REAL_KEYS";
+					case "PART REAL_KEYS":
+						variation = "PART REAL_KEYS";
+						part = Part.ProKeys;
+						bIsEventTrack = false;
+						break;
+
 					case "EVENTS":
 						break;
 					case "VENUE":
@@ -162,6 +180,11 @@ class Song
 						// Contains text events that control the animation state of the band keyboard player.
 						part = Part.Keys;
 						break;
+					case "PART KEYS_ANIM_RH":
+					case "PART KEYS_ANIM_LH":
+						// Contains keyboard animation events.
+						part = Part.Keys;
+						break;
 					case "TRIGGERS":
 						// GH1 + GH2: The contents of this track are not known.
 						break;
@@ -178,47 +201,60 @@ class Song
 
 				if(part != Part.Unknown && !bIsEventTrack)
 				{
-					v = parts[part].variations.length;
-					parts[part].variations ~= Variation(variation);
-
-					// Note: Vox track only has one difficulty...
-					parts[part].variations[v].difficulties = new Sequence[part == Part.Vox ? 1 : difficulties.length];
-					foreach(j, ref d; parts[part].variations[v].difficulties)
+					// find variation...
+					foreach(j, var; parts[part].variations)
 					{
-						d = new Sequence;
-						d.part = part;
-						d.variation = variation;
-						d.difficulty = part == Part.Vox ? "Default" : difficulties[j];
-						d.difficultyMeter = 0; // TODO: I think we can pull this from songs.ini?
+						if(var.name == variation)
+						{
+							v = j;
+							break;
+						}
 					}
 
-					if(part == Part.Drums)
+					if(v == -1)
 					{
-						// scan for any notes 100-102 (indicates pro drums)
-						foreach(ref e; t)
+						v = parts[part].variations.length;
+						parts[part].variations ~= Variation(variation);
+
+						// Note: Vox track only has one difficulty...
+						parts[part].variations[v].difficulties = new Sequence[part == Part.Vox ? 1 : difficulties.length];
+						foreach(j, ref d; parts[part].variations[v].difficulties)
 						{
-							if(e.type == MIDIEventType.NoteOn && e.note.note >= 110 && e.note.note <= 112)
-							{
-								drumType = DrumsType.SevenDrums;
-								break;
-							}
-						}
-						if(drumType == DrumsType.Unknown)
-						{
-							// check if 'five_lane_drums' appears in song.ini
-							string* p5Lane = "five_lane_drums" in params;
-							bool b5Lane = p5Lane && (*p5Lane == "1" || !icmp(*p5Lane, "true"));
-							if(b5Lane)
-								drumType = DrumsType.FiveDrums;
-							else
-								drumType = DrumsType.FourDrums;
+							d = new Sequence;
+							d.part = part;
+							d.variation = variation;
+							d.difficulty = part == Part.Vox ? "Default" : difficulties[j];
+							d.difficultyMeter = 0; // TODO: I think we can pull this from songs.ini?
 						}
 
-						// prepend the drums type to the variation name
-						static __gshared immutable string variationNames[] = [ "-4drums", "-5drums", "-7drums" ];
-						parts[part].variations[v].name = parts[part].variations[v].name ~ variationNames[drumType];
-						foreach(d; parts[part].variations[v].difficulties)
-							d.variation = parts[part].variations[v].name;
+						if(part == Part.Drums)
+						{
+							// scan for any notes 100-102 (indicates pro drums)
+							foreach(ref e; t)
+							{
+								if(e.type == MIDIEventType.NoteOn && e.note.note >= 110 && e.note.note <= 112)
+								{
+									drumType = DrumsType.SevenDrums;
+									break;
+								}
+							}
+							if(drumType == DrumsType.Unknown)
+							{
+								// check if 'five_lane_drums' appears in song.ini
+								string* p5Lane = "five_lane_drums" in params;
+								bool b5Lane = p5Lane && (*p5Lane == "1" || !icmp(*p5Lane, "true"));
+								if(b5Lane)
+									drumType = DrumsType.FiveDrums;
+								else
+									drumType = DrumsType.FourDrums;
+							}
+
+							// prepend the drums type to the variation name
+							static __gshared immutable string variationNames[] = [ "-4drums", "-5drums", "-7drums" ];
+							parts[part].variations[v].name = parts[part].variations[v].name ~ variationNames[drumType];
+							foreach(d; parts[part].variations[v].difficulties)
+								d.variation = parts[part].variations[v].name;
+						}
 					}
 				}
 			}
@@ -397,6 +433,7 @@ class Song
 					case Part.RhythmGuitar:
 					case Part.Bass:
 					case Part.Drums:
+					case Part.Keys:
 						// if it within a difficulty bracket?
 						int difficulty = -1;
 						if(e.note.note >= 60 && e.note.note < 72)

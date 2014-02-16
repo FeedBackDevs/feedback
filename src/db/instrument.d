@@ -17,6 +17,7 @@ enum InstrumentType
 	Vocals,				// vocals
 	Keyboard,			// keyboard
 	Guitar,				// (real) guitar
+	Bass,				// (real) bass
 	DJ,					// DJ controller
 
 	// Bemani

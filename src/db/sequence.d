@@ -12,10 +12,11 @@ enum Part
 	Bass,			// bass guitar
 	Drums,			// drums
 	Vox,			// lead vocals
-	Vox2,			// secondary/backing vocals
 	Keys,			// keyboard
 	ProGuitar,		// pro guitar
-	ProDrums,		// pro drums
+	ProRhythmGuitar,// pro rhythm guitar
+	ProBass,		// pro bass
+	ProKeys,		// pro keyboard
 	DJ,				// DJ hero
 
 	// Bemani games
