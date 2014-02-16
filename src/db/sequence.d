@@ -41,14 +41,17 @@ enum EventType
 	Anchor,
 	TimeSignature,
 
-	Note,
-	Special,		// special sections
-	Event,			// text events
-	Lyric,			// lyrics
-	Section,		// song section names
-	Lighting,		// lighting events
-	DirectedCut,	// directed camera cut
-	MIDI,			// raw midi event (for stuff we haven't decoded yet)
+	Note,				// a regular note
+	GuitarNote,			// notes for pro guitar modes (string + fret)
+	Lyric,				// lyrics
+	Special,			// special sections
+	Event,				// text events
+	Section,			// song section names
+	Chord,				// the guitar chord in use
+	KeyboardPosition,	// the key appearing at the left of the keyboard
+	Lighting,			// lighting events
+	DirectedCut,		// directed camera cut
+	MIDI,				// raw midi event (for stuff we haven't decoded yet)
 }
 
 enum SpecialType
@@ -85,6 +88,12 @@ struct Event
 		int key;
 		uint flags;
 	}
+	struct GuitarNote
+	{
+		int _string;
+		uint flags;
+		int fret;
+	}
 	struct MIDI
 	{
 		ubyte type;
@@ -99,9 +108,12 @@ struct Event
 		BPM bpm;
 		TimeSig ts;
 		Note note;
+		GuitarNote guitar;
 		SpecialType special;
-		MIDI midi;
 		string text;
+		int chord;
+		int keyboardPosition;
+		MIDI midi;
 	}
 }
 

@@ -117,7 +117,8 @@ class Song
 
 			Part part;
 			bool bIsEventTrack = true;
-			ptrdiff_t v = -1;
+			SongPart* pPart;
+			Variation* pVariation;
 
 			DrumsType drumType = DrumsType.Unknown;
 			int keysDifficulty;
@@ -137,15 +138,16 @@ class Song
 				switch(name.text)
 				{
 					case "T1 GEMS":				variation = "PART GUITAR"; goto case "PART GUITAR";
-					case "PART GUITAR":			part = Part.LeadGuitar; bIsEventTrack = false; break;
+					case "PART GUITAR":
 					case "PART GUITAR COOP":	part = Part.LeadGuitar; bIsEventTrack = false; break;
 					case "PART RHYTHM":			part = Part.RhythmGuitar; bIsEventTrack = false; break;
 					case "PART BASS":			part = Part.Bass; bIsEventTrack = false; break;
 					case "PART DRUMS":			part = Part.Drums; bIsEventTrack = false; break;
 					case "PART KEYS":			part = Part.Keys; bIsEventTrack = false; break;
+					case "PART VOCALS":
 					case "HARM1":
 					case "HARM2":
-					case "PART VOCALS":			part = Part.Vox; bIsEventTrack = false; break;
+					case "HARM3":				part = Part.Vox; bIsEventTrack = false; break;
 					case "PART REAL_GUITAR":
 					case "PART REAL_GUITAR_22":	part = Part.ProGuitar; bIsEventTrack = false; break;
 					case "PART REAL_BASS":		part = Part.ProBass; bIsEventTrack = false; break;
@@ -201,24 +203,29 @@ class Song
 
 				if(part != Part.Unknown && !bIsEventTrack)
 				{
+					pPart = &parts[part];
+
 					// find variation...
-					foreach(j, var; parts[part].variations)
+					bool bFound;
+					foreach(j, var; pPart.variations)
 					{
 						if(var.name == variation)
 						{
-							v = j;
+							pVariation = &pPart.variations[j];
+							bFound = true;
 							break;
 						}
 					}
 
-					if(v == -1)
+					if(!bFound)
 					{
-						v = parts[part].variations.length;
-						parts[part].variations ~= Variation(variation);
+						ptrdiff_t v = pPart.variations.length;
+						pPart.variations ~= Variation(variation);
+						pVariation = &pPart.variations[v];
 
 						// Note: Vox track only has one difficulty...
-						parts[part].variations[v].difficulties = new Sequence[part == Part.Vox ? 1 : difficulties.length];
-						foreach(j, ref d; parts[part].variations[v].difficulties)
+						pVariation.difficulties = new Sequence[part == Part.Vox ? 1 : difficulties.length];
+						foreach(j, ref d; pVariation.difficulties)
 						{
 							d = new Sequence;
 							d.part = part;
@@ -251,9 +258,9 @@ class Song
 
 							// prepend the drums type to the variation name
 							static __gshared immutable string variationNames[] = [ "-4drums", "-5drums", "-7drums" ];
-							parts[part].variations[v].name = parts[part].variations[v].name ~ variationNames[drumType];
-							foreach(d; parts[part].variations[v].difficulties)
-								d.variation = parts[part].variations[v].name;
+							pVariation.name = pVariation.name ~ variationNames[drumType];
+							foreach(d; pVariation.difficulties)
+								d.variation = pVariation.name;
 						}
 					}
 				}
@@ -313,7 +320,7 @@ class Song
 								// stash it in the part (all difficulties)
 								ev.event = EventType.Event;
 								ev.text = text;
-								parts[part].events ~= ev;
+								pPart.events ~= ev;
 							}
 							break;
 						case Lyric:
@@ -327,7 +334,7 @@ class Song
 							ev.text = e.text;
 
 							// Note: keeping lyrics in variation means we can support things like 'misheard lyric' variations ;)
-							parts[part].variations[v].difficulties[0].notes ~= ev;
+							pVariation.difficulties[0].notes ~= ev;
 							break;
 						case EndOfTrack:
 							// TODO: should we validate that the track actually ends?
@@ -353,7 +360,7 @@ class Song
 						{
 							tomSwitchStart[e.note.note - 110] = 0;
 
-							foreach(seq; parts[Part.Drums].variations[v].difficulties)
+							foreach(seq; pVariation.difficulties)
 							{
 								Event[] notes = seq.notes;
 								for(ptrdiff_t j = notes.length-1; j >= 0 && notes[j].tick >= start; --j)
@@ -362,12 +369,12 @@ class Song
 									if(pEv.event != EventType.Note)
 										continue;
 
-									switch(pEv.note.key)
+									switch(pEv.note.key) with(DrumNotes)
 									{
-										case DrumNotes.Hat:		pEv.note.key = DrumNotes.Tom1; break;
-										case DrumNotes.Ride:	pEv.note.key = DrumNotes.Tom2; break;
-										case DrumNotes.Crash:	pEv.note.key = DrumNotes.Tom3; break;
-										default:				break;
+										case Hat:	pEv.note.key = Tom1; break;
+										case Ride:	pEv.note.key = Tom2; break;
+										case Crash:	pEv.note.key = Tom3; break;
+										default:	break;
 									}
 								}
 							}
@@ -415,8 +422,8 @@ class Song
 					ev.midi.velocity = e.note.velocity;
 					if(part != Part.Unknown)
 					{
-						parts[part].events ~= ev;
-						currentEvents[e.note.note] = &parts[part].events.back;
+						pPart.events ~= ev;
+						currentEvents[e.note.note] = &pPart.events.back;
 					}
 					else
 					{
@@ -427,13 +434,9 @@ class Song
 					continue;
 				}
 
-				switch(part)
+				switch(part) with(Part)
 				{
-					case Part.LeadGuitar:
-					case Part.RhythmGuitar:
-					case Part.Bass:
-					case Part.Drums:
-					case Part.Keys:
+					case LeadGuitar, RhythmGuitar, Bass, Drums, Keys:
 						// if it within a difficulty bracket?
 						int difficulty = -1;
 						if(e.note.note >= 60 && e.note.note < 72)
@@ -459,11 +462,11 @@ class Song
 									static __gshared immutable int fiveDrumMap[5] = [ DrumNotes.Kick, DrumNotes.Snare, DrumNotes.Hat, DrumNotes.Tom2, DrumNotes.Tom3 ];
 									static __gshared immutable int sevenDrumMap[5] = [ DrumNotes.Kick, DrumNotes.Snare, DrumNotes.Hat, DrumNotes.Ride, DrumNotes.Crash ];
 
-									switch(drumType)
+									switch(drumType) with(DrumsType)
 									{
-										case DrumsType.FourDrums:	ev.note.key = fourDrumMap[note]; break;
-										case DrumsType.FiveDrums:	ev.note.key = fiveDrumMap[note]; break;
-										case DrumsType.SevenDrums:	ev.note.key = sevenDrumMap[note]; break;
+										case FourDrums:		ev.note.key = fourDrumMap[note]; break;
+										case FiveDrums:		ev.note.key = fiveDrumMap[note]; break;
+										case SevenDrums:	ev.note.key = sevenDrumMap[note]; break;
 										default:
 											assert(false, "Unreachable?");
 									}
@@ -477,6 +480,7 @@ class Song
 							{
 								if(part == Part.Drums && drumType == DrumsType.FiveDrums)
 								{
+									ev.event = EventType.Note;
 									ev.note.key = DrumNotes.Ride;
 								}
 								else
@@ -508,8 +512,8 @@ class Song
 
 							if(ev.event != EventType.Unknown)
 							{
-								parts[part].variations[v].difficulties[difficulty].notes ~= ev;
-								currentEvents[e.note.note] = &parts[part].variations[v].difficulties[difficulty].notes.back;
+								pVariation.difficulties[difficulty].notes ~= ev;
+								currentEvents[e.note.note] = &pVariation.difficulties[difficulty].notes.back;
 							}
 						}
 						else
@@ -549,23 +553,20 @@ class Song
 								case 116:
 									ev.event = EventType.Special;
 									ev.special = SpecialType.Overdrive;
-									foreach(seq; parts[part].variations[v].difficulties)
+									foreach(seq; pVariation.difficulties)
 									{
 										seq.notes ~= ev;
 										currentEvents[e.note.note] = &seq.notes.back;	// TODO: *FIXME* this get's overwritten 4 times, and only the last one will get sustain!
 									}
 									break;
 
-								case 120:	// RB: drum fills
-								case 121:
-								case 122:
-								case 123:
+								case 120: .. case 123:	// RB: drum fills
 									// Note: Freestyle always triggers all notes from 120-124, so we'll ignore 120-123.
 									break;
 								case 124:
 									ev.event = EventType.Special;
 									ev.special = SpecialType.FreeStyle;
-									foreach(seq; parts[part].variations[v].difficulties)
+									foreach(seq; pVariation.difficulties)
 									{
 										seq.notes ~= ev;
 										currentEvents[e.note.note] = &seq.notes.back;	// TODO: *FIXME* this get's overwritten 4 times, and only the last one will get sustain!
@@ -574,7 +575,10 @@ class Song
 
 								default:
 									// TODO: there are still a bunch of unknown notes...
-//									MFDebug_Warn(2, "Unknown note: " ~ to!string(part) ~ " " ~ to!string(e.note.note));
+									MFDebug_Warn(2, "Unknown note: " ~ to!string(part) ~ " " ~ to!string(e.note.note));
+									goto unknown;
+
+								unknown:
 									ev.event = EventType.MIDI;
 									ev.midi.type = e.type;
 									ev.midi.subType = e.subType;
@@ -582,14 +586,150 @@ class Song
 									ev.midi.note = e.note.note;
 									ev.midi.velocity = e.note.velocity;
 
-									parts[part].events ~= ev;
-									currentEvents[e.note.note] = &parts[part].events.back;
+									pPart.events ~= ev;
+									currentEvents[e.note.note] = &pPart.events.back;
 									continue;
 							}
 						}
 						break;
 
-					case Part.Vox:
+					case ProGuitar, ProRhythmGuitar, ProBass:
+						// if it within a difficulty bracket?
+						int difficulty = -1;
+						if(e.note.note >= 24 && e.note.note <= 29)
+							difficulty = 0;
+						else if(e.note.note >= 48 && e.note.note <= 53)
+							difficulty = 1;
+						else if(e.note.note >= 72 && e.note.note <= 77)
+							difficulty = 2;
+						else if(e.note.note >= 96 && e.note.note <= 101)
+							difficulty = 3;
+
+						if(difficulty != -1)
+						{
+							int[4] offset = [ 24, 48, 72, 96 ];
+							int _string = e.note.note - offset[difficulty];
+
+							ev.event = EventType.GuitarNote;
+							ev.guitar._string = _string;
+							ev.guitar.fret = e.note.velocity - 100;
+
+							pVariation.difficulties[difficulty].notes ~= ev;
+							currentEvents[e.note.note] = &pVariation.difficulties[difficulty].notes.back;
+						}
+						else
+						{
+							// events here are not difficulty specific, and apply to all difficulties
+							switch(e.note.note)
+							{
+								case 0: .. case 20:
+									// chord names..
+									ev.event = EventType.Chord;
+									ev.chord = e.note.note;
+
+									pPart.events ~= ev;
+									currentEvents[e.note.note] = &pPart.events.back;
+									break;
+
+								case 104:
+									// Arpeggio Section
+									goto pro_unknown;
+								case 108:
+									// Base note for Arpeggio Section (velocity determines number)
+									goto pro_unknown;
+								case 115:
+									// Solo Marker
+									goto pro_unknown;
+								case 116:
+									ev.event = EventType.Special;
+									ev.special = SpecialType.Overdrive;
+									foreach(seq; pVariation.difficulties)
+									{
+										seq.notes ~= ev;
+										currentEvents[e.note.note] = &seq.notes.back;	// TODO: *FIXME* this get's overwritten 4 times, and only the last one will get sustain!
+									}
+									break;
+
+								case 21, 45, 69, 93:
+									// unknown... (apparently difficulty based)
+									goto pro_unknown;
+								case 55:
+									// unknown... (just random notes)
+									goto pro_unknown;
+								case 78, 79, 80:
+									// unknown... (looks like an extension of 'hard')
+									goto pro_unknown;
+								case 103:
+									// unknown
+									goto pro_unknown;
+								case 127:
+									// unknown
+									goto pro_unknown;
+
+								default:
+									// TODO: there are still a bunch of unknown notes...
+									MFDebug_Warn(2, "Unknown note: " ~ to!string(part) ~ " " ~ to!string(e.note.note));
+									goto pro_unknown;
+
+								pro_unknown:
+									ev.event = EventType.MIDI;
+									ev.midi.type = e.type;
+									ev.midi.subType = e.subType;
+									ev.midi.channel = e.note.channel;
+									ev.midi.note = e.note.note;
+									ev.midi.velocity = e.note.velocity;
+
+									pPart.events ~= ev;
+									currentEvents[e.note.note] = &pPart.events.back;
+									continue;
+							}
+						}
+						break;
+
+					case ProKeys:
+						if(e.note.note >= Notes.C2 && e.note.note <= Notes.C4)
+						{
+							ev.event = EventType.Note;
+							ev.note.key = e.note.note;
+
+							pVariation.difficulties[keysDifficulty].notes ~= ev;
+							currentEvents[e.note.note] = &pVariation.difficulties[keysDifficulty].notes.back;
+						}
+						else
+						{
+							// events here are not difficulty specific, and apply to all difficulties
+							switch(e.note.note)
+							{
+								case 0: .. case 9:
+									// keyboard position
+									ev.event = EventType.KeyboardPosition;
+									ev.keyboardPosition = Notes.C2 + e.note.note;
+
+									pPart.events ~= ev;
+									currentEvents[e.note.note] = &pPart.events.back;
+									break;
+
+								default:
+									// TODO: there are still a bunch of unknown notes...
+									MFDebug_Warn(2, "Unknown note: " ~ to!string(part) ~ " " ~ to!string(e.note.note));
+									goto keys_unknown;
+
+								keys_unknown:
+									ev.event = EventType.MIDI;
+									ev.midi.type = e.type;
+									ev.midi.subType = e.subType;
+									ev.midi.channel = e.note.channel;
+									ev.midi.note = e.note.note;
+									ev.midi.velocity = e.note.velocity;
+
+									pPart.events ~= ev;
+									currentEvents[e.note.note] = &pPart.events.back;
+									continue;
+							}
+						}
+						break;
+
+					case Vox:
 						// TODO: read vox...
 						break;
 
@@ -599,6 +739,7 @@ class Song
 				}
 			}
 
+			// seven drums may need some post-processing if we have options to rearrange the drums
 			if(drumType == DrumsType.SevenDrums)
 			{
 				// green_is_ride instructs that the crash and ride cymbals should be swapped
@@ -727,7 +868,8 @@ class Song
 		}
 
 		Part part = player.input.part;
-		if(parts[part].variations.empty)
+		SongPart* pPart = &parts[part];
+		if(pPart.variations.empty)
 			return null;
 
 		Variation var;
@@ -757,7 +899,7 @@ class Song
 			// find the appropriate variation for the player's kit
 			outer: foreach(i, pref; preferences)
 			{
-				foreach(v; parts[part].variations)
+				foreach(v; pPart.variations)
 				{
 					if(endsWith(v.name, pref))
 					{
@@ -774,7 +916,7 @@ class Song
 		}
 		else
 		{
-			foreach(v; parts[part].variations)
+			foreach(v; pPart.variations)
 			{
 				if(!variation || (variation && v.name == variation))
 				{
