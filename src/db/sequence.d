@@ -47,7 +47,9 @@ enum EventType
 	Special,			// special sections
 	Event,				// text events
 	Section,			// song section names
+	DrumAnimation,		// drum animation
 	Chord,				// the guitar chord in use
+	NeckPosition,		// ranging 0-19, even spatial intervals between frets 0 and 12
 	KeyboardPosition,	// the key appearing at the left of the keyboard
 	Lighting,			// lighting events
 	DirectedCut,		// directed camera cut
@@ -57,12 +59,17 @@ enum EventType
 enum SpecialType
 {
 	StarPower,
+	LeftPlayer,		// GH1/2 co-op mode
+	RightPlayer,	// GH1/2 co-op mode
+	Slide,			// GH4 slider
 	Overdrive,
 	FreeStyle,
-	Solo,			// RB solo keys
-	Slide,			// GH4 slider
-	LeftPlayer,		// GH1/2 co-op mode
-	RightPlayer		// GH1/2 co-op mode
+	Solo,			// RB solo
+	DrumRoll,
+	SpecialDrumRoll,
+	Trill,			// RB trill guitar, pro keys
+	Tremolo,		// RB guitar
+	Glissando		// RB pro keys
 }
 
 struct Event
@@ -110,9 +117,10 @@ struct Event
 		Note note;
 		GuitarNote guitar;
 		SpecialType special;
+		DrumAnimation drumAnim;
 		string text;
 		int chord;
-		int keyboardPosition;
+		int position;
 		MIDI midi;
 	}
 }
