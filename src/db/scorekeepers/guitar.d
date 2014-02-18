@@ -7,6 +7,7 @@ import db.sequence;
 import db.instrument;
 
 import std.signals;
+import std.algorithm;
 
 enum NumGuitarNotes = 5;
 
@@ -31,14 +32,16 @@ class GuitarScoreKeeper : ScoreKeeper
 	{
 		super(sequence, input);
 
-		foreach(n; sequence.notes)
+		numNotes = cast(int)sequence.notes.count!(a => a.event == EventType.Note);
+		notes = new GuitarNote[numNotes];
+
+		int i;
+		foreach(ref n; sequence.notes.filter!(a => a.event == EventType.Note))
 		{
-			if(n.event == EventType.Note)
-			{
-				GuitarNote note;
-				note.pEv = &n;
-				notes ~= note;
-			}
+			GuitarNote* pGuitarNote = &notes[i++];
+
+			pGuitarNote.pEv = &n;
+			n.pScoreKeeperData = pGuitarNote;
 		}
 	}
 
@@ -81,6 +84,11 @@ class GuitarScoreKeeper : ScoreKeeper
 		}
 
 		inputDevice.Clear();
+	}
+
+	override bool WasHit(Event* pEvent)
+	{
+		return pEvent.pScoreKeeperData ? (cast(GuitarNote*)pEvent.pScoreKeeperData).bHit : false;
 	}
 
 	GuitarNote[] notes;

@@ -60,6 +60,8 @@ struct Variation
 {
 	string name;
 	Sequence[] difficulties;	// sequences for each difficulty
+
+	bool bHasCoopMarkers;		// GH1/GH2 style co-op (players take turns)
 }
 
 class Song
@@ -534,7 +536,7 @@ class Song
 
 									case 7:
 										ev.event = EventType.Special;
-										ev.special = ghVer >= GHVersion.RB ? SpecialType.Solo : SpecialType.StarPower;
+										ev.special = ghVer >= GHVersion.RB ? SpecialType.Solo : SpecialType.Boost;
 										goto current_difficulty;
 
 									case 8:
@@ -544,6 +546,7 @@ class Song
 									case 9:
 										ev.event = EventType.Special;
 										ev.special = SpecialType.LeftPlayer;
+										pVariation.bHasCoopMarkers = true;
 										if(ghVer >= GHVersion.RB)
 											goto all_difficulties;
 										goto current_difficulty;
@@ -551,6 +554,7 @@ class Song
 									case 10:
 										ev.event = EventType.Special;
 										ev.special = SpecialType.RightPlayer;
+										pVariation.bHasCoopMarkers = true;
 										if(ghVer >= GHVersion.RB)
 											goto all_difficulties;
 										goto current_difficulty;
@@ -597,7 +601,7 @@ class Song
 
 							case 116:
 								ev.event = EventType.Special;
-								ev.special = SpecialType.Overdrive;
+								ev.special = SpecialType.Boost;
 								goto all_difficulties;
 
 							case 120: .. case 123:	// RB: drum fills
@@ -744,7 +748,7 @@ class Song
 
 							case 115, 116:
 								ev.event = EventType.Special;
-								ev.special = note == 115 ? SpecialType.Solo : SpecialType.Overdrive;
+								ev.special = note == 115 ? SpecialType.Solo : SpecialType.Boost;
 								goto all_difficulties;
 
 							case 120: .. case 124:	// RB: big rock ending
@@ -786,7 +790,7 @@ class Song
 									goto default;
 
 								ev.event = EventType.Special;
-								ev.special = note == 115 ? SpecialType.Solo : SpecialType.Overdrive;
+								ev.special = note == 115 ? SpecialType.Solo : SpecialType.Boost;
 								goto all_difficulties;
 
 							case 126, 127:

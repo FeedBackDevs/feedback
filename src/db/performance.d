@@ -58,7 +58,12 @@ class Performer
 
 	void Draw(long now)
 	{
-		noteTrack.Draw(screenSpace, now, this);
+		noteTrack.Draw(screenSpace, now);
+	}
+
+	void DrawUI()
+	{
+		noteTrack.DrawUI(screenSpace);
 	}
 
 	MFRect screenSpace;
@@ -140,13 +145,26 @@ class Performance
 
 	void Draw()
 	{
+		MFView_Push();
+
 		// TODO: draw the background
 		Renderer.Instance.SetCurrentLayer(RenderLayers.Background);
 
-		// draw the players
+		// draw the tracks
 		Renderer.Instance.SetCurrentLayer(RenderLayers.Game);
 		foreach(p; performers)
 			p.Draw(time + (-Game.Instance.settings.audioLatency + Game.Instance.settings.videoLatency)*1_000);
+
+		// draw the UI
+		Renderer.Instance.SetCurrentLayer(RenderLayers.UI);
+
+		MFRect rect = MFRect(0, 0, 1920, 1080);
+		MFView_SetOrtho(&rect);
+
+		foreach(p; performers)
+			p.DrawUI();
+
+		MFView_Pop();
 	}
 
 	Song song;

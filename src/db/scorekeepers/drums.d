@@ -9,6 +9,7 @@ import db.game;
 import db.song;
 
 import std.signals;
+import std.algorithm;
 
 import fuji.fuji;
 
@@ -147,14 +148,16 @@ class DrumsScoreKeeper : ScoreKeeper
 	{
 		super(sequence, input);
 
-		foreach(ref n; sequence.notes)
+		numNotes = cast(int)sequence.notes.count!(a => a.event == EventType.Note);
+		notes = new DrumNote[numNotes];
+
+		int i;
+		foreach(ref n; sequence.notes.filter!(a => a.event == EventType.Note))
 		{
-			if(n.event == EventType.Note)
-			{
-				DrumNote note;
-				note.pEv = &n;
-				notes ~= note;
-			}
+			DrumNote* pDrumNote = &notes[i++];
+
+			pDrumNote.pEv = &n;
+			n.pScoreKeeperData = pDrumNote;
 		}
 	}
 
@@ -183,7 +186,15 @@ class DrumsScoreKeeper : ScoreKeeper
 			else if(time > notes[offset].time + tolerance)
 			{
 				WriteLog(format("%6d missed: %d", notes[offset].time/1000, notes[offset].key), MFVector(1,1,1,1));
+
+				int oldCombo = combo;
+				combo = 0;
+				multiplier = 1;
+
 				noteMiss.emit(notes[offset].key);
+				if(oldCombo > 1)
+					lostCombo.emit();
+
 				++offset;
 			}
 			else
@@ -220,16 +231,32 @@ class DrumsScoreKeeper : ScoreKeeper
 
 				if(notes[i].key == note)
 				{
-					notes[i].bHit = true;
-
 					long error = timestamp - notes[i].time;
 					cumulativeError += error;
 					++numErrorSamples;
 
 					WriteLog(format("%6d hit: %d (%g) - %d", notes[i].time/1000, note, e.velocity, error/1000), MFVector(1,1,1,1));
-					noteHit.emit(note, error);
-					bDidHit = true;
 
+					notes[i].bHit = true;
+
+					// update counters
+					++numHits;
+					++combo;
+
+					int oldMultiplier = multiplier;
+					multiplier = min(1 + combo/10, 4);
+					if(bStarPowerActive)
+						multiplier *= 2;
+
+					// score note
+					score += 25*multiplier;
+
+					// emit sognals
+					noteHit.emit(note, error);
+					if(multiplier > oldMultiplier)
+						multiplierIncrease.emit();
+
+					bDidHit = true;
 					if(i == offset)
 						++offset;
 					break;
@@ -238,11 +265,23 @@ class DrumsScoreKeeper : ScoreKeeper
 			if(!bDidHit)
 			{
 				WriteLog(format("%6d bad: %d (%g)", timestamp/1000, note, e.velocity), MFVector(1,1,1,1));
+
+				int oldCombo = combo;
+				combo = 0;
+				multiplier = 1;
+
 				badNote.emit(note);
+				if(oldCombo > 1)
+					lostCombo.emit();
 			}
 		}
 
 		inputDevice.Clear();
+	}
+
+	override bool WasHit(Event* pEvent)
+	{
+		return pEvent.pScoreKeeperData ? (cast(DrumNote*)pEvent.pScoreKeeperData).bHit : false;
 	}
 
 	DrumNote[] notes;

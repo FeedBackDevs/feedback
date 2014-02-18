@@ -16,6 +16,8 @@ class GHGuitar : NoteTrack
 {
 	this(Performer performer)
 	{
+		super(performer);
+
 		Song song = performer.performance.song;
 		this.song = song;
 
@@ -33,26 +35,26 @@ class GHGuitar : NoteTrack
 		edge.parameters.zread = false;
 	}
 
-	@property Orientation orientation()
+	override @property Orientation orientation()
 	{
 		return Orientation.Tall;
 	}
 
-	@property InstrumentType instrumentType()
+	override @property InstrumentType instrumentType()
 	{
 		return InstrumentType.GuitarController;
 	}
 
-	@property float laneWidth()
+	override @property float laneWidth()
 	{
 		return fretboardWidth / 5.0f;
 	}
 
-	void Update()
+	override void Update()
 	{
 	}
 
-	void Draw(ref MFRect vp, long offset, Performer performer)
+	override void Draw(ref MFRect vp, long offset)
 	{
 		// HACK: horrible rendering code!
 		// stolen from the old C++ feedback, but it'll do for now...
@@ -292,12 +294,16 @@ class GHGuitar : NoteTrack
 		MFView_Pop();
 	}
 
-	MFVector GetPosForTick(long offset, int tick, RelativePosition pos)
+	override void DrawUI(ref MFRect vp)
+	{
+	}
+
+	override MFVector GetPosForTick(long offset, int tick, RelativePosition pos)
 	{
 		return GetPosForTime(offset, song.CalculateTimeOfTick(tick), pos);
 	}
 
-	MFVector GetPosForTime(long offset, long time, RelativePosition pos)
+	override MFVector GetPosForTime(long offset, long time, RelativePosition pos)
 	{
 		MFVector p;
 		p.z = (time-offset)*scrollSpeed*(1.0f/1_000_000.0f);
@@ -305,7 +311,7 @@ class GHGuitar : NoteTrack
 		return p;
 	}
 
-	void GetVisibleRange(long offset, int* pStartTick, int* pEndTick, long* pStartTime, long* pEndTime)
+	override void GetVisibleRange(long offset, int* pStartTick, int* pEndTick, long* pStartTime, long* pEndTime)
 	{
 		if(pStartTime || pStartTick)
 		{

@@ -18,6 +18,8 @@ class GHDrums : NoteTrack
 {
 	this(Performer performer)
 	{
+		super(performer);
+
 		Song song = performer.performance.song;
 		this.song = song;
 
@@ -63,26 +65,26 @@ class GHDrums : NoteTrack
 //		laneMap = [ 0, 1, 2, 3, 4, 5, 6, 7 ];
 	}
 
-	@property Orientation orientation()
+	override @property Orientation orientation()
 	{
 		return Orientation.Tall;
 	}
 
-	@property InstrumentType instrumentType()
+	override @property InstrumentType instrumentType()
 	{
 		return InstrumentType.Drums;
 	}
 
-	@property float laneWidth()
+	override @property float laneWidth()
 	{
 		return fretboardWidth / numLanes;
 	}
 
-	void Update()
+	override void Update()
 	{
 	}
 
-	void Draw(ref MFRect vp, long offset, Performer performer)
+	override void Draw(ref MFRect vp, long offset)
 	{
 		// HACK: horrible rendering code!
 		// stolen from the old C++ feedback, but it'll do for now...
@@ -272,6 +274,10 @@ class GHDrums : NoteTrack
 			if(e.event != EventType.Note)
 				continue;
 
+			// if it was hit, we don't need to render it
+			if(performer.scoreKeeper.WasHit(&e))
+				continue;
+
 			int key = laneMap[e.note.key];
 
 			// HACK: don't render notes for which we have no lanes!
@@ -295,8 +301,6 @@ class GHDrums : NoteTrack
 				noteDepth = columnWidth*0.3f;
 				noteHeight = columnWidth*0.2f;
 			}
-
-
 
 			if(e.duration > 0)
 			{
@@ -362,18 +366,26 @@ class GHDrums : NoteTrack
 			MFFont_DrawTextAnchored(MFFont_GetDebugFont(), e.text.toStringz, r, MFFontJustify.Bottom_Right, 1920.0f, 30.0f, MFVector.white);
 		}
 
-		// write average error
-		MFFont_DrawText2(null, 10, 10, 20, MFVector.white, ("error: " ~ to!string(performer.scoreKeeper.averageError/1000)).toStringz);
-
 		MFView_Pop();
 	}
 
-	MFVector GetPosForTick(long offset, int tick, RelativePosition pos)
+	override void DrawUI(ref MFRect vp)
+	{
+		// write average error
+		MFFont_DrawText2(null, 10, 10, 20, MFVector.white, ("Error: " ~ to!string(performer.scoreKeeper.averageError/1000)).toStringz);
+
+		MFFont_DrawText2(null, 10, 100, 50, MFVector.yellow, ("Score: " ~ to!string(performer.scoreKeeper.score)).toStringz);
+
+		MFFont_DrawText2(null, 10, 180, 50, MFVector.red, ("Combo: " ~ to!string(performer.scoreKeeper.combo)).toStringz);
+		MFFont_DrawText2(null, 10, 230, 70, MFVector.magenta, ("Multiplier: " ~ to!string(performer.scoreKeeper.multiplier) ~ "x").toStringz);
+	}
+
+	override MFVector GetPosForTick(long offset, int tick, RelativePosition pos)
 	{
 		return GetPosForTime(offset, song.CalculateTimeOfTick(tick), pos);
 	}
 
-	MFVector GetPosForTime(long offset, long time, RelativePosition pos)
+	override MFVector GetPosForTime(long offset, long time, RelativePosition pos)
 	{
 		MFVector p;
 		p.z = (time-offset)*scrollSpeed*(1.0f/1_000_000.0f);
@@ -381,7 +393,7 @@ class GHDrums : NoteTrack
 		return p;
 	}
 
-	void GetVisibleRange(long offset, int* pStartTick, int* pEndTick, long* pStartTime, long* pEndTime)
+	override void GetVisibleRange(long offset, int* pStartTick, int* pEndTick, long* pStartTime, long* pEndTime)
 	{
 		if(pStartTime || pStartTick)
 		{

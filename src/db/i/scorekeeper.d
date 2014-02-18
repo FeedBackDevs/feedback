@@ -21,10 +21,23 @@ abstract class ScoreKeeper
 
 	void Update();
 
+	bool WasHit(Event* pEvent);
+
 	@property long averageError() { return numErrorSamples ? cumulativeError / numErrorSamples : 0; }
+	@property int hitPercentage() { return numNotes ? numHits*100 / numNotes : 0; }
 
 	Sequence sequence;
 	InputDevice inputDevice;
+
+	int numNotes;
+	int numHits;
+
+	int score;
+	int combo;
+	int multiplier = 1;
+
+	float starPower;
+	bool bStarPowerActive;
 
 	long cumulativeError;
 	int numErrorSamples;
@@ -35,5 +48,8 @@ abstract class ScoreKeeper
 	mixin Signal!(int, long) noteHit;	// (note, precision) precision is microseconds from the precise note time
 	mixin Signal!(int) noteMiss;		// (note)
 	mixin Signal!(int) badNote;			// (note)
-	mixin Signal!(int) trigger;			// (trigger type)
+	mixin Signal!() lostCombo;			// (note)
+	mixin Signal!() multiplierIncrease;	// (note)
+	mixin Signal!() gainBoost;			// ()
+	mixin Signal!() triggerBoost;		// ()
 }

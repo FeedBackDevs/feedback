@@ -58,13 +58,12 @@ enum EventType
 
 enum SpecialType
 {
-	StarPower,
+	Boost,			// star power/overdrive
 	LeftPlayer,		// GH1/2 co-op mode
 	RightPlayer,	// GH1/2 co-op mode
 	Slide,			// GH4 slider
-	Overdrive,
-	FreeStyle,
 	Solo,			// RB solo
+	FreeStyle,
 	DrumRoll,
 	SpecialDrumRoll,
 	Trill,			// RB trill guitar, pro keys
@@ -80,6 +79,9 @@ struct Event
 	int duration;	// note duration
 
 	EventType event;
+
+	void* pScoreKeeperData;
+	void* pPresentationData;
 
 	struct BPM
 	{

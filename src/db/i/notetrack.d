@@ -37,17 +37,25 @@ RelativePosition Lane(int i) pure nothrow
 	return cast(RelativePosition)(RelativePosition.Lane + i);
 }
 
-interface NoteTrack
+abstract class NoteTrack
 {
+	this(Performer performer)
+	{
+		this.performer = performer;
+	}
+
 	@property Orientation orientation();
 	@property InstrumentType instrumentType();
 
 	@property float laneWidth();
 
 	void Update();
-	void Draw(ref MFRect vp, long offset, Performer performer);
+	void Draw(ref MFRect vp, long offset);
+	void DrawUI(ref MFRect vp);
 
 	MFVector GetPosForTick(long offset, int tick, RelativePosition pos);	// get a world position for the tick
 	MFVector GetPosForTime(long offset, long time, RelativePosition pos);	// get a world position for the time
 	void GetVisibleRange(long offset, int* pStartTick, int* pEndTick, long* pStartTime, long* pEndTime);	// get the range displayed by the track
+
+	Performer performer;
 }
