@@ -169,24 +169,32 @@ enum DrumAnimation
 enum DanceFeatures
 {
 	HasDancePads,	// Up, Down, Left, Right
-	HasSoloPads,	// UpLeft, UpRight
-	HasPumpPads		// UpLeft, UpRight, DownLeft, DownRight, Center
+	HasSoloPads,	// Includes UpLeft, UpRight
+	HasPumpPads,	// Corners and, Center
+	Has8Pads,		// 8 panels (no center)
+	Has9Pads		// 9 panels
 }
 
 enum DanceNotes
 {
 	Left,
-	Up,
 	Down,
+	Up,
 	Right,
 	UpLeft,
 	UpRight,
+	DownLeft,
+	DownRight,
+	Center,
 	Left2,
-	Up2,
 	Down2,
+	Up2,
 	Right2,
 	UpLeft2,
-	UpRight2
+	UpRight2,
+	DownLeft2,
+	DownRight2,
+	Center2
 }
 
 // misc

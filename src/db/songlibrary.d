@@ -10,6 +10,9 @@ import db.tools.midifile;
 
 import std.string;
 import std.encoding;
+import std.range;
+import std.path;
+import std.exception;
 
 class SongLibrary
 {
@@ -35,9 +38,17 @@ class SongLibrary
 				{
 					// TODO: stepmania anyone? :)
 				}
+				else if(file.filename.endsWith(".ksf"))
+				{
+					// kick is up step file (5-panel 'pump it up' steps)
+//					Song song = LoadFromKSF(file);
+//					songs ~= song;
+				}
 				else if(file.filename.endsWith(".dwi"))
 				{
-					// TODO: how about dance with intensity? :P
+					// danci with intensity step file
+					Song song = LoadFromDWI(file);
+					songs ~= song;
 				}
 			}
 			catch
@@ -49,9 +60,6 @@ class SongLibrary
 
 	Song LoadFromMidi(DirEntry file)
 	{
-		import std.range;
-		import std.path;
-
 		void[] ini = MFFileSystem_Load(file.filepath);
 		scope(exit) MFHeap_Free(ini);
 
@@ -141,6 +149,55 @@ class SongLibrary
 					song.musicFiles[musicFileNames[filepart]] = f.filename;
 			}
 		}
+
+		return song;
+	}
+
+	Song LoadFromDWI(DirEntry file)
+	{
+		const(char)[] dwi = cast(const(char)[])enforce(MFFileSystem_Load(file.filepath), "");
+		scope(exit) MFHeap_Free(cast(void[])dwi);
+
+		string path = file.directory ~ "/";
+
+		MFDebug_Log(2, "Loading song: '" ~ file.filepath ~ "'");
+
+		Song song = new Song;
+		song.songPath = path;
+		song.id = file.filename.stripExtension;
+		song.name = song.id;
+
+		// search for the music and other stuff...
+		string songName = file.filename.stripExtension.toLower;
+		foreach(f; dirEntries(path ~ "*", SpanMode.shallow))
+		{
+			static immutable imageTypes = [ ".png", ".jpg", ".jpeg", ".tga", ".dds", ".bmp" ];
+			static immutable musicTypes = [ ".ogg", ".mp3", ".flac", ".wav" ];
+
+			string filename = f.filename.toLower;
+			string ext = filename.extension;
+			string fn = filename.stripExtension;
+			if(std.algorithm.canFind(imageTypes, ext))
+			{
+				if(fn[] == songName)
+					song.cover = f.filename;
+				else if(fn[] == songName ~ "-bg")
+					song.background = f.filename;
+			}
+			else if(std.algorithm.canFind(musicTypes, ext))
+			{
+				if(fn[] == songName)
+					song.musicFiles[MusicFiles.Song] = f.filename;
+			}
+			else if(filename[] == songName ~ ".lrc")
+			{
+				// load lyrics into vocal track?
+				// move this into the DWI loader?
+			}
+		}
+
+		// load the midi
+		song.LoadDWI(dwi);
 
 		return song;
 	}

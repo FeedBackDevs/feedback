@@ -13,13 +13,12 @@ enum NumGuitarNotes = 5;
 
 struct GuitarNote
 {
-	@property long time() const pure nothrow		{ return pEv.time; }
-	@property int tick() const pure nothrow			{ return pEv.tick; }
-	@property int duration() const pure nothrow		{ return pEv.duration; }
-	@property EventType event() const pure nothrow	{ return pEv.event; }
+	@property long time() const pure nothrow		{ return pEv[0].time; }
+	@property int tick() const pure nothrow			{ return pEv[0].tick; }
+	@property int duration() const pure nothrow		{ return pEv[0].duration; }
+	@property EventType event() const pure nothrow	{ return pEv[0].event; }
 
-	Event *pEv;
-
+	Event*[NumGuitarNotes] pEv;
 	bool[NumGuitarNotes] bNoteDown;
 	bool bStrike;
 
@@ -35,12 +34,14 @@ class GuitarScoreKeeper : ScoreKeeper
 		numNotes = cast(int)sequence.notes.count!(a => a.event == EventType.Note);
 		notes = new GuitarNote[numNotes];
 
+		GuitarNote* pGuitarNote;
+
 		int i;
 		foreach(ref n; sequence.notes.filter!(a => a.event == EventType.Note))
 		{
-			GuitarNote* pGuitarNote = &notes[i++];
+			pGuitarNote = &notes[i++];
 
-			pGuitarNote.pEv = &n;
+//			pGuitarNote.pEv = &n;
 			n.pScoreKeeperData = pGuitarNote;
 		}
 	}

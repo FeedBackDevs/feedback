@@ -15,8 +15,10 @@ import db.i.syncsource;
 
 import db.tracks.gh_drums;
 import db.tracks.gh_guitar;
+import db.tracks.dance;
 import db.scorekeepers.drums;
 import db.scorekeepers.guitar;
+import db.scorekeepers.dance;
 import db.sync.systime;
 
 class Performer
@@ -38,6 +40,11 @@ class Performer
 		{
 			scoreKeeper = new DrumsScoreKeeper(sequence, player.input.device);
 			noteTrack = new GHDrums(this);
+		}
+		else if(player.input.part == Part.Dance)
+		{
+			scoreKeeper = new DanceScoreKeeper(sequence, player.input.device);
+			noteTrack = new DanceTrack(this);
 		}
 	}
 
@@ -86,7 +93,7 @@ class Performance
 		performers = null;
 		foreach(p; players)
 		{
-			Sequence s = song.GetSequence(p, null, null);
+			Sequence s = song.GetSequence(p, p.variation, p.difficulty);
 			if(s)
 				performers ~= new Performer(this, p, s);
 		}

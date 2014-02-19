@@ -21,9 +21,6 @@ enum Part
 
 	// Bemani games
 	Dance,			// dance mat
-	DanceDouble,	// double dance mat
-	DanceSolo,		// dance mat
-	Pump,			// pump it up
 	Beatmania,		// beatmania controller
 
 	// Silly (fun!) shit
@@ -39,6 +36,7 @@ enum EventType
 
 	BPM,
 	Anchor,
+	Freeze,
 	TimeSignature,
 
 	Note,				// a regular note
@@ -92,6 +90,10 @@ struct Event
 		int numerator;
 		int denominator;
 	}
+	struct Freeze
+	{
+		long usToFreeze;
+	}
 	struct Note
 	{
 		int key;
@@ -115,6 +117,7 @@ struct Event
 	union
 	{
 		BPM bpm;
+		Freeze freeze;
 		TimeSig ts;
 		Note note;
 		GuitarNote guitar;
@@ -149,17 +152,17 @@ immutable InstrumentType[Part.Count] instrumentForPart =
 	InstrumentType.GuitarController,	// Bass
 	InstrumentType.Drums,				// Drums
 	InstrumentType.Vocals,				// Vox
-	InstrumentType.Vocals,				// Vox2
 	InstrumentType.Keyboard,			// Keys
 	InstrumentType.Guitar,				// ProGuitar
+	InstrumentType.Guitar,				// ProRhythmGuitar
+	InstrumentType.Bass,				// ProBass
+	InstrumentType.Keyboard,			// ProKeys
 	InstrumentType.DJ,					// DJ
 	InstrumentType.Dance,				// Dance
-	InstrumentType.Dance,				// DanceDouble
-	InstrumentType.Dance,				// DanceSolo
-	InstrumentType.Dance,				// Pump
 	InstrumentType.Beatmania,			// Beatmania
 	InstrumentType.Conga,				// Conga
 	InstrumentType.Taiko				// Taiko
 ];
+
 
 template instrumentFor(Part part)		{ enum instrumentOf = instrumentForPart[part]; }

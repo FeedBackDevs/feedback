@@ -23,7 +23,7 @@ struct DrumNote
 	@property int key() const pure nothrow			{ return pEv.note.key; }
 	@property uint flags() const pure nothrow		{ return pEv.note.flags; }
 
-	Event *pEv;
+	Event* pEv;
 
 	bool bHit;
 }
@@ -287,6 +287,6 @@ class DrumsScoreKeeper : ScoreKeeper
 	DrumNote[] notes;
 	size_t offset;
 
-	// guitar specific
+	// drum specific
 	mixin Signal!(bool) hatPos;		// (bHatUp)
 }
