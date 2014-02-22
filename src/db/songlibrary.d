@@ -14,6 +14,10 @@ import std.range;
 import std.path;
 import std.exception;
 
+static immutable imageTypes = [ ".png", ".jpg", ".jpeg", ".tga", ".dds", ".bmp" ];
+static immutable musicTypes = [ ".ogg", ".mp3", ".flac", ".wav" ];
+static immutable videoTypes = [ ".avi", ".mp4", ".mkv", ".mpg", ".mpeg" ];
+
 class SongLibrary
 {
 	void Scan()
@@ -36,19 +40,26 @@ class SongLibrary
 				}
 				else if(file.filename.endsWith(".sm"))
 				{
-					// TODO: stepmania anyone? :)
+					// stepmania step file
+					Song song = LoadFromSM_DWI(file);
+					songs ~= song;
 				}
 				else if(file.filename.endsWith(".ksf"))
 				{
 					// kick is up step file (5-panel 'pump it up' steps)
-//					Song song = LoadFromKSF(file);
-//					songs ~= song;
+					LoadFromKSF(file);
 				}
 				else if(file.filename.endsWith(".dwi"))
 				{
 					// danci with intensity step file
-					Song song = LoadFromDWI(file);
+					Song song = LoadFromSM_DWI(file);
 					songs ~= song;
+				}
+				else if(file.filename.endsWith(".bme"))
+				{
+					// beatmania keys
+//					Song song = LoadFromBME(file);
+//					songs ~= song;
 				}
 			}
 			catch
@@ -153,10 +164,10 @@ class SongLibrary
 		return song;
 	}
 
-	Song LoadFromDWI(DirEntry file)
+	Song LoadFromSM_DWI(DirEntry file)
 	{
-		const(char)[] dwi = cast(const(char)[])enforce(MFFileSystem_Load(file.filepath), "");
-		scope(exit) MFHeap_Free(cast(void[])dwi);
+		const(char)[] steps = cast(const(char)[])enforce(MFFileSystem_Load(file.filepath), "");
+		scope(exit) MFHeap_Free(cast(void[])steps);
 
 		string path = file.directory ~ "/";
 
@@ -179,15 +190,22 @@ class SongLibrary
 			string fn = filename.stripExtension;
 			if(std.algorithm.canFind(imageTypes, ext))
 			{
-				if(fn[] == songName)
+				if(fn[] == songName || fn[] == "disc")
 					song.cover = f.filename;
-				else if(fn[] == songName ~ "-bg")
+				else if(fn[] == songName ~ "-bg" || fn[] == "back" || fn[] == "title" || fn[] == "title-bg")
 					song.background = f.filename;
 			}
 			else if(std.algorithm.canFind(musicTypes, ext))
 			{
-				if(fn[] == songName)
+				if(fn[] == songName || fn[] == "song")
 					song.musicFiles[MusicFiles.Song] = f.filename;
+				if(fn[] == "intro")
+					song.musicFiles[MusicFiles.Preview] = f.filename;
+			}
+			else if(std.algorithm.canFind(videoTypes, ext))
+			{
+				if(fn[] == songName || fn[] == "song")
+					song.video = f.filename;
 			}
 			else if(filename[] == songName ~ ".lrc")
 			{
@@ -196,10 +214,87 @@ class SongLibrary
 			}
 		}
 
-		// load the midi
-		song.LoadDWI(dwi);
+		// load the steps
+		switch(file.filename.extension.toLower)
+		{
+			case ".dwi":
+				song.LoadDWI(steps);
+				break;
+			case ".sm":
+				song.LoadSM(steps);
+				break;
+			default:
+				break;
+		}
 
 		return song;
+	}
+
+	void LoadFromKSF(DirEntry file)
+	{
+		const(char)[] steps = cast(const(char)[])enforce(MFFileSystem_Load(file.filepath), "");
+		scope(exit) MFHeap_Free(cast(void[])steps);
+
+		string path = file.directory ~ "/";
+
+		MFDebug_Log(2, "Loading song: '" ~ file.filepath ~ "'");
+
+		size_t sep = file.directory.lastIndexOf("/");
+		if(sep == -1)
+			return;
+		string name = file.directory[sep+1..$];
+
+		Song song = Find(name);
+		if(!song)
+		{			
+			song = new Song;
+			song.songPath = path;
+			song.id = name;
+			// TODO: split Artist - Title
+			song.name = song.id;
+
+			// search for the music and other stuff...
+			foreach(f; dirEntries(path ~ "*", SpanMode.shallow))
+			{
+				string filename = f.filename.toLower;
+				string ext = filename.extension;
+				string fn = filename.stripExtension;
+				if(std.algorithm.canFind(imageTypes, ext))
+				{
+					if(fn[] == "disc")
+						song.cover = f.filename;
+					else if(fn[] == "back" || fn[] == "title" || fn[] == "title-bg")
+						song.background = f.filename;
+				}
+				else if(std.algorithm.canFind(musicTypes, ext))
+				{
+					if(fn[] == "song")
+						song.musicFiles[MusicFiles.Song] = f.filename;
+					if(fn[] == "intro")
+						song.musicFiles[MusicFiles.Preview] = f.filename;
+				}
+				else if(std.algorithm.canFind(videoTypes, ext))
+				{
+					if(fn[] == "song")
+						song.video = f.filename;
+				}
+			}
+
+			songs ~= song;
+		}
+
+		// load the steps
+		song.LoadKSF(steps, file.filename);
+	}
+
+	Song Find(const(char)[] name)
+	{
+		foreach(s; songs)
+		{
+			if(s.id[] == name || s.name[] == name)
+				return s;
+		}
+		return null;
 	}
 
 	// TODO: database...

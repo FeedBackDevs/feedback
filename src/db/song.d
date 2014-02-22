@@ -877,8 +877,276 @@ class Song
 		return true;
 	}
 
+	bool LoadSM(const(char)[] sm)
+	{
+		// Format description:
+		// http://www.stepmania.com/wiki/The_.SM_file_format
+
+		enum SMResolution = 48;
+		resolution = SMResolution;
+
+		while(1)
+		{
+			auto start = sm.find('#');
+			if(!start)
+				break;
+			size_t split = start.countUntil(':');
+			if(split == -1)
+				break;
+
+			// get the tag
+			auto tag = start[1..split];
+
+			auto end = countUntil(start[split..$], ";");
+			if(end == -1)
+				break;
+
+			// get the content
+			auto content = start[split+1..split+end];
+			sm = start[split+end+1..$];
+
+			if(!content.length)
+				continue;
+
+			switch(tag)
+			{
+				case "TITLE":
+					name = content.idup;
+					break;
+				case "SUBTITLE":
+					subtitle = content.idup;
+					break;
+				case "ARTIST":
+					artist = content.idup;
+					break;
+				case "TITLETRANSLIT":
+					params[tag] = content.idup;
+					break;
+				case "SUBTITLETRANSLIT":
+					params[tag] = content.idup;
+					break;
+				case "ARTISTTRANSLIT":
+					params[tag] = content.idup;
+					break;
+				case "CREDIT":
+					charterName = content.idup;
+					break;
+				case "BANNER":
+					cover = content.idup;
+					break;
+				case "BACKGROUND":
+					background = content.idup;
+					break;
+				case "LYRICSPATH":
+					params[tag] = content.idup;
+					break;
+				case "CDTITLE":
+					params[tag] = content.idup;
+					break;
+				case "MUSIC":
+					musicFiles[MusicFiles.Song] = content.idup;
+					break;
+				case "OFFSET":
+					startOffset = cast(long)(to!double(content)*1_000_000);
+					break;
+				case "SAMPLESTART":
+					params[tag] = content.idup;
+					break;
+				case "SAMPLELENGTH":
+					params[tag] = content.idup;
+					break;
+				case "SELECTABLE":
+					params[tag] = content.idup;
+					break;
+				case "BPMS":
+					Event ev;
+					ev.tick = 0;
+
+					// we need to write a time signature first...
+					ev.event = EventType.TimeSignature;
+					ev.ts.numerator = 4;
+					ev.ts.denominator = 4;
+					sync ~= ev;
+
+					auto bpms = content.splitter(',');
+					foreach(b; bpms)
+					{
+						auto params = b.findSplit("=");
+						double offset = to!double(params[0]);
+						double bpm = to!double(params[2]);
+
+						ev.tick = cast(int)(offset*cast(double)SMResolution);
+						ev.event = EventType.BPM;
+						ev.bpm.usPerBeat = cast(int)(60_000_000.0 / bpm + 0.5);
+						sync ~= ev;
+					}
+					break;
+				case "DISPLAYBPM":
+					// a    - BPM stays set at 'a' value (no cycling)
+					// a:b  - BPM cycles between 'a' and 'b' values
+					// *    - BPM cycles randomly
+					params[tag] = content.idup;
+					break;
+				case "STOPS":
+					auto freezes = content.splitter(',');
+					foreach(f; freezes)
+					{
+						auto params = f.findSplit("=");
+						double offset = to!double(params[0]);
+						double seconds = to!double(params[2]);
+
+						Event ev;
+						ev.tick = cast(int)(offset*SMResolution);
+						ev.event = EventType.Freeze;
+						ev.freeze.usToFreeze = cast(long)(seconds*1_000_1000);
+						sync ~= ev;
+					}
+					break;
+				case "BGCHANGE":
+					params[tag] = content.idup;
+					break;
+			case "NOTES":
+					auto parts = content.splitter(':');
+					auto type = parts.front.strip; parts.popFront;
+					auto desc = parts.front.strip; parts.popFront;
+					auto difficulty = parts.front.strip; parts.popFront;
+					auto meter = parts.front.strip; parts.popFront;
+					auto radar = parts.front.strip; parts.popFront;
+
+					Sequence seq = new Sequence;
+					seq.part = Part.Dance;
+					seq.variation = type.idup;
+					seq.difficulty = difficulty.idup;
+					seq.difficultyMeter = to!int(meter);
+
+					// TODO: do something with desc?
+					// TODO: do something with the radar values?
+
+					// generate note map
+					const(int)[] map;
+					with(DanceNotes)
+					{
+						__gshared immutable int[4] mapDanceSingle	= [ Left,Down,Up,Right ];
+						__gshared immutable int[8] mapDanceDouble	= [ Left,Down,Up,Right,Left2,Down2,Up2,Right2 ];
+						__gshared immutable int[8] mapDanceCouple	= [ Left,Down,Up,Right,Left2,Down2,Up2,Right2 ];
+						__gshared immutable int[6] mapDanceSolo		= [ Left,UpLeft,Down,Up,UpRight,Right ];
+						__gshared immutable int[5] mapPumpSingle	= [ DownLeft,UpLeft,Center,UpRight,DownRight ];
+						__gshared immutable int[10] mapPumpDouble	= [ DownLeft,UpLeft,Center,UpRight,DownRight,DownLeft2,UpLeft2,Center2,UpRight2,DownRight2 ];
+						__gshared immutable int[10] mapPumpCouple	= [ DownLeft,UpLeft,Center,UpRight,DownRight,DownLeft2,UpLeft2,Center2,UpRight2,DownRight2 ];
+						__gshared immutable int[5] mapEz2Single		= [ UpLeft,LeftHand,Down,RightHand,UpRight ];
+						__gshared immutable int[10] mapEz2Double	= [ UpLeft,LeftHand,Down,RightHand,UpRight,UpLeft2,LeftHand2,Down2,RightHand2,UpRight2 ];
+						__gshared immutable int[7] mapEz2Real		= [ UpLeft,LeftHandBelow,LeftHand,Down,RightHand,RightHandBelow,UpRight ];
+						__gshared immutable int[5] mapParaSingle	= [ Left,UpLeft,Up,UpRight,Right ];
+
+						switch(type)
+						{
+							case "dance-single":	map = mapDanceSingle; 	break;
+							case "dance-double":	map = mapDanceDouble; 	break;
+							case "dance-couple":	map = mapDanceCouple; 	break;
+							case "dance-solo":		map = mapDanceSolo;		break;
+							case "pump-single":		map = mapPumpSingle;	break;
+							case "pump-double":		map = mapPumpDouble;	break;
+							case "pump-couple":		map = mapPumpCouple;	break;
+							case "ez2-single":		map = mapEz2Single;		break;
+							case "ez2-double":		map = mapEz2Double;		break;
+							case "ez2-real":		map = mapEz2Real;		break;
+							case "para-single":		map = mapParaSingle;	break;
+							default: break;
+						}
+					}
+
+					// break into measures
+					auto measures = parts.front.strip.splitter(',');
+
+					// read notes...
+					ptrdiff_t[10] holds = -1;
+
+					int offset;
+					foreach(m; measures)
+					{
+						auto lines = m.strip.splitLines;
+						if(lines[0].length < map.length || lines[0][0..2] == "//")
+							lines = lines[1..$];
+
+						int step = SMResolution*4 / cast(int)lines.length;
+
+						foreach(int i, line; lines)
+						{
+							foreach(n, note; line.strip[0..map.length])
+							{
+								if(note == '3')
+								{
+									// set the duration for the last freeze arrow
+									seq.notes[holds[n]].duration = offset + i*step - seq.notes[holds[n]].tick;
+									holds[n] = -1;
+								}
+								else if(note != '0')
+								{
+									Event ev;
+									ev.tick = offset + i*step;
+									ev.event = EventType.Note;
+									ev.note.key = map[n];
+
+									if(note != '1')
+									{
+										if(note == '2' || note == '4')
+											holds[n] = seq.notes.length;
+
+										if(note == '4')
+											ev.note.flags |= MFBit!(DanceFlags.Roll);
+										else if(note == 'M')
+											ev.note.flags |= MFBit!(DanceFlags.Mine);
+										else if(note == 'L')
+											ev.note.flags |= MFBit!(DanceFlags.Lift);
+										else if(note == 'F')
+											ev.note.flags |= MFBit!(DanceFlags.Fake);
+										else if(note == 'S')
+											ev.note.flags |= MFBit!(DanceFlags.Shock);
+										else if(note >= 'a' && note <= 'z')
+										{
+											ev.note.flags |= MFBit!(DanceFlags.Sound);
+											ev.note.flags |= (note - 'a') << 24;
+										}
+										else if(note >= 'A' && note <= 'Z')
+										{
+											ev.note.flags |= MFBit!(DanceFlags.Sound);
+											ev.note.flags |= (note - 'A' + 26) << 24;
+										}
+									}
+
+									seq.notes ~= ev;
+								}
+							}
+						}
+
+						offset += SMResolution*4;
+					}
+
+					// find variation for tag, if there isn't one, create it.
+					Variation* pVariation = GetVariation(Part.Dance, type, true);
+
+					// create difficulty, set difficulty to feet rating
+					assert(!GetDifficulty(*pVariation, difficulty), "Difficulty already exists!");
+					pVariation.difficulties ~= seq;
+					break;
+
+				default:
+					MFDebug_Warn(2, "Unknown tag: " ~ tag);
+					break;
+			}
+		}
+
+		// since freezes and bpm changes are added at different times, they need to be sorted
+		sync.sort!("a.tick < b.tick");
+
+		return false;
+	}
+
 	bool LoadDWI(const(char)[] dwi)
 	{
+		// Format description:
+		// http://dwi.ddruk.com/readme.php#4
+
 		enum DwiResolution = 48;
 		resolution = DwiResolution;
 
@@ -1007,7 +1275,7 @@ class Song
 				case "SINGLE", "DOUBLE", "COUPLE", "SOLO":
 					with(DanceNotes)
 					{
-						enum uint stepMap[char] = [
+						enum uint[char] stepMap = [
 							'0': 0,
 							'1': MFBit!Left | MFBit!Down,
 							'2': MFBit!Down,
@@ -1032,17 +1300,23 @@ class Song
 							'L': MFBit!Right | MFBit!UpRight,
 							'M': MFBit!UpLeft | MFBit!UpRight ];
 
-						auto difficulty = content.findSplit(":");
-						auto meter = difficulty[2].findSplit(":");
-						auto steps = meter[2].findSplit(":");
-						auto left = steps[0];
-						auto right = steps[2];
+						enum string[string] variationMap = [ "SINGLE":"dance-single", "DOUBLE":"dance-double", "COUPLE":"dance-couple", "SOLO":"dance-solo" ];
+						enum string[string] difficultyMap = [ "BEGINNER":"Beginner", "BASIC":"Easy", "ANOTHER":"Medium", "MANIAC":"Hard", "SMANIAC":"Challenge" ];
+
+						auto parts = content.splitter(':');
+						auto diff = parts.front.strip; parts.popFront;
+						auto meter = parts.front.strip; parts.popFront;
+						auto left = parts.front.strip; parts.popFront;
+						auto right = parts.empty ? null : parts.front.strip;
+
+						string variation = tag in variationMap ? variationMap[tag] : tag.idup;
+						string difficulty = diff in difficultyMap ? difficultyMap[diff] : diff.idup;
 
 						Sequence seq = new Sequence;
 						seq.part = Part.Dance;
-						seq.variation = tag.idup;
-						seq.difficulty = difficulty[0].idup;
-						seq.difficultyMeter = to!int(meter[0]);
+						seq.variation = variation;
+						seq.difficulty = difficulty;
+						seq.difficultyMeter = to!int(meter);
 
 						// read notes...
 						static void ReadNotes(Sequence seq, const(char)[] steps, int shift)
@@ -1144,11 +1418,11 @@ class Song
 							seq.notes.sort!("a.tick < b.tick", SwapStrategy.stable);
 						}
 
-						// find variation for tag, if there isn't one, create it.
-						Variation* pVariation = GetVariation(Part.Dance, tag, true);
+						// find variation, if there isn't one, create it.
+						Variation* pVariation = GetVariation(Part.Dance, seq.variation, true);
 
 						// create difficulty, set difficulty to feet rating
-						assert(!GetDifficulty(*pVariation, difficulty[0]), "Difficulty already exists!");
+						assert(!GetDifficulty(*pVariation, seq.difficulty), "Difficulty already exists!");
 						pVariation.difficulties ~= seq;
 					}
 					break;
@@ -1161,6 +1435,265 @@ class Song
 
 		// since freezes and bpm changes are added at different times, they need to be sorted
 		sync.sort!("a.tick < b.tick");
+
+		return false;
+	}
+
+	bool LoadKSF(const(char)[] ksf, const(char)[] filename)
+	{
+		// Format description:
+		// https://code.google.com/p/sm-ssc/source/browse/Docs/SimfileFormats/KSF/ksf-format.txt?name=stepsWithScore
+
+		const(int)[] panels;
+
+		enum KsfResolution = 48;
+		resolution = KsfResolution;
+
+		string type, difficulty;
+		bool bParseMetadata;
+
+		with(DanceNotes)
+		{
+			__gshared immutable int[10] mapPump = [ DownLeft,UpLeft,Center,UpRight,DownRight,DownLeft2,UpLeft2,Center2,UpRight2,DownRight2 ];
+
+			switch(filename)
+			{
+				case "Easy_1.ksf":
+					type = "pump-single";
+					difficulty = "Easy";
+					panels = mapPump[0..5];
+					bParseMetadata = true;
+					break;
+				case "Hard_1.ksf":
+					type = "pump-single";
+					difficulty = "Medium";
+					panels = mapPump[0..5];
+					bParseMetadata = true;
+					break;
+				case "Crazy_1.ksf":
+					type = "pump-single";
+					difficulty = "Hard";
+					panels = mapPump[0..5];
+					bParseMetadata = true;
+					break;
+				case "Easy_2.ksf":
+					type = "pump-couple";
+					panels = mapPump;
+					difficulty = "Easy";
+					break;
+				case "Hard_2.ksf":
+					type = "pump-couple";
+					panels = mapPump;
+					difficulty = "Medium";
+					break;
+				case "Crazy_2.ksf":
+					type = "pump-couple";
+					panels = mapPump;
+					difficulty = "Hard";
+					break;
+				case "Double.ksf":
+					type = "pump-double";
+					panels = mapPump;
+					difficulty = "Medium";
+					break;
+				case "CrazyDouble.ksf":
+					type = "pump-double";
+					panels = mapPump;
+					difficulty = "Hard";
+					break;
+				case "HalfDouble.ksf":
+					type = "pump-double";
+					panels = mapPump;
+					difficulty = "Easy";	// NOTE: Should this be 'Easy', or 'Half'? Is the reduction to make it easier?
+					break;
+				default:
+					MFDebug_Warn(2, "Unknown .ksf file difficulty: " ~ filename);
+					return true;
+			}
+		}
+
+		Sequence seq = new Sequence;
+		seq.part = Part.Dance;
+		seq.variation = type;
+		seq.difficulty = difficulty;
+
+		bool bParseSync = bParseMetadata && sync.length == 0;
+		int step;
+
+		while(1)
+		{
+			auto start = ksf.find('#');
+			if(!start)
+				break;
+			size_t split = start.countUntil(':');
+			if(split == -1)
+				break;
+
+			// get the tag
+			auto tag = start[1..split];
+			auto end = countUntil(start[split..$], ";");
+
+			// get the content
+			const(char)[] content;
+			if(end != -1)
+			{
+				content = start[split+1 .. split+end];
+				ksf = start[split+end+1..$];
+			}
+			else
+			{
+				content = start[split+1 .. $];
+				ksf = null;
+			}
+
+			switch(tag)
+			{
+				case "TITLE":
+					// We take it from the folder name; some difficulties of some songs seem to keep junk in #TITLE
+					if(bParseMetadata)
+					{
+						// "Artist - Title"
+//						name = content.idup;
+					}
+					break;
+				case "STARTTIME":
+					if(bParseMetadata)
+					{
+						long offset = cast(long)(to!double(content)*10_000.0);
+						if(startOffset != 0 && startOffset != offset)
+							MFDebug_Warn(2, "#STARTTIME doesn't match other .ksf files in: " ~ filename);
+						startOffset = offset;
+					}
+					break;
+				case "TICKCOUNT":
+					step = resolution / to!int(content);
+					break;
+				case "DIFFICULTY":
+					seq.difficultyMeter = to!int(content);
+					break;
+				default:
+					// BPM/BUNKI
+					if(tag == "BPM")
+					{
+						if(bParseSync)
+						{
+							Event ev;
+							ev.tick = 0;
+
+							// we need to write a time signature first...
+							ev.event = EventType.TimeSignature;
+							ev.ts.numerator = 4;
+							ev.ts.denominator = 4;
+							sync ~= ev;
+
+							// set the starting BPM
+							ev.event = EventType.BPM;
+							ev.bpm.usPerBeat = cast(int)(60_000_000.0 / to!double(content) + 0.5);
+							sync ~= ev;
+						}
+						else
+						{
+							// TODO: validate that it matches the previously parsed data?
+							if(sync[1].bpm.usPerBeat != cast(int)(60_000_000.0 / to!double(content) + 0.5))
+								MFDebug_Warn(2, "#BPM doesn't match other .ksf files in: " ~ filename);
+						}
+					}
+					else if(tag.length > 3 && tag[0..3] == "BPM")
+					{
+						if(bParseSync)
+						{
+							int index = tag[3] - '0';
+
+							while(sync.length <= index)
+							{
+								Event ev;
+								ev.event = EventType.BPM;
+								sync ~= ev;
+							}
+
+							sync[index].bpm.usPerBeat = cast(int)(60_000_000.0 / to!double(content) + 0.5);
+						}
+						else
+						{
+							// TODO: validate that it matches the previously parsed data?
+						}
+					}
+					else if(tag.length >= 5 && tag[0..5] == "BUNKI")
+					{
+						if(bParseSync)
+						{
+							int index = tag.length > 5 ? tag[5] - '0' + 1 : 2;
+
+							while(sync.length <= index)
+							{
+								Event ev;
+								ev.event = EventType.BPM;
+								sync ~= ev;
+							}
+
+							long time = cast(long)(to!double(content) * 10_000.0);
+							sync[index].tick = CalculateTickAtTime(time);
+						}
+						else
+						{
+							// TODO: validate that it matches the previously parsed data?
+						}
+					}
+					else
+					{
+						MFDebug_Warn(2, "Unknown tag: " ~ tag);
+					}
+					break;
+
+				case "STEP":
+					content = content.strip;
+
+					ptrdiff_t[10] holds = -1;
+
+					auto lines = content.splitLines;
+					foreach(int i, l; lines)
+					{
+						if(l[0] == '2')
+							break;
+
+						int offset = i*step;
+						for(int j=0; j<panels.length; ++j)
+						{
+							if(l[j] == '0')
+							{
+								holds[j] = -1;
+							}
+							else
+							{
+								if(l[j] == '1' || l[j] == '4' && holds[j] == -1)
+								{
+									// place note
+									Event ev;
+									ev.tick = offset;
+									ev.event = EventType.Note;
+									ev.note.key = panels[j];
+									seq.notes ~= ev;
+								}
+								if(l[j] == '4')
+								{
+									if(holds[j] == -1)
+										holds[j] = seq.notes.length-1;
+									else
+										seq.notes[holds[j]].duration = offset - seq.notes[holds[j]].tick;
+								}
+							}
+						}
+					}
+					break;
+			}
+		}
+
+		// find variation, if there isn't one, create it.
+		Variation* pVariation = GetVariation(Part.Dance, seq.variation, true);
+
+		// create difficulty, set difficulty to feet rating
+		assert(!GetDifficulty(*pVariation, seq.difficulty), "Difficulty already exists!");
+		pVariation.difficulties ~= seq;
 
 		return false;
 	}
@@ -1539,6 +2072,7 @@ class Song
 
 	string id;
 	string name;
+	string subtitle;
 	string artist;
 	string album;
 	string year;
@@ -1556,6 +2090,7 @@ class Song
 	string[string] params;			// optional key-value pairs (much data taken from the original .ini files, might be useful in future)
 
 	string[MusicFiles.Count] musicFiles;
+	string video;
 
 	// multitrack support? (Rock Band uses .mogg files; multitrack ogg files)
 //	string multitrackFilename;		// multitrack filename (TODO: this will take some work...)

@@ -186,6 +186,10 @@ enum DanceNotes
 	DownLeft,
 	DownRight,
 	Center,
+	LeftHand,
+	RightHand,
+	LeftHandBelow,
+	RightHandBelow,
 	Left2,
 	Down2,
 	Up2,
@@ -194,7 +198,19 @@ enum DanceNotes
 	UpRight2,
 	DownLeft2,
 	DownRight2,
-	Center2
+	Center2,
+	LeftHand2,
+	RightHand2
+}
+
+enum DanceFlags
+{
+	Roll,
+	Mine,
+	Lift,
+	Fake,
+	Shock,
+	Sound,	// sound index should be found in the top byte
 }
 
 // misc

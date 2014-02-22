@@ -21,6 +21,8 @@ import db.scorekeepers.guitar;
 import db.scorekeepers.dance;
 import db.sync.systime;
 
+import std.signals;
+
 class Performer
 {
 	this(Performance performance, Player player, Sequence sequence)
@@ -179,4 +181,7 @@ class Performance
 	SyncSource sync;
 	long startTime;
 	long time;
+
+	mixin Signal!() beginMusic;		// ()
+	mixin Signal!() endMusic;		// ()
 }

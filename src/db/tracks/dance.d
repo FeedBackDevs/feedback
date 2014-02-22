@@ -36,26 +36,26 @@ class DanceTrack : NoteTrack
 		edge = Material("edge");
 		edge.parameters.zread = false;
 
-		if(performer.sequence.variation[] == "DOUBLE")
+		switch(performer.sequence.variation)
 		{
-			numLanes = 8;
-			laneMap = [ 0,1,2,3, -1,-1,-1,-1, -1, 4,5,6,7, -1,-1,-1,-1, -1 ];
+			case "dance-single":	numLanes = 4;  laneMap = [ 0,1,2,3,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1 ];	break;
+			case "dance-double":	numLanes = 8;  laneMap = [ 0,1,2,3,-1,-1,-1,-1,-1,-1,-1,-1,-1,4,5,6,7,-1,-1,-1,-1,-1,-1,-1 ];	break;
+			case "dance-couple":	numLanes = 8;  laneMap = [ 0,1,2,3,-1,-1,-1,-1,-1,-1,-1,-1,-1,4,5,6,7,-1,-1,-1,-1,-1,-1,-1 ];	break;
+			case "dance-solo":		numLanes = 6;  laneMap = [ 0,2,3,5,1,4,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1 ];	break;
+			case "pump-single":		numLanes = 5;  laneMap = [ -1,-1,-1,-1,1,3,0,4,2,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1 ];	break;
+			case "pump-double":		numLanes = 10; laneMap = [ -1,-1,-1,-1,1,3,0,4,2,-1,-1,-1,-1,-1,-1,-1,-1,6,8,5,9,7,-1,-1 ];	break;
+			case "pump-couple":		numLanes = 10; laneMap = [ -1,-1,-1,-1,1,3,0,4,2,-1,-1,-1,-1,-1,-1,-1,-1,6,8,5,9,7,-1,-1 ];	break;
+			case "ez2-single":		numLanes = 5;  laneMap = [ -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1 ];	break;
+			case "ez2-double":		numLanes = 10; laneMap = [ -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1 ];	break;
+			case "ez2-real":		numLanes = 7;  laneMap = [ -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1 ];	break;
+			case "para-single":		numLanes = 5;  laneMap = [ 0,-1,2,4,1,3,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1 ];	break;
+			default: break;
 		}
-		else if(performer.sequence.variation[] == "SOLO")
-		{
-			numLanes = 6;
-			laneMap = [ 0,1,2,3, 4,5,-1,-1, -1, -1,-1,-1,-1, -1,-1,-1,-1, -1 ];
-		}
-		else if(performer.sequence.variation[] == "PUMP")
-		{
-			numLanes = 6;
-			laneMap = [ 0,1,2,3, 4,5,-1,-1, -1, -1,-1,-1,-1, -1,-1,-1,-1, -1 ];
-		}
-		else
-		{
-			numLanes = 4;
-			laneMap = [ 0,1,2,3, -1,-1,-1,-1, -1, -1,-1,-1,-1, -1,-1,-1,-1, -1 ];
-		}
+
+//			__gshared immutable int[5] mapEz2Single		= [ UpLeft,LeftHand,Down,RightHand,UpRight ];
+//			__gshared immutable int[10] mapEz2Double	= [ UpLeft,LeftHand,Down,RightHand,UpRight,UpLeft2,LeftHand2,Down2,RightHand2,UpRight2 ];
+//			__gshared immutable int[7] mapEz2Real		= [ UpLeft,LeftHandBelow,LeftHand,Down,RightHand,RightHandBelow,UpRight ];
+
 
 		// we could remap the lanes from effects and options if we wanted to
 		//...
