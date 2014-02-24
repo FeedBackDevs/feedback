@@ -1,3 +1,4 @@
+require "monodevelop"
 require "d"
 
 solution "FeedBack"
