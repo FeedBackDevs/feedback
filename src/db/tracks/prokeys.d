@@ -1,6 +1,7 @@
 module db.tracks.prokeys;
 
 import fuji.materials.standard;
+import fuji.system;
 
 import db.i.notetrack;
 import db.i.scorekeeper;
@@ -13,6 +14,7 @@ import db.song;
 import db.sequence;
 
 import core.stdc.math;
+import std.algorithm;
 
 class ProKeysTrack : NoteTrack
 {
@@ -92,6 +94,17 @@ class ProKeysTrack : NoteTrack
 		long topTime, bottomTime;
 		GetVisibleRange(offset, null, null, &bottomTime, &topTime);
 
+		auto leftPosEv = performer.sequence.notes.GetMostRecentEventByTime(offset, EventType.KeyboardPosition);
+		if(leftPosEv != -1)
+			leftLaneTarget = WhiteKeys[performer.sequence.notes[leftPosEv].position] & 0x7F;
+		else
+			leftLaneTarget = WhiteKeys[Notes.G4] & 0x7F;
+		if(leftLane != leftLaneTarget)
+		{
+			float shift = MFSystem_GetTimeDelta() * shiftVelocity;
+			leftLane += leftLaneTarget < leftLane ? -min(leftLane - leftLaneTarget, shift) : min(leftLaneTarget - leftLane, shift);
+		}
+
 		// draw the track surface
 		MFMaterial_SetMaterial(fretboard);
 		MFPrimitive(PrimType.TriStrip, 0);
@@ -114,7 +127,7 @@ class ProKeysTrack : NoteTrack
 
 		MFEnd();
 
-		// draw the fretboard edges and bar lines
+		// draw the fretboard edges and lane lines
 		const float barWidth = 0.2f;
 
 		MFMaterial_SetMaterial(bar);
@@ -179,7 +192,7 @@ class ProKeysTrack : NoteTrack
 
 		MFEnd();
 
-		// draw the frets....
+		// draw the bars....
 		bool bHalfFrets = true;
 
 		MFMaterial_SetMaterial(bar);
@@ -246,16 +259,24 @@ class ProKeysTrack : NoteTrack
 			if(performer.scoreKeeper.WasHit(&e))
 				continue;
 
-			int key = e.note.key - Notes.C4;
+			int key = e.note.key;
+			float lane = (WhiteKeys[key] & 0x7F) - leftLane;
+			bool bIsBlack = !!(WhiteKeys[key] & 0x80);
 
 			// HACK: don't render notes for which we have no lanes!
-			if(key == -1)
+			if(lane < 0 || lane >= 10)
 				continue;
- 
-			MFVector pos = GetPosForTime(offset, e.time, Lane(key - DrumNotes.Snare));
+
+			MFVector pos = GetPosForTime(offset, e.time, Lane(cast(int)lane));
 			float noteWidth = columnWidth*0.3f;
 			float noteDepth = columnWidth*0.3f;
 			float noteHeight = columnWidth*0.2f;
+
+			if(bIsBlack)
+			{
+				pos.x += laneWidth * 0.4f;
+				noteWidth *= 0.75f;
+			}
 
 			if(e.duration > 0)
 			{
@@ -263,12 +284,12 @@ class ProKeysTrack : NoteTrack
 
 				auto b1 = MFVector(pos.x - noteWidth*0.3f, 0, end.z);
 				auto b2 = MFVector(pos.x + noteWidth*0.3f, noteHeight*0.05f, pos.z);
-				MFPrimitive_DrawBox(b1, b2, MFVector.white, MFMatrix.identity, false);
+				MFPrimitive_DrawBox(b1, b2, bIsBlack ? MFVector.black : MFVector.white, MFMatrix.identity, false);
 			}
 
 			auto b1 = MFVector(pos.x - noteWidth, 0, pos.z - noteDepth);
 			auto b2 = MFVector(pos.x + noteWidth, noteHeight, pos.z + noteDepth);
-			MFPrimitive_DrawBox(b1, b2, MFVector.white, MFMatrix.identity, false);
+			MFPrimitive_DrawBox(b1, b2, bIsBlack ? MFVector.black : MFVector.white, MFMatrix.identity, false);
 		}
 
 /*
@@ -398,7 +419,10 @@ private:
 	}
 
 	// some constants for the fretboard
-	int numLanes = 25;
+	int numLanes = 10;
+	float leftLaneTarget = WhiteKeys[Notes.G4] & 0x7F;
+	float leftLane = WhiteKeys[Notes.G4] & 0x7F;
+	float shiftVelocity = 20; // white keys to shift per second
 
 	int start = -4;
 	int end = 60;
@@ -407,5 +431,5 @@ private:
 	int scrollSpeed = 12;
 
 	float fretboardRepeat = 15.0f;
-	float fretboardWidth = 15.0f;
+	float fretboardWidth = 6.0f;
 }
