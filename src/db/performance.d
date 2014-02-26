@@ -13,11 +13,14 @@ import db.i.notetrack;
 import db.i.scorekeeper;
 import db.i.syncsource;
 
-import db.tracks.gh_drums;
 import db.tracks.gh_guitar;
+import db.tracks.gh_drums;
+import db.tracks.keys;
+import db.tracks.prokeys;
 import db.tracks.dance;
-import db.scorekeepers.drums;
 import db.scorekeepers.guitar;
+import db.scorekeepers.drums;
+import db.scorekeepers.keys;
 import db.scorekeepers.dance;
 import db.sync.systime;
 
@@ -42,6 +45,16 @@ class Performer
 		{
 			scoreKeeper = new DrumsScoreKeeper(sequence, player.input.device);
 			noteTrack = new GHDrums(this);
+		}
+		else if(player.input.part == Part.Keys)
+		{
+			scoreKeeper = new KeysScoreKeeper(sequence, player.input.device);
+			noteTrack = new KeysTrack(this);
+		}
+		else if(player.input.part == Part.ProKeys)
+		{
+			scoreKeeper = new KeysScoreKeeper(sequence, player.input.device);
+			noteTrack = new ProKeysTrack(this);
 		}
 		else if(player.input.part == Part.Dance)
 		{

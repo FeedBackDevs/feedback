@@ -61,7 +61,7 @@ class Midi : InputDevice
 					ie.timestamp = cast(long)e.timestamp * 1_000 - (deviceLatency + Game.Instance.settings.midiLatency)*1_000; // feedback times are microseconds
 					ie.event = (e.command == 0x80 || (e.command == 0x90 && e.data1 == 0)) ? InputEventType.Off : (e.command == 0x90 ? InputEventType.On : InputEventType.Change);
 					ie.key = e.data0;
-					ie.velocity = e.data1 * (1 / 255.0f);
+					ie.velocity = e.data1 * (1 / 127.0f);
 
 					// TODO: we probably want to apply some map to 'note' for the configured instrument type
 					//...

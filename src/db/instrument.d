@@ -355,6 +355,7 @@ InputDevice[] DetectInstruments()
 	Midi[] midiDevices = DetectMidiDevices();
 
 	devices ~= controllers;
+	devices ~= midiDevices;
 
 	return devices;
 }

@@ -160,9 +160,6 @@ class Game
 		int i = 0;
 		foreach(input; inputs)
 		{
-			if(input.instrumentType != InstrumentType.GuitarController && input.instrumentType != InstrumentType.Drums)
-				continue;
-
 			Player player = new Player;
 
 			player.profile = new Profile;
@@ -173,6 +170,12 @@ class Game
 				player.input.part = Part.LeadGuitar;
 			else if(input.instrumentType == InstrumentType.Drums)
 				player.input.part = Part.Drums;
+			else if(input.instrumentType == InstrumentType.Keyboard)
+				player.input.part = Part.ProKeys;
+			else if(input.instrumentType == InstrumentType.Dance)
+				player.input.part = Part.Dance;
+			else
+				player.input.part = Part.Unknown;
 
 			players ~= player;
 		}
