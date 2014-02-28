@@ -1,4 +1,4 @@
-module db.tracks.gh_drums;
+module db.tracks.drumstrack;
 
 import fuji.materials.standard;
 

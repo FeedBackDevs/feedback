@@ -1,4 +1,4 @@
-module db.tracks.gh_guitar;
+module db.tracks.guitartrack;
 
 import fuji.materials.standard;
 

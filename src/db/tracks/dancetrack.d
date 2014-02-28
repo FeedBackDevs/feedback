@@ -1,4 +1,4 @@
-module db.tracks.dance;
+module db.tracks.dancetrack;
 
 import fuji.materials.standard;
 

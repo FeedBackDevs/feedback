@@ -1,4 +1,4 @@
-module db.tracks.prokeys;
+module db.tracks.prokeystrack;
 
 import fuji.materials.standard;
 import fuji.system;
