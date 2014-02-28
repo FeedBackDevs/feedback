@@ -12,6 +12,7 @@ solution "FeedBack"
 	-- include the fuji project...
 --	fujiDll = true
 	dofile  "../fuji/Fuji/Project/fujiproj.lua"
+	dofile  "../fuji/Fuji/Project/fujidproj.lua"
 
 	-- include the Haku project...
 --	dofile "../fuji/Haku/Project/hakuproj.lua"
@@ -21,9 +22,8 @@ solution "FeedBack"
 		language "D"
 
 		files { "src/**.d" }
-		files { "../fuji/dist/include/d2/fuji/**.d" }
 
-		includedirs { "src/", "../fuji/dist/include/d2/" }
+		includedirs { "src/" }
 		libdirs { "../fuji/dist/lib/x64" }
 
 		links { "Fuji" }

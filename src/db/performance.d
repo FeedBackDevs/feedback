@@ -13,11 +13,11 @@ import db.i.notetrack;
 import db.i.scorekeeper;
 import db.i.syncsource;
 
-import db.tracks.gh_guitar;
-import db.tracks.gh_drums;
-import db.tracks.keys;
-import db.tracks.prokeys;
-import db.tracks.dance;
+import db.tracks.guitartrack;
+import db.tracks.drumstrack;
+import db.tracks.keystrack;
+import db.tracks.prokeystrack;
+import db.tracks.dancetrack;
 import db.scorekeepers.guitar;
 import db.scorekeepers.drums;
 import db.scorekeepers.keys;
