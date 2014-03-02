@@ -10,9 +10,12 @@ solution "FeedBack"
 	end
 
 	-- include the fuji project...
---	fujiDll = true
-	dofile  "../fuji/Fuji/Project/fujiproj.lua"
-	dofile  "../fuji/Fuji/Project/fujidproj.lua"
+	local linkFujiDirectly = not os.is("linux") or true
+	if linkFujiDirectly then
+--		fujiDll = true
+		dofile  "../fuji/Fuji/Project/fujiproj.lua"
+		dofile  "../fuji/Fuji/Project/fujidproj.lua"
+	end
 
 	-- include the Haku project...
 --	dofile "../fuji/Haku/Project/hakuproj.lua"
@@ -22,15 +25,16 @@ solution "FeedBack"
 		language "D"
 
 		files { "src/**.d" }
-
 		includedirs { "src/" }
-		libdirs { "../fuji/dist/lib/x64" }
 
 		links { "Fuji", "FujiD" }
 
 		targetname "FeedBack"
 --		targetdir "bin"
 		objdir "build"
+
+		dofile "../fuji/dist/Project/fujiconfig.lua"
+--		dofile "../fuji/dist/Project/hakuconfig.lua"
 
 		configuration { "windows" }
 			links { "Gdi32.lib", "Ole32.lib", "oleaut32.lib" }
@@ -41,7 +45,3 @@ solution "FeedBack"
 			configuration { "windows", "x64" }
 				links { "FujiAsset64.lib" }
 				linkoptions { "/DelayLoad:FujiAsset64.dll" }
-
-		dofile "../fuji/dist/Project/fujiconfig.lua"
---		dofile "../fuji/dist/Project/hakuconfig.lua"
-
