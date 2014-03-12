@@ -37,11 +37,4 @@ solution "FeedBack"
 --		dofile "../fuji/dist/Project/hakuconfig.lua"
 
 		configuration { "windows" }
-			links { "Gdi32.lib", "Ole32.lib", "oleaut32.lib" }
-
-			configuration { "windows", "x32 or native" }
-				links { "FujiAsset32.lib" }
-				linkoptions { "/DelayLoad:FujiAsset32.dll" }
-			configuration { "windows", "x64" }
-				links { "FujiAsset64.lib" }
-				linkoptions { "/DelayLoad:FujiAsset64.dll" }
+			links { "Gdi32.lib", "Ole32.lib", "oleaut32.lib", "FujiMiddleware.lib" }

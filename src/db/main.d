@@ -80,11 +80,17 @@ int Start()
 //	game.initParams.display.bFullscreen = true;
 	game.initParams.pAppTitle = "FeedBack".ptr;
 
+	Fuji_CreateEngineInstance();
+
 	MFSystem_RegisterSystemCallback(MFCallback.FileSystemInit, &Game.Static_InitFileSystem);
 	MFSystem_RegisterSystemCallback(MFCallback.InitDone, &Game.Static_Init);
 	MFSystem_RegisterSystemCallback(MFCallback.Deinit, &Game.Static_Deinit);
 	MFSystem_RegisterSystemCallback(MFCallback.Update, &Game.Static_Update);
 	MFSystem_RegisterSystemCallback(MFCallback.Draw, &Game.Static_Draw);
 
-	return MFMain(game.initParams);
+	int r = MFMain(game.initParams);
+
+	Fuji_DestroyEngineInstance();
+
+	return r;
 }
