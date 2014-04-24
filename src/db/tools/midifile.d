@@ -1,5 +1,6 @@
 module db.tools.midifile;
 
+import fuji.fuji;
 import fuji.filesystem;
 import fuji.heap;
 import fuji.dbg;

@@ -17,7 +17,7 @@ class Midi : InputDevice
 		pMidiInput = MFMidi_OpenInput(midiDeviceId, true);
 
 		// input is either drums, keyboard, or guitar (via guitar->midi converter)
-		// this needs to be configured; mini triggers mapped to inputs
+		// this needs to be configured; midi triggers mapped to inputs
 
 		// HACK: assume keyboard for now?
 		instrumentType = InstrumentType.Keyboard;

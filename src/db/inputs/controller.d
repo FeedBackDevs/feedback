@@ -6,6 +6,7 @@ import db.i.syncsource;
 import db.instrument;
 import db.game;
 
+import fuji.fuji;
 import fuji.system;
 import fuji.input;
 

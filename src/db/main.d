@@ -2,6 +2,7 @@ module db.main;
 
 import core.runtime;
 
+import fuji.fuji;
 import fuji.system;
 import fuji.display;
 

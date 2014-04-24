@@ -6,6 +6,7 @@ import db.player;
 import db.tools.midifile;
 import db.scorekeepers.drums;
 
+import fuji.fuji;
 import fuji.material;
 import fuji.sound;
 import fuji.filesystem;

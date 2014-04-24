@@ -60,7 +60,7 @@ class GuitarScoreKeeper : ScoreKeeper
 
 		long tolerance = window*1000 / 2;
 
-		GuitarNote[] expecting = GetNext();
+		GuitarNote[] expecting = null;//GetNext();
 		if(expecting)
 		{
 			foreach(e; inputDevice.events)

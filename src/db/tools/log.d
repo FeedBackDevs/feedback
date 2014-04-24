@@ -1,6 +1,7 @@
 module db.tools.log;
 
 public import fuji.vector;
+import fuji.fuji;
 import fuji.font;
 import fuji.system;
 

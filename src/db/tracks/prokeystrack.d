@@ -1,5 +1,6 @@
 module db.tracks.prokeystrack;
 
+import fuji.fuji;
 import fuji.materials.standard;
 import fuji.system;
 
@@ -15,6 +16,7 @@ import db.sequence;
 
 import core.stdc.math;
 import std.algorithm;
+import std.string;
 
 class ProKeysTrack : NoteTrack
 {
@@ -106,7 +108,7 @@ class ProKeysTrack : NoteTrack
 		}
 
 		// draw the track surface
-		MFMaterial_SetMaterial(fretboard);
+		fretboard.setCurrent();
 		MFPrimitive(PrimType.TriStrip, 0);
 
 		MFBegin(((end-start) / 4) * 2 + 2);
@@ -130,7 +132,7 @@ class ProKeysTrack : NoteTrack
 		// draw the fretboard edges and lane lines
 		const float barWidth = 0.2f;
 
-		MFMaterial_SetMaterial(bar);
+		bar.setCurrent();
 		MFPrimitive(PrimType.TriStrip, 0);
 
 		MFBegin(4);
@@ -145,7 +147,7 @@ class ProKeysTrack : NoteTrack
 		MFSetPosition(halfFB, 0.0f, -barWidth);
 		MFEnd();
 
-		MFMaterial_SetMaterial(edge);
+		edge.setCurrent();
 		MFPrimitive(PrimType.TriStrip, 0);
 		MFBegin(10 + 6*(numLanes-1));
 
@@ -195,7 +197,7 @@ class ProKeysTrack : NoteTrack
 		// draw the bars....
 		bool bHalfFrets = true;
 
-		MFMaterial_SetMaterial(bar);
+		bar.setCurrent();
 		MFPrimitive(PrimType.TriStrip, 0);
 
 		int bottomTick = song.CalculateTickAtTime(bottomTime);

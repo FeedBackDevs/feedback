@@ -185,7 +185,7 @@ class DrumsScoreKeeper : ScoreKeeper
 				++offset;
 			else if(time > notes[offset].time + tolerance)
 			{
-				WriteLog(format("%6d missed: %d", notes[offset].time/1000, notes[offset].key), MFVector(1,1,1,1));
+//				WriteLog(format("%6d missed: %d", notes[offset].time/1000, notes[offset].key), MFVector(1,1,1,1));
 
 				int oldCombo = combo;
 				combo = 0;

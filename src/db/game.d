@@ -246,30 +246,65 @@ class Game
 	// singleton stuff
 	static @property Game Instance() { if(instance is null) instance = new Game; return instance; }
 
-	static extern (C) void Static_InitFileSystem()
+	static extern (C) void Static_InitFileSystem() nothrow
 	{
-		instance.InitFileSystem();
+		try
+		{
+			instance.InitFileSystem();
+		}
+		catch
+		{
+			//...?
+		}
 	}
 
-	static extern (C) void Static_Init()
+	static extern (C) void Static_Init() nothrow
 	{
-		instance.Init();
+		try
+		{
+			instance.Init();
+		}
+		catch
+		{
+			//...?
+		}
 	}
 
-	static extern (C) void Static_Deinit()
+	static extern (C) void Static_Deinit() nothrow
 	{
-		instance.Deinit();
-		instance = null;
+		try
+		{
+			instance.Deinit();
+			instance = null;
+		}
+		catch
+		{
+			//...?
+		}
 	}
 
-	static extern (C) void Static_Update()
+	static extern (C) void Static_Update() nothrow
 	{
-		instance.Update();
+		try
+		{
+			instance.Update();
+		}
+		catch
+		{
+			//...?
+		}
 	}
 
-	static extern (C) void Static_Draw()
+	static extern (C) void Static_Draw() nothrow
 	{
-		instance.Draw();
+		try
+		{
+			instance.Draw();
+		}
+		catch
+		{
+			//...?
+		}
 	}
 
 private:

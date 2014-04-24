@@ -1,5 +1,6 @@
 module db.tracks.keystrack;
 
+import fuji.fuji;
 import fuji.materials.standard;
 
 import db.i.notetrack;
@@ -13,6 +14,7 @@ import db.song;
 import db.sequence;
 
 import core.stdc.math;
+import std.string;
 
 class KeysTrack : NoteTrack
 {
@@ -93,7 +95,7 @@ class KeysTrack : NoteTrack
 		GetVisibleRange(offset, null, null, &bottomTime, &topTime);
 
 		// draw the track surface
-		MFMaterial_SetMaterial(fretboard);
+		fretboard.setCurrent();
 		MFPrimitive(PrimType.TriStrip, 0);
 
 		MFBegin(((end-start) / 4) * 2 + 2);
@@ -117,7 +119,7 @@ class KeysTrack : NoteTrack
 		// draw the fretboard edges and bar lines
 		const float barWidth = 0.2f;
 
-		MFMaterial_SetMaterial(bar);
+		bar.setCurrent();
 		MFPrimitive(PrimType.TriStrip, 0);
 
 		MFBegin(4);
@@ -132,7 +134,7 @@ class KeysTrack : NoteTrack
 		MFSetPosition(halfFB, 0.0f, -barWidth);
 		MFEnd();
 
-		MFMaterial_SetMaterial(edge);
+		edge.setCurrent();
 		MFPrimitive(PrimType.TriStrip, 0);
 		MFBegin(10 + 6*(numLanes-1));
 
@@ -182,7 +184,7 @@ class KeysTrack : NoteTrack
 		// draw the frets....
 		bool bHalfFrets = true;
 
-		MFMaterial_SetMaterial(bar);
+		bar.setCurrent();
 		MFPrimitive(PrimType.TriStrip, 0);
 
 		int bottomTick = song.CalculateTickAtTime(bottomTime);
