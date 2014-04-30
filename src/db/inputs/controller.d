@@ -23,7 +23,7 @@ class Controller : InputDevice
 		if(flags & (MFGamepadFlags.IsAdapter | MFGamepadFlags.IsProxy))
 			bCantDetectFeatures = true;
 
-		if(flags & MFGamepadFlags.IsGuitar)
+		if((flags & MFGamepadFlags.TypeMask) == MFGamepadFlags.Type_Guitar)
 		{
 			instrumentType = InstrumentType.GuitarController;
 
@@ -33,7 +33,7 @@ class Controller : InputDevice
 			features |= flags & MFGamepadFlags.Guitar_HasPickupSwitch ? MFBit!(GuitarFeatures.HasPickupSwitch) : 0;
 		}
 
-		if(flags & MFGamepadFlags.IsDrums)
+		if((flags & MFGamepadFlags.TypeMask) == MFGamepadFlags.Type_Drums)
 		{
 			instrumentType = InstrumentType.Drums;
 
