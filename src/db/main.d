@@ -52,8 +52,12 @@ else
 	    {
 			Game game = Game.Instance;
 
-//			game.initParams.argc = cast(int)args.length;
-//			game.initParams.argv = ...we have a problem! (not important for now)
+			const(char)*[] argv;
+			foreach(arg; args)
+				argv ~= arg.ptr;
+
+			game.initParams.argc = cast(int)args.length;
+			game.initParams.argv = argv.ptr;
 
 			result = Start();
 	    }
