@@ -7,6 +7,7 @@ import fuji.dbg;
 public import db.song;
 import db.sequence;
 import db.tools.midifile;
+import db.tools.guitarprofile;
 
 import std.string;
 import std.encoding;
@@ -31,35 +32,63 @@ class SongLibrary
 					Song song = LoadFromMidi(file);
 					songs ~= song;
 				}
-				else if(file.filename.endsWith(".chart"))
+				else switch(file.filename.extension.toLower)
 				{
-					// we have a legacy feedback chart
-					MFDebug_Log(0, file.filepath);
+					case ".chart":
+					{
+						// we have a legacy feedback chart
+						MFDebug_Log(0, file.filepath);
 
-					// TODO: parse old feedback charts
-				}
-				else if(file.filename.endsWith(".sm"))
-				{
-					// stepmania step file
-					Song song = LoadFromSM_DWI(file);
-					songs ~= song;
-				}
-				else if(file.filename.endsWith(".ksf"))
-				{
-					// kick is up step file (5-panel 'pump it up' steps)
-					LoadFromKSF(file);
-				}
-				else if(file.filename.endsWith(".dwi"))
-				{
-					// danci with intensity step file
-					Song song = LoadFromSM_DWI(file);
-					songs ~= song;
-				}
-				else if(file.filename.endsWith(".bme"))
-				{
-					// beatmania keys
-//					Song song = LoadFromBME(file);
-//					songs ~= song;
+						// TODO: parse old feedback charts
+						break;
+					}
+					case ".sm":
+					{
+						// stepmania step file
+						Song song = LoadFromSM_DWI(file);
+						songs ~= song;
+						break;
+					}
+					case ".ksf":
+					{
+						// kick is up step file (5-panel 'pump it up' steps)
+						LoadFromKSF(file);
+						break;
+					}
+					case ".dwi":
+					{
+						// danci with intensity step file
+						Song song = LoadFromSM_DWI(file);
+						songs ~= song;
+						break;
+					}
+					case ".bme":
+					{
+						// beatmania keys
+//						Song song = LoadFromBME(file);
+//						songs ~= song;
+						break;
+					}
+					case ".gtp":
+					case ".gp3":
+					case ".gp4":
+					case ".gp5":
+					case ".gpx":
+					{
+						Song song = LoadFromGuitarPro(file);
+						songs ~= song;
+						break;
+					}
+					case ".mid":
+					{
+						if(file.filename.icmp("notes.mid") == 0)
+							break;
+						// raw midi file
+						Song song = LoadRawMidi(file);
+						songs ~= song;
+						break;
+					}
+					default:
 				}
 			}
 			catch
@@ -164,6 +193,76 @@ class SongLibrary
 		return song;
 	}
 
+	Song LoadRawMidi(DirEntry file)
+	{
+		string path = file.directory ~ "/";
+
+		MFDebug_Log(2, "Loading song: '" ~ file.filepath ~ "'");
+
+		Song song = new Song;
+		song.songPath = path;
+		song.id = file.filename.stripExtension;
+		song.name = song.id;
+
+		MIDIFile midi = new MIDIFile(file);
+//		midi.WriteText(file.filepath.stripExtension ~ ".txt");
+
+		song.LoadRawMidi(midi);
+
+		// search for the music and other stuff...
+		string songName = file.filename.stripExtension.toLower;
+		foreach(f; dirEntries(path ~ "*", SpanMode.shallow))
+		{
+			static immutable imageTypes = [ ".png", ".jpg", ".jpeg", ".tga", ".dds", ".bmp" ];
+			static immutable musicTypes = [ ".ogg", ".mp3", ".flac", ".wav" ];
+
+			string filename = f.filename.toLower;
+			string ext = filename.extension;
+			string fn = filename.stripExtension;
+			if(std.algorithm.canFind(imageTypes, ext))
+			{
+				if(fn[] == songName)
+					song.cover = f.filename;
+				else if(fn[] == songName || fn[] == songName ~ "-bg")
+					song.background = f.filename;
+			}
+			else if(std.algorithm.canFind(musicTypes, ext))
+			{
+				if(fn[] == songName)
+					song.musicFiles[MusicFiles.Song] = f.filename;
+				if(fn[] == songName ~ "-intro")
+					song.musicFiles[MusicFiles.Preview] = f.filename;
+			}
+			else if(std.algorithm.canFind(videoTypes, ext))
+			{
+				if(fn[] == songName)
+					song.video = f.filename;
+			}
+		}
+
+		return song;
+	}
+
+	Song LoadFromGuitarPro(DirEntry file)
+	{
+		string path = file.directory ~ "/";
+
+		MFDebug_Log(2, "Loading song: '" ~ file.filepath ~ "'");
+
+		Song song = new Song;
+		song.songPath = path;
+
+		GuitarProFile gpx = new GuitarProFile(file);
+//		gpx.WriteText(file.filepath.stripExtension ~ ".txt");
+
+		song.LoadGPx(gpx);
+
+		// search for music files
+		//...
+
+		return song;
+	}
+
 	Song LoadFromSM_DWI(DirEntry file)
 	{
 		const(char)[] steps = cast(const(char)[])enforce(MFFileSystem_Load(file.filepath), "");
@@ -246,7 +345,7 @@ class SongLibrary
 
 		Song song = Find(name);
 		if(!song)
-		{			
+		{
 			song = new Song;
 			song.songPath = path;
 			song.id = name;

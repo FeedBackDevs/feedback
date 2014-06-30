@@ -9,6 +9,8 @@ import std.string;
 import std.range;
 import std.exception;
 
+import db.tools.range;
+
 enum MIDIEventType : ubyte
 {
 	NoteOff = 0x80,
@@ -56,34 +58,6 @@ struct MTrk_Chunk
 {
 	ubyte[4] id;   // 'M','T','r','k' */
 	uint	 length;
-}
-
-auto getFront(R)(ref R range)
-{
-	auto f = range.front();
-	range.popFront();
-	return f;
-}
-
-T[] getFrontN(R, T = ElementType!R)(ref R range, size_t n)
-{
-	T[] f = range[0..n];
-	range.popFrontN(n);
-	return f;
-}
-
-As frontAs(As, R)(R range)
-{
-	As r;
-	(cast(ubyte*)&r)[0..As.sizeof] = range[0..As.sizeof];
-	return r;
-}
-
-As getFrontAs(As, R)(ref R range)
-{
-	As r;
-	(cast(ubyte*)&r)[0..As.sizeof] = range.getFrontN(As.sizeof)[];
-	return r;
 }
 
 class MIDIFile
@@ -181,7 +155,6 @@ class MIDIFile
 								}
 							case EndOfTrack:
 								{
-									// is it valid to have data remaining after the end of track marker?
 									assert(track.length == 0, "Track seems to end prematurely...");
 									break;
 								}
@@ -295,7 +268,7 @@ class MIDIFile
 		string file = .format("MIDI\r\nformat = %d\r\nresolution = %d\r\n", format, ticksPerBeat);
 		foreach(i, t; tracks)
 		{
-			file ~= .format("Track %d\r\n", i);
+			file ~= .format("Track %d\r\n", i+1);
 			foreach(e; t)
 			{
 				file ~= .format("  %06d %s: ", e.tick, (cast(MIDIEventType)e.type).to!string);
@@ -347,7 +320,7 @@ class MIDIFile
 						file ~= toHexString(e.data);
 						break;
 					default:
-						file ~= .format("[%d] %d, %d", e.note.channel, e.note.note, e.note.velocity);
+						file ~= .format("[%d] %d, %d", e.note.channel+1, e.note.note, e.note.velocity);
 						break;
 				}
 

@@ -23,7 +23,7 @@ enum InstrumentType
 	// Bemani
 	// NOTE: Guitar Freak, Drum Mania, and Keyboardmania can be factored into the existing parts
 	Dance,				// dance controller
-	Beatmania,			// 
+	Beatmania,			//
 	PNM,				// Pop'n Music
 
 	// Silly
@@ -120,6 +120,7 @@ enum DrumNotes
 	Ride,		//   G			  O
 	Tom3,		//   G			  G
 	Kick,
+//	Cowbell,	// cowbell or tambourine
 }
 
 enum DrumNoteFlags
