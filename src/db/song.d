@@ -780,10 +780,10 @@ class Song
 							case 0: .. case 9:
 								// keyboard position
 								ev.event = EventType.KeyboardPosition;
-								ev.position = Notes.C4 + note;
+								ev.position = MIDINote.C4 + note;
 								goto current_difficulty;
 
-							case Notes.C4: .. case Notes.C6:
+							case MIDINote.C4: .. case MIDINote.C6:
 								ev.event = EventType.Note;
 								ev.note.key = note;
 								goto current_difficulty;
@@ -1121,17 +1121,50 @@ class Song
 
 	bool LoadGPx(GuitarProFile gpx)
 	{
-		// TODO: what can we parse from a GP file?
+		with(GuitarProFile)
+		{
+			// parse timing
 
-		// parse timing
+			// creating starting BPM event
+//			gpx.tempo;
 
-		// parse drums
+			foreach(ref m; gpx.measures)
+			{
+				if(m.has(MeasureInfo.Bits.TSNumerator) || m.has(MeasureInfo.Bits.TSDenimonator))
+				{
+					// time dignature event...
+				}
+			}
 
-		// parse 'real' guitar and bass
+			foreach(ref t; gpx.tracks)
+			{
+				foreach(ref m; t.measures)
+				{
+					foreach(ref b; t.beats[m.beat .. m.beat+m.numBeats])
+					{
+						if(b.mix && b.mix.tempo != -1)
+						{
+							// bpm event
+						}
+					}
+				}
+			}
 
-		// parse keyboard
+			// time sig in measure info
+			// tempo in beat mix events
 
-		// parse lyrics/vox
+			// parse drums
+			// midi track 10
+
+
+			// how to identify the tracks...?
+
+			// parse 'real' guitar and bass
+
+			// parse keyboard
+
+			// parse lyrics/vox
+		}
 
 		return false;
 	}

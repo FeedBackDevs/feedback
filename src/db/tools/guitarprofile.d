@@ -10,6 +10,7 @@ import std.range;
 import std.exception;
 
 import db.tools.range;
+import db.tools.midifile;
 
 class GuitarProFile
 {
@@ -42,10 +43,8 @@ class GuitarProFile
 		if(!buffer.empty)
 		{
 			int ex = buffer.getFrontAs!int();            // Exit code: 00 00 00 00
-//			if(ex != 0)
-//				kdWarning() << "File not ended with 00 00 00 00\n";
-//			if (!buffer.empty)
-//				kdWarning() << "File not ended - there's more data!\n";
+			assert(ex == 0, "File should terminate with 00 00 00 00");
+			assert(buffer.empty, "File not ended!");
 		}
 	}
 
@@ -55,24 +54,6 @@ class GuitarProFile
 		LYRIC_LINES_MAX_NUMBER = 5,
 		STRING_MAX_NUMBER = 7
 	};
-
-	enum Flags
-	{
-		ARC = 1,
-		Dot = 2,
-		PalmMute = 4,
-		Triplet = 8
-	}
-
-	enum Effect
-	{
-		Harmonic = 1,
-		ArtHarm = 2,
-		Legato = 3,
-		Slide = 4,
-		LetRing = 5,
-		StopRing = 6
-	}
 
 	struct MidiTrack
 	{
@@ -116,36 +97,237 @@ class GuitarProFile
 
 	struct Beat
 	{
+		enum Bits
+		{
+			Dotted,
+			ChordDiagram,
+			Text,
+			Effects,
+			MixChange,
+			N_Tuplet,
+			Silent
+		}
+
+		struct MixChange
+		{
+			byte patch;
+
+			byte volume;
+			byte pan;
+			byte chorus;
+			byte reverb;
+			byte phase;
+			byte tremolo;
+			int tempo;
+
+			ubyte volumeTrans;
+			ubyte panTrans;
+			ubyte chorusTrans;
+			ubyte reverbTrans;
+			ubyte phaseTrans;
+			ubyte tremoloTrans;
+			ubyte tempoTrans;
+
+			ubyte maskAll;
+		}
+
+		enum PauseKind : ubyte
+		{
+			Empty = 0,
+			Rest = 2
+		}
+
 		ubyte bitmask;
 
-		ubyte pauseKind;
+		byte length; // quarter_note / 2^length
+
+		PauseKind pauseKind;
+		int tuple;
+		ChordDiagram* chord;
+		string text;
+		BeatEffect* effects;
+		MixChange* mix;
+
+		Note*[STRING_MAX_NUMBER] notes;
+
+		bool has(Bits bit) { return (bitmask & MFBit(bit)) != 0; }
+	}
+
+	struct BeatEffect
+	{
+		enum Bits1
+		{
+			TapSlap = 5,
+			StrokeEffect = 6
+		}
+
+		enum Bits2
+		{
+			Rasguedo,
+			Pickstroke,
+			TremoloBar
+		}
+
+		enum TapType : byte
+		{
+			None,
+			Tapping,
+			Slapping,
+			Popping
+		}
+
+		enum StrokeType : byte
+		{
+			None,
+			GoingUp,
+			GoingDown
+		}
+
+		ubyte bitmask1;
+		ubyte bitmask2;
+
+		TapType tapType;
+		Bend* bend;
+		byte upStroke;
+		byte downStroke;
+		StrokeType strokeType;
+
+		bool has(Bits1 bit) { return (bitmask1 & MFBit(bit)) != 0; }
+		bool has(Bits2 bit) { return (bitmask2 & MFBit(bit)) != 0; }
+	}
+
+	struct Note
+	{
+		enum Bits
+		{
+			Duration,
+			Dotted,
+			Ghost,
+			HasEffects,
+			Dynamic,
+			Type,
+			Accentuated,
+			Fingering // right/left handed
+		}
+
+		enum Type : ubyte
+		{
+			None = 0, // unknown?
+
+			Normal = 1,
+			Ghost = 2,
+			Tie = 3
+		}
+
+		ubyte bitmask;
+
+		Type type;
 
 		byte length; // quarter_note / 2^length
-		byte[STRING_MAX_NUMBER] frets = -1;
-		byte[STRING_MAX_NUMBER] effects;
-		ubyte flags;
+		byte tuple;
 
-		int tuple;
+		byte dynamic = 6;
 
-		string text;
+		byte fret = -1;
 
-		// mixer variations
-		int tempo;
-		ubyte patch;
+		byte left = -1;
+		byte right = -1;
 
-		ubyte volume;
-		ubyte volumeTrans;
-		ubyte pan;
-		ubyte panTrans;
-		ubyte chorus;
-		ubyte chorusTrans;
-		ubyte reverb;
-		ubyte reverbTrans;
-		ubyte phase;
-		ubyte phaseTrans;
-		ubyte tremolo;
-		ubyte tremoloTrans;
-		ubyte tempoTrans;
+		NoteEffect* effect;
+
+		bool has(Bits bit) { return (bitmask & MFBit(bit)) != 0; }
+	}
+
+	struct NoteEffect
+	{
+		enum Bits1
+		{
+			Bend,
+			HOPO,
+			Slide,
+			LetRing,
+			GraceNote
+		}
+
+		enum Bits2
+		{
+			Staccato,
+			PalmMute,
+			TremloPicking,
+			Slide,
+			Harmonic,
+			Trill,
+			Vibrato
+		}
+
+		struct GraceNote
+		{
+			ubyte fret;
+			ubyte dynamic;
+			ubyte transition;
+			ubyte duration;
+		}
+
+		ubyte bitmask1;
+		ubyte bitmask2;
+
+		Bend* bend;
+
+		GraceNote graceNote;
+
+		byte tremloRate;
+		byte slideType;
+		byte harmonicType;
+
+		byte trillFret;
+		byte trillRate;
+
+		bool has(Bits1 bit) { return (bitmask1 & MFBit(bit)) != 0; }
+		bool has(Bits2 bit) { return (bitmask2 & MFBit(bit)) != 0; }
+	}
+
+	struct Bend
+	{
+		enum Type : byte
+		{
+			None,
+			// bends
+			Bend,
+			BendAndRelease,
+			BendAndReleaseAndBend,
+			Prebend,
+			PrebendAndRelease,
+			// tremlo bar
+			Dip,
+			Dive,
+			ReleaseUp,
+			InvertedDip,
+			Return,
+			ReleaseDown
+		}
+
+		struct Point
+		{
+			enum Vibrato : byte
+			{
+				None,
+				Fast,
+				Average,
+				Slow
+			}
+
+			int time; // 60th of note duration
+			int value;  // 50 = 1 semitone
+			Vibrato vibrato;
+		}
+
+		Type type;
+		int value; // 50 = 1 semitone
+		Point[] points;
+	}
+
+	struct ChordDiagram
+	{
 	}
 
 	struct Measure
@@ -165,7 +347,7 @@ class GuitarProFile
 
 		struct String
 		{
-			int tune;
+			MIDINote tune;
 		}
 
 		ubyte bitmask;
@@ -363,8 +545,9 @@ private:
 			// Parse [0..string-1] with real string tune data in reverse order
 			for(ptrdiff_t j = t.numStrings-1; j >= 0; --j)
 			{
-				t.strings[j].tune = buffer.getFrontAs!int();
-				assert(t.strings[j].tune < 128, "Insane tuning");
+				int note = buffer.getFrontAs!int();
+				assert(note < 128, "Invalid tuning");
+				t.strings[j].tune = cast(MIDINote)note;
 			}
 
 			// Throw out the other useless garbage in [string..MAX-1] range
@@ -413,11 +596,8 @@ private:
 
 					b.bitmask = buffer.getFront();
 
-					if(b.bitmask & 0x01)     // dotted column
-						b.flags |= MFBit!(Flags.Dot);
-
-					if(b.bitmask & 0x40)
-						b.pauseKind = buffer.getFront(); // GREYFIX: pause_kind
+					if(b.has(Beat.Bits.Silent))
+						b.pauseKind = buffer.getFrontAs!(Beat.PauseKind)(); // GREYFIX: pause_kind
 
 					// Guitar Pro 4 beat lengths are as following:
 					// -2 = 1    => 480     3-l = 5  2^(3-l)*15
@@ -428,54 +608,65 @@ private:
 					//  3 = 1/32 => 15            0
 					b.length = buffer.getFront();
 
-					if(b.bitmask & 0x20)
+					if(b.has(Beat.Bits.N_Tuplet))
 					{
 						b.tuple = buffer.getFrontAs!int();
 						assert(b.tuple >= 3 && b.tuple <= 13, "Invalid tuple?");
 					}
 
-					if(b.bitmask & 0x02)     // Chord diagram
-					{
-//						readChord();
-						int x = 0;
-					}
+					if(b.has(Beat.Bits.ChordDiagram))
+						b.chord = readChord(buffer);
 
-					if(b.bitmask & 0x04)
+					if(b.has(Beat.Bits.Text))
 						b.text = buffer.readDelphiString().idup;
 
-					// GREYFIX: column-wide effects
-					if(b.bitmask & 0x08)
-						readColumnEffects(buffer, b, t);
+					if(b.has(Beat.Bits.Effects))
+						b.effects = readColumnEffects(buffer);
 
-					if(b.bitmask & 0x10)     // mixer variations
+					if(b.has(Beat.Bits.MixChange))
 					{
-						b.patch = buffer.getFront();   // GREYFIX: new MIDI patch
-						b.volume = buffer.getFront();  // GREYFIX: new
-						b.pan = buffer.getFront();     // GREYFIX: new
-						b.chorus = buffer.getFront();  // GREYFIX: new
-						b.reverb = buffer.getFront();  // GREYFIX: new
-						b.phase = buffer.getFront();   // GREYFIX: new
-						b.tremolo = buffer.getFront(); // GREYFIX: new
-						b.tempo = buffer.getFrontAs!int();    // GREYFIX: new tempo
+						Beat.MixChange* mix = new Beat.MixChange;
+
+						mix.patch = buffer.getFront();   // GREYFIX: new MIDI patch
+						mix.volume = buffer.getFront();  // GREYFIX: new
+						mix.pan = buffer.getFront();     // GREYFIX: new
+						mix.chorus = buffer.getFront();  // GREYFIX: new
+						mix.reverb = buffer.getFront();  // GREYFIX: new
+						mix.phase = buffer.getFront();   // GREYFIX: new
+						mix.tremolo = buffer.getFront(); // GREYFIX: new
+						mix.tempo = buffer.getFrontAs!int();    // GREYFIX: new tempo
+
+						if(mix.tempo != -1)
+						{
+							int tt = 0;
+						}
 
 						// GREYFIX: transitions
-						if(b.volume != -1)   b.volumeTrans = buffer.getFront();
-						if(b.pan != -1)      b.panTrans = buffer.getFront();
-						if(b.chorus != -1)   b.chorusTrans = buffer.getFront();
-						if(b.reverb != -1)   b.reverbTrans = buffer.getFront();
-						if(b.phase != -1)    b.phaseTrans = buffer.getFront();
-						if(b.tremolo != -1)  b.tremoloTrans = buffer.getFront();
-						if(b.tempo != -1)    b.tempoTrans = buffer.getFront();
+						if(mix.volume != -1)   mix.volumeTrans = buffer.getFront();
+						if(mix.pan != -1)      mix.panTrans = buffer.getFront();
+						if(mix.chorus != -1)   mix.chorusTrans = buffer.getFront();
+						if(mix.reverb != -1)   mix.reverbTrans = buffer.getFront();
+						if(mix.phase != -1)    mix.phaseTrans = buffer.getFront();
+						if(mix.tremolo != -1)  mix.tremoloTrans = buffer.getFront();
+						if(mix.tempo != -1)    mix.tempoTrans = buffer.getFront();
 
 						if(versionMajor >= 4)
-							buffer.getFront();  // bitmask: what should be applied to all tracks
+						{
+							// bitmask: what should be applied to all tracks
+							mix.maskAll = buffer.getFront();
+						}
+
+						b.mix = mix;
 					}
 
-					int strings = buffer.getFront();  // used strings mask
-					for(int s = STRING_MAX_NUMBER - 1; s >= 0; --s)
+					int strings = buffer.getFront();
+					if(strings)
 					{
-						if((strings & (1 << s)) != 0 && (STRING_MAX_NUMBER - 1 - s) < t.numStrings)
-							readNote(buffer, b, t, s);
+						foreach(s; 0..t.numStrings)
+						{
+							if(strings & (1 << 6-s))
+								b.notes[t.numStrings - s - 1] = readNote(buffer);
+						}
 					}
 
 					t.beats ~= b;
@@ -484,172 +675,196 @@ private:
 		}
 	}
 
-	void readNote(ref const(ubyte)[] buffer, ref Beat b, ref Track t, int s)
+	Note* readNote(ref const(ubyte)[] buffer)
 	{
-		ubyte note_bitmask = buffer.getFront();
+		Note* n = new Note;
+		n.bitmask = buffer.getFront();
 
-		if(note_bitmask & 0x20) // GREYFIX: note type
+		if(n.has(Note.Bits.Type))
+			n.type = buffer.getFrontAs!(Note.Type)();
+
+		if(n.has(Note.Bits.Duration))
 		{
-			ubyte type = buffer.getFront();
-
-			if(type == 2)                      // link with previous beat
-			{
-				b.flags |= Flags.ARC;
-				b.effects[s] = 0;//Effect.DeadNote;
-			}
-			else if(type == 3)                      // dead notes
-				b.frets[s] = -2;
+			n.length = buffer.getFront();
+			n.tuple = buffer.getFront();
 		}
 
-		if(note_bitmask & 0x01) // GREYFIX: note != beat
-		{
-			ubyte length = buffer.getFront();
-			ubyte tuple = buffer.getFront();
-		}
-
-		if(note_bitmask & 0x02) // GREYFIX: note is dotted
+		if(n.has(Note.Bits.Dotted))
 		{}
 
-		if(note_bitmask & 0x10) // GREYFIX: velocity
+		if(n.has(Note.Bits.Dynamic))
+			n.dynamic = buffer.getFront();
+
+		if(n.has(Note.Bits.Type))
+			n.fret = buffer.getFront();
+
+		if(n.has(Note.Bits.Fingering))
 		{
-			ubyte velocity = buffer.getFront();
+			n.left = buffer.getFront();
+			n.right = buffer.getFront();
 		}
 
-		if(note_bitmask & 0x20)
-		{
-			b.frets[s] = buffer.getFront();
-		}
+		if(n.has(Note.Bits.HasEffects))
+			n.effect = readNoteEffect(buffer);
 
-		if(note_bitmask & 0x80)               // GREYFIX: fingering
-		{
-			buffer.getFront();
-			buffer.getFront();
-		}
-
-		if(note_bitmask & 0x08)
-		{
-			ubyte mod_mask1 = buffer.getFront();
-			ubyte mod_mask2 = versionMajor >= 4 ? buffer.getFront() : 0;
-
-			if(mod_mask1 & 0x01)
-			{
-				readChromaticGraph(buffer);      // GREYFIX: bend graph
-			}
-			if (mod_mask1 & 0x02)                // hammer on / pull off
-				b.effects[s] |= Effect.Legato;
-			if (mod_mask1 & 0x08)                // let ring
-				b.effects[s] |= Effect.LetRing;
-			if (mod_mask1 & 0x10)                // GREYFIX: graces
-			{
-				buffer.getFront();               // GREYFIX: grace fret
-				buffer.getFront();               // GREYFIX: grace dynamic
-				buffer.getFront();               // GREYFIX: grace transition
-				buffer.getFront();               // GREYFIX: grace length
-			}
-			if(versionMajor >= 4)
-			{
-				if(mod_mask2 & 0x01)                // staccato - we do palm mute
-					b.flags |= Flags.PalmMute;
-				if(mod_mask2 & 0x02)                // palm mute - we mute the whole column
-					b.flags |= Flags.PalmMute;
-				if(mod_mask2 & 0x04)                // GREYFIX: tremolo
-				{
-					buffer.getFront();              // GREYFIX: tremolo picking length
-				}
-				if(mod_mask2 & 0x08)                // slide
-				{
-					b.effects[s] |= Effect.Slide;
-					buffer.getFront();              // GREYFIX: slide kind
-				}
-				if(mod_mask2 & 0x10)                // GREYFIX: harmonic
-				{
-					buffer.getFront();              // GREYFIX: harmonic kind
-				}
-				if(mod_mask2 & 0x20)                // GREYFIX: trill
-				{
-					buffer.getFront();              // GREYFIX: trill fret
-					buffer.getFront();              // GREYFIX: trill length
-				}
-			}
-		}
+		return n;
 	}
 
-	void readChromaticGraph(ref const(ubyte)[] buffer)
+	NoteEffect* readNoteEffect(ref const(ubyte)[] buffer)
 	{
-		// GREYFIX: currently just skips over chromatic graph
-		buffer.getFront();                    // icon
-		buffer.getFrontAs!int();              // shown amplitude
-		int n = buffer.getFrontAs!int();      // number of points
+		NoteEffect* e = new NoteEffect;
+
+		e.bitmask1 = buffer.getFront();
+		e.bitmask2 = versionMajor >= 4 ? buffer.getFront() : 0;
+
+		if(e.has(NoteEffect.Bits1.Bend))
+			e.bend = readBend(buffer);
+		if(e.has(NoteEffect.Bits1.GraceNote))
+		{
+			e.graceNote.fret = buffer.getFront();
+			e.graceNote.dynamic = buffer.getFront();
+			e.graceNote.transition = buffer.getFront();
+			e.graceNote.duration = buffer.getFront();
+		}
+		if(versionMajor >= 4)
+		{
+			if(e.has(NoteEffect.Bits2.TremloPicking))
+				e.tremloRate = buffer.getFront();
+			if(e.has(NoteEffect.Bits2.Slide))
+				e.slideType = buffer.getFront();
+			if(e.has(NoteEffect.Bits2.Harmonic))
+				e.harmonicType = buffer.getFront();
+			if(e.has(NoteEffect.Bits2.Trill))
+			{
+				e.trillFret = buffer.getFront();
+				e.trillRate = buffer.getFront();
+			}
+		}
+
+		return e;
+	}
+
+	Bend* readBend(ref const(ubyte)[] buffer)
+	{
+		Bend* b = new Bend;
+
+		b.type = buffer.getFrontAs!(Bend.Type)();
+		b.value = buffer.getFrontAs!int();
+		int n = buffer.getFrontAs!int();
+		b.points = new Bend.Point[n];
 		foreach(i; 0..n)
 		{
-			buffer.getFrontAs!int();          // time
-			buffer.getFrontAs!int();          // pitch
-			buffer.getFront();                // vibrato
+			b.points[i].time = buffer.getFrontAs!int();
+			b.points[i].value = buffer.getFrontAs!int();
+			b.points[i].vibrato = buffer.getFrontAs!(Bend.Point.Vibrato)();
 		}
+
+		return b;
 	}
 
-	void readColumnEffects(ref const(ubyte)[] buffer, ref Beat b, ref Track t)
+	BeatEffect* readColumnEffects(ref const(ubyte)[] buffer)
 	{
-		ubyte fx_bitmask1 = buffer.getFront();
-		ubyte fx_bitmask2 = versionMajor >= 4 ? buffer.getFront() : 0;
+		BeatEffect* e = new BeatEffect;
+		e.bitmask1 = buffer.getFront();
+		e.bitmask2 = versionMajor >= 4 ? buffer.getFront() : 0;
 
-		if(fx_bitmask1 & 0x20)      // GREYFIX: string torture
+		if(e.has(BeatEffect.Bits1.TapSlap))
 		{
 			ubyte effect = buffer.getFront();
-			switch (effect)
+			if(versionMajor < 4)
 			{
-				case 0:                    // GREYFIX: tremolo bar
-					if(versionMajor < 4)
+				switch(effect)
+				{
+					case 0:                    // GREYFIX: tremolo bar
 						buffer.getFrontAs!int();
-					break;
-				case 1:                    // GREYFIX: tapping
-					if(versionMajor < 4)
+						break;
+					case 1:                    // GREYFIX: tapping
 						buffer.getFrontAs!int(); // ?
-					break;
-				case 2:                    // GREYFIX: slapping
-					if(versionMajor < 4)
+						break;
+					case 2:                    // GREYFIX: slapping
 						buffer.getFrontAs!int(); // ?
-					break;
-				case 3:                    // GREYFIX: popping
-					if(versionMajor < 4)
+						break;
+					case 3:                    // GREYFIX: popping
 						buffer.getFrontAs!int(); // ?
-					break;
-				default:
-					assert(false, "Unknown string torture effect");
+						break;
+					default:
+						assert(false, "Unknown string torture effect");
+				}
 			}
+			else
+				e.tapType = cast(BeatEffect.TapType)effect;
 		}
-		if(fx_bitmask1 & 0x04)      // GP3 column-wide natural harmonic
+		if(e.has(BeatEffect.Bits2.TremoloBar))
+			e.bend = readBend(buffer);
+		if(e.has(BeatEffect.Bits1.StrokeEffect))
 		{
-			foreach(i; 0 .. t.numStrings)
-				b.effects[i] |= Effect.Harmonic;
+			e.downStroke = buffer.getFront();
+			e.upStroke = buffer.getFront();
 		}
-		if(fx_bitmask1 & 0x08)      // GP3 column-wide artificial harmonic
-		{
-			foreach(i; 0 .. t.numStrings)
-				b.effects[i] |= Effect.ArtHarm;
-		}
-		if(fx_bitmask2 & 0x04)
-			readChromaticGraph(buffer);   // GREYFIX: tremolo graph
-		if(fx_bitmask1 & 0x40)
-		{
-			buffer.getFront();      // GREYFIX: down stroke length
-			buffer.getFront();      // GREYFIX: up stroke length
-		}
-		if(fx_bitmask2 & 0x02)
-		{
-			buffer.getFront();      // GREYFIX: stroke pick direction
-		}
+		if(e.has(BeatEffect.Bits2.Pickstroke))
+			e.strokeType = buffer.getFrontAs!(BeatEffect.StrokeType)();
+/+
 		if(fx_bitmask1 & 0x01)      // GREYFIX: GP3 column-wide vibrato
 		{
 		}
 		if(fx_bitmask1 & 0x02)      // GREYFIX: GP3 column-wide wide vibrato (="tremolo" in GP3)
 		{
 		}
++/
+		return e;
 	}
 
+	ChordDiagram* readChord(ref const(ubyte)[] buffer)
+	{
+		assert(false);
 
+		ubyte ver = buffer.getFront();
+		if((ver & 1) == 0)
+		{
 
+		}
+		else
+		{
+		}
 
+		return null;
+/+
+		int x1, x2, x3, x4;
+		Q_UINT8 num;
+		QString text;
+		char garbage[50];
+		// GREYFIX: currently just skips over chord diagram
+
+		// GREYFIX: chord diagram
+		x1 = getFrontAs!int();
+		if (x1 != 257)
+			kdWarning() << "Chord INT1=" << x1 << ", not 257\n";
+		x2 = getFrontAs!int();
+		if (x2 != 0)
+			kdWarning() << "Chord INT2=" << x2 << ", not 0\n";
+		x3 = getFrontAs!int();
+		kdDebug() << "Chord INT3: " << x3 << "\n"; // FF FF FF FF if there is diagram
+		x4 = getFrontAs!int();
+		if (x4 != 0)
+			kdWarning() << "Chord INT4=" << x4 << ", not 0\n";
+		(*stream) >> num;
+		if (num != 0)
+			kdWarning() << "Chord BYTE5=" << (int) num << ", not 0\n";
+		text = readPascalString(25);
+		kdDebug() << "Chord diagram: " << text << "\n";
+
+		// Chord diagram parameters - for every string
+		for (int i = 0; i < STRING_MAX_NUMBER; i++) {
+			x1 = getFrontAs!int();
+			kdDebug() << x1 << "\n";
+		}
+
+		// Unknown bytes
+		stream->readRawBytes(garbage, 36);
+
+		kdDebug() << "after chord, position: " << stream->device()->at() << "\n";
++/
+	}
 }
 
 
@@ -680,83 +895,3 @@ const(char)[] readDelphiString(ref inout(ubyte)[] buffer)
 
 	return cast(const(char)[])buffer.getFrontN(l);
 }
-
-/+
-#include "convertgtp.h"
-
-#include <klocale.h>
-#include <qfile.h>
-#include <qdatastream.h>
-
-ConvertGtp::ConvertGtp(TabSong *song): ConvertBase(song)
-{
-	strongChecks = TRUE;
-}
-
-void ConvertGtp::readChord()
-{
-	int x1, x2, x3, x4;
-	Q_UINT8 num;
-	QString text;
-	char garbage[50];
-	// GREYFIX: currently just skips over chord diagram
-
-	// GREYFIX: chord diagram
-	x1 = getFrontAs!int();
-	if (x1 != 257)
-		kdWarning() << "Chord INT1=" << x1 << ", not 257\n";
-	x2 = getFrontAs!int();
-	if (x2 != 0)
-		kdWarning() << "Chord INT2=" << x2 << ", not 0\n";
-	x3 = getFrontAs!int();
-	kdDebug() << "Chord INT3: " << x3 << "\n"; // FF FF FF FF if there is diagram
-	x4 = getFrontAs!int();
-	if (x4 != 0)
-		kdWarning() << "Chord INT4=" << x4 << ", not 0\n";
-	(*stream) >> num;
-	if (num != 0)
-		kdWarning() << "Chord BYTE5=" << (int) num << ", not 0\n";
-	text = readPascalString(25);
-	kdDebug() << "Chord diagram: " << text << "\n";
-
-	// Chord diagram parameters - for every string
-	for (int i = 0; i < STRING_MAX_NUMBER; i++) {
-		x1 = getFrontAs!int();
-		kdDebug() << x1 << "\n";
-	}
-
-	// Unknown bytes
-	stream->readRawBytes(garbage, 36);
-
-	kdDebug() << "after chord, position: " << stream->device()->at() << "\n";
-}
-
-void ConvertGtp::readTrackDefaults()
-{
-	Q_UINT8 num, volume, pan, chorus, reverb, phase, tremolo;
-	currentStage = QString("readTrackDefaults");
-
-	for (int i = 0; i < TRACK_MAX_NUMBER * 2; i++) {
-		trackPatch[i] = getFrontAs!int(); // MIDI Patch
-		(*stream) >> volume;                 // GREYFIX: volume
-		(*stream) >> pan;                    // GREYFIX: pan
-		(*stream) >> chorus;                 // GREYFIX: chorus
-		(*stream) >> reverb;                 // GREYFIX: reverb
-		(*stream) >> phase;                  // GREYFIX: phase
-		(*stream) >> tremolo;                // GREYFIX: tremolo
-		kdDebug() << "=== TrackDefaults: " << i <<
-			" (patch=" << trackPatch[i] <<
-			" vol=" << (int) volume <<
-			" p=" << (int) pan <<
-			" c=" << (int) chorus <<
-			" ph=" << (int) phase <<
-			" tr=" << (int) tremolo << "\n";
-
-		(*stream) >> num;                    // 2 byte padding: must be 00 00
-		if (num != 0)  kdDebug() << QString("1 of 2 byte padding: there is %1, must be 0\n").arg(num);
-		(*stream) >> num;
-		if (num != 0)  kdDebug() << QString("2 of 2 byte padding: there is %1, must be 0\n").arg(num);
-	}
-}
-
-+/

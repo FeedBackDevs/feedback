@@ -14,6 +14,8 @@ import db.renderer;
 import db.song;
 import db.sequence;
 
+import db.tools.midifile;
+
 import core.stdc.math;
 import std.algorithm;
 import std.string;
@@ -100,7 +102,7 @@ class ProKeysTrack : NoteTrack
 		if(leftPosEv != -1)
 			leftLaneTarget = WhiteKeys[performer.sequence.notes[leftPosEv].position] & 0x7F;
 		else
-			leftLaneTarget = WhiteKeys[Notes.G4] & 0x7F;
+			leftLaneTarget = WhiteKeys[MIDINote.G4] & 0x7F;
 		if(leftLane != leftLaneTarget)
 		{
 			float shift = MFSystem_GetTimeDelta() * shiftVelocity;
@@ -422,8 +424,8 @@ private:
 
 	// some constants for the fretboard
 	int numLanes = 10;
-	float leftLaneTarget = WhiteKeys[Notes.G4] & 0x7F;
-	float leftLane = WhiteKeys[Notes.G4] & 0x7F;
+	float leftLaneTarget = WhiteKeys[MIDINote.G4] & 0x7F;
+	float leftLane = WhiteKeys[MIDINote.G4] & 0x7F;
 	float shiftVelocity = 20; // white keys to shift per second
 
 	int start = -4;
