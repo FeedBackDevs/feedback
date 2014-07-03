@@ -14,7 +14,7 @@ import db.renderer;
 import db.song;
 import db.sequence;
 
-import db.tools.midifile;
+import db.formats.parsers.midifile;
 
 import core.stdc.math;
 import std.algorithm;

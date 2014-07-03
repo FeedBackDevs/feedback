@@ -1,4 +1,4 @@
-module db.tools.guitarprofile;
+module db.formats.parsers.guitarprofile;
 
 import fuji.fuji;
 import fuji.filesystem;
@@ -10,7 +10,7 @@ import std.range;
 import std.exception;
 
 import db.tools.range;
-import db.tools.midifile;
+import db.formats.parsers.midifile;
 
 class GuitarProFile
 {
@@ -24,8 +24,68 @@ class GuitarProFile
 	this(const(ubyte)[] buffer)
 	{
 		readSignature(buffer);
-		readSongAttributes(buffer);
+
+		// read attributes
+		title = buffer.readDelphiString().idup;
+		subtitle = buffer.readDelphiString().idup;
+		artist = buffer.readDelphiString().idup;
+		album = buffer.readDelphiString().idup;
+		composer = buffer.readDelphiString().idup;
+		if(ver >= 0x500)
+			buffer.readDelphiString();
+		copyright = buffer.readDelphiString().idup;
+		transcriber = buffer.readDelphiString().idup;
+		instructions = buffer.readDelphiString().idup;
+
+		// notice lines
+		int n = buffer.getFrontAs!int();
+		foreach(i; 0..n)
+		{
+			auto line = buffer.readDelphiString();
+			commments ~= i > 0 ? "\n" ~ line : line;
+		}
+
+		byte shuffleFeel;
+		if(ver < 0x500)
+			shuffleFeel = buffer.getFront();
+
+		if(ver >= 0x400)
+		{
+			// Lyrics
+			int lyricTrack = buffer.getFrontAs!int();		// GREYFIX: Lyric track number start
+
+			for(int i = 0; i < LYRIC_LINES_MAX_NUMBER; i++)
+			{
+				int bar = buffer.getFrontAs!int();			// GREYFIX: Start from bar
+				auto lyric = buffer.readWordPascalString();	// GREYFIX: Lyric line
+			}
+		}
+
+		if(ver >= 0x500)
+		{
+			// page setup...
+			buffer.getFrontN(ver > 0x500 ? 49 : 30);
+			foreach(i; 0..11)
+			{
+				auto s = buffer.readDelphiString();
+			}
+		}
+
+		tempo = buffer.getFrontAs!int();
+
+		if(ver > 0x500)
+			buffer.getFront(); // unknown?
+
+		key = buffer.getFront();
+		buffer.getFrontN(3); // unknown?
+
+		if(ver >= 0x400)
+			octave = buffer.getFront();
+
 		readTrackDefaults(buffer);
+
+		if(ver >= 0x500)
+			buffer.getFrontN(42); // unknown?
 
 		int numBars = buffer.getFrontAs!int();           // Number of bars
 		assert(numBars > 0 && numBars < 16384, "Insane number of bars");
@@ -35,7 +95,7 @@ class GuitarProFile
 		assert(numTracks > 0 && numTracks <= 32, "Insane number of tracks");
 		tracks = new Track[numTracks];
 
-		readBarProperties(buffer);
+		readBarProperties(buffer, shuffleFeel);
 		readTrackProperties(buffer);
 
 		readTabs(buffer);
@@ -82,12 +142,14 @@ class GuitarProFile
 
 		ubyte bitmask;
 
-		ubyte tn = 4;
-		ubyte td = 4;
+		byte tn = 4;
+		byte td = 4;
 		ubyte numRepeats;
 		ubyte altEnding;
-		ubyte keysig;
-		ubyte minor;
+		byte keysig;
+		byte minor;
+
+		byte shuffleFeel;
 
 		string section;
 		int colour;
@@ -263,9 +325,10 @@ class GuitarProFile
 		struct GraceNote
 		{
 			ubyte fret;
-			ubyte dynamic;
+			byte dynamic;
 			ubyte transition;
 			ubyte duration;
+			ubyte flags;
 		}
 
 		ubyte bitmask1;
@@ -332,8 +395,14 @@ class GuitarProFile
 
 	struct Measure
 	{
+		struct Beat
+		{
+			uint beat;
+			int numBeats;
+		}
+
 		MeasureInfo *pInfo;
-		uint beat, numBeats;
+		Beat[2] voices;
 	}
 
 	struct Track
@@ -373,8 +442,7 @@ class GuitarProFile
 		@property int numStrings() const pure nothrow { return cast(int)strings.length; }
 	}
 
-	int versionMajor;
-	int versionMinor;
+	int ver;
 
 	string title;
 	string subtitle;
@@ -385,8 +453,6 @@ class GuitarProFile
 	string transcriber;
 	string instructions;
 	string commments;
-
-	ubyte shuffleFeel;
 
 	int tempo;
 	int key;
@@ -408,66 +474,21 @@ private:
 		// Parse version string
 		switch(s)
 		{
-			case "FICHIER GUITARE PRO v1":		versionMajor = 1; versionMinor = 0; break;
-			case "FICHIER GUITARE PRO v1.01":	versionMajor = 1; versionMinor = 1; break;
-			case "FICHIER GUITARE PRO v1.02":	versionMajor = 1; versionMinor = 2; break;
-			case "FICHIER GUITARE PRO v1.03":	versionMajor = 1; versionMinor = 3; break;
-			case "FICHIER GUITARE PRO v1.04":	versionMajor = 1; versionMinor = 4; break;
-			case "FICHIER GUITAR PRO v2.20":	versionMajor = 2; versionMinor = 20; break;
-			case "FICHIER GUITAR PRO v2.21":	versionMajor = 2; versionMinor = 21; break;
-			case "FICHIER GUITAR PRO v3.00":	versionMajor = 3; versionMinor = 0; break;
-			case "FICHIER GUITAR PRO v4.00":	versionMajor = 4; versionMinor = 0; break;
-			case "FICHIER GUITAR PRO v4.06":	versionMajor = 4; versionMinor = 6; break;
-			case "FICHIER GUITAR PRO L4.06":	versionMajor = 4; versionMinor = 6; break;
+			case "FICHIER GUITARE PRO v1":		ver = 0x100; break;
+			case "FICHIER GUITARE PRO v1.01":	ver = 0x101; break;
+			case "FICHIER GUITARE PRO v1.02":	ver = 0x102; break;
+			case "FICHIER GUITARE PRO v1.03":	ver = 0x103; break;
+			case "FICHIER GUITARE PRO v1.04":	ver = 0x104; break;
+			case "FICHIER GUITAR PRO v2.20":	ver = 0x220; break;
+			case "FICHIER GUITAR PRO v2.21":	ver = 0x221; break;
+			case "FICHIER GUITAR PRO v3.00":	ver = 0x300; break;
+			case "FICHIER GUITAR PRO v4.00":	ver = 0x400; break;
+			case "FICHIER GUITAR PRO v4.06":	ver = 0x406; break;
+			case "FICHIER GUITAR PRO L4.06":	ver = 0x406; break;
+			case "FICHIER GUITAR PRO v5.00":	ver = 0x500; break;
+			case "FICHIER GUITAR PRO v5.10":	ver = 0x510; break;
 			default:
 				assert(false, "Invalid file format: " ~ s);
-		}
-	}
-
-	void readSongAttributes(ref const(ubyte)[] buffer)
-	{
-		title = buffer.readDelphiString().idup;
-		subtitle = buffer.readDelphiString().idup;
-		artist = buffer.readDelphiString().idup;
-		album = buffer.readDelphiString().idup;
-		composer = buffer.readDelphiString().idup;
-		copyright = buffer.readDelphiString().idup;
-		transcriber = buffer.readDelphiString().idup;
-		instructions = buffer.readDelphiString().idup;
-
-
-		// Notice lines
-		int n = buffer.getFrontAs!int();
-		foreach(i; 0..n)
-		{
-			auto line = buffer.readDelphiString();
-			commments ~= i > 0 ? "\n" ~ line : line;
-		}
-
-		shuffleFeel = buffer.getFront();
-
-		if(versionMajor >= 4)
-		{
-			// Lyrics
-			int lyricTrack = buffer.getFrontAs!int();              // GREYFIX: Lyric track number start
-
-			for(int i = 0; i < LYRIC_LINES_MAX_NUMBER; i++)
-			{
-				int bar = buffer.getFrontAs!int();                 // GREYFIX: Start from bar
-				auto lyric = buffer.readWordPascalString();      // GREYFIX: Lyric line
-			}
-		}
-
-		tempo = buffer.getFrontAs!int();       // Tempo
-
-		if(versionMajor >= 4)
-		{
-			key = buffer.getFront();         // GREYFIX: key
-			octave = buffer.getFrontAs!int();  // GREYFIX: octave
-		}
-		else
-		{
-			key = buffer.getFrontAs!int();     // GREYFIX: key
 		}
 	}
 
@@ -491,35 +512,62 @@ private:
 		}
 	}
 
-	void readBarProperties(ref const(ubyte)[] buffer)
+	void readBarProperties(ref const(ubyte)[] buffer, byte shuffleFeel)
 	{
-		ubyte tn = 4, td = 4, ks, min;
+		byte tn = 4, td = 4, ks, min;
 		foreach(i, ref m; measures)
 		{
+			if(ver >= 0x500 && i > 0)
+				buffer.getFront(); // unknown?
+
 			m.bitmask = buffer.getFront();
 
-			// GREYFIX: new_time_numerator
 			if(m.has(MeasureInfo.Bits.TSNumerator))
 				tn = buffer.getFront();
-			// GREYFIX: new_time_denominator
+
 			if(m.has(MeasureInfo.Bits.TSDenimonator))
 				td = buffer.getFront();
-			// GREYFIX: number_of_repeats
+
 			if(m.has(MeasureInfo.Bits.NumRepeats))
 				m.numRepeats = buffer.getFront();
-			// GREYFIX: alternative_ending_to
-			if(m.has(MeasureInfo.Bits.AlternativeEnding))
-				m.altEnding = buffer.getFront();
-			// GREYFIX: new section
+
+			if(ver < 0x500)
+			{
+				if(m.has(MeasureInfo.Bits.AlternativeEnding))
+					m.altEnding = buffer.getFront();
+			}
+
 			if(m.has(MeasureInfo.Bits.NewSection))
 			{
 				m.section = buffer.readDelphiString().idup;
 				m.colour = buffer.getFrontAs!int(); // color?
 			}
+
+			if(ver >= 0x500)
+			{
+				if(m.has(MeasureInfo.Bits.AlternativeEnding))
+					m.altEnding = buffer.getFront();
+			}
+
 			if(m.has(MeasureInfo.Bits.NewKeySignature))
 			{
 				ks = buffer.getFront();		// GREYFIX: alterations_number
 				min = buffer.getFront();		// GREYFIX: minor
+			}
+
+			if(ver >= 0x500)
+			{
+				if(m.has(MeasureInfo.Bits.TSNumerator) || m.has(MeasureInfo.Bits.TSDenimonator))
+					buffer.getFrontN(4); // unknown?
+
+				if(!m.has(MeasureInfo.Bits.AlternativeEnding))
+					buffer.getFront();
+
+				m.shuffleFeel = buffer.getFront();
+			}
+			else
+			{
+				m.shuffleFeel = shuffleFeel;
 			}
 
 			m.tn = tn;
@@ -531,9 +579,25 @@ private:
 
 	void readTrackProperties(ref const(ubyte)[] buffer)
 	{
+		ubyte bitmask;
 		foreach(i, ref t; tracks)
 		{
-			t.bitmask = buffer.getFront();	// GREYFIX: simulations bitmask
+			if(ver > 0x500)
+			{
+				if(i == 0)
+					bitmask = buffer.getFront(); // note: maybe this isn't he bitmask??
+				buffer.getFront(); // unknown? (88...)
+			}
+			else if(ver == 0x500)
+			{
+				// what are these?
+				buffer.getFront(); // (00, FF, FF, FF, 00, 00)
+				buffer.getFront(); // (08, 08, 08, 48, 48, 09)
+			}
+			else
+				bitmask = buffer.getFront();
+
+			t.bitmask = bitmask;
 
 			t.name = buffer.readPascalString(40).idup;    // Track name
 
@@ -563,6 +627,16 @@ private:
 			t.capo = buffer.getFrontAs!int();		// GREYFIX: Capo
 			t.colour = buffer.getFrontAs!int();		// GREYFIX: Color
 
+			if(ver >= 0x500)
+			{
+				buffer.getFrontN(ver > 0x500 ? 49 : 44);
+				if(ver > 0x500)
+				{
+					buffer.readDelphiString();
+					buffer.readDelphiString();
+				}
+			}
+
 			assert(t.frets > 0 && t.frets <= 100, "Insane number of frets");
 			assert(t.channel <= 16, "Insane MIDI channel 1");
 			assert(t.channel2 >= 0 && t.channel2 <= 16, "Insane MIDI channel 2");
@@ -570,6 +644,9 @@ private:
 			// Fill remembered values from defaults
 			t.patch = midiTracks[0][i].patch;
 		}
+
+		if(ver >= 0x500)
+			buffer.getFrontN(ver == 0x500 ? 2 : 1); // unknown?
 	}
 
 	void readTabs(ref const(ubyte)[] buffer)
@@ -579,100 +656,143 @@ private:
 
 		foreach(i, ref mi; measures)
 		{
-			foreach(ref t; tracks)
+			foreach(j, ref t; tracks)
 			{
+				if(ver >= 0x500 && (i != 0 || j != 0))
+					buffer.getFront(); // unknown? Note: Doesn't seem to be present for the very first measure
+
 				Measure* m = &t.measures[i];
 				m.pInfo = &mi;
 
-				int numBeats = buffer.getFrontAs!int();
-				assert(numBeats >= 0 && numBeats <= 128, "insane number of beats");
-
-				m.beat = cast(uint)t.beats.length;
-				m.numBeats = numBeats;
-
-				foreach(_; 0..numBeats)
-				{
-					Beat b;
-
-					b.bitmask = buffer.getFront();
-
-					if(b.has(Beat.Bits.Silent))
-						b.pauseKind = buffer.getFrontAs!(Beat.PauseKind)(); // GREYFIX: pause_kind
-
-					// Guitar Pro 4 beat lengths are as following:
-					// -2 = 1    => 480     3-l = 5  2^(3-l)*15
-					// -1 = 1/2  => 240           4
-					//  0 = 1/4  => 120           3
-					//  1 = 1/8  => 60            2
-					//  2 = 1/16 => 30 ... etc    1
-					//  3 = 1/32 => 15            0
-					b.length = buffer.getFront();
-
-					if(b.has(Beat.Bits.N_Tuplet))
-					{
-						b.tuple = buffer.getFrontAs!int();
-						assert(b.tuple >= 3 && b.tuple <= 13, "Invalid tuple?");
-					}
-
-					if(b.has(Beat.Bits.ChordDiagram))
-						b.chord = readChord(buffer);
-
-					if(b.has(Beat.Bits.Text))
-						b.text = buffer.readDelphiString().idup;
-
-					if(b.has(Beat.Bits.Effects))
-						b.effects = readColumnEffects(buffer);
-
-					if(b.has(Beat.Bits.MixChange))
-					{
-						Beat.MixChange* mix = new Beat.MixChange;
-
-						mix.patch = buffer.getFront();   // GREYFIX: new MIDI patch
-						mix.volume = buffer.getFront();  // GREYFIX: new
-						mix.pan = buffer.getFront();     // GREYFIX: new
-						mix.chorus = buffer.getFront();  // GREYFIX: new
-						mix.reverb = buffer.getFront();  // GREYFIX: new
-						mix.phase = buffer.getFront();   // GREYFIX: new
-						mix.tremolo = buffer.getFront(); // GREYFIX: new
-						mix.tempo = buffer.getFrontAs!int();    // GREYFIX: new tempo
-
-						if(mix.tempo != -1)
-						{
-							int tt = 0;
-						}
-
-						// GREYFIX: transitions
-						if(mix.volume != -1)   mix.volumeTrans = buffer.getFront();
-						if(mix.pan != -1)      mix.panTrans = buffer.getFront();
-						if(mix.chorus != -1)   mix.chorusTrans = buffer.getFront();
-						if(mix.reverb != -1)   mix.reverbTrans = buffer.getFront();
-						if(mix.phase != -1)    mix.phaseTrans = buffer.getFront();
-						if(mix.tremolo != -1)  mix.tremoloTrans = buffer.getFront();
-						if(mix.tempo != -1)    mix.tempoTrans = buffer.getFront();
-
-						if(versionMajor >= 4)
-						{
-							// bitmask: what should be applied to all tracks
-							mix.maskAll = buffer.getFront();
-						}
-
-						b.mix = mix;
-					}
-
-					int strings = buffer.getFront();
-					if(strings)
-					{
-						foreach(s; 0..t.numStrings)
-						{
-							if(strings & (1 << 6-s))
-								b.notes[t.numStrings - s - 1] = readNote(buffer);
-						}
-					}
-
-					t.beats ~= b;
-				}
+				readMeasure(buffer, t, m);
 			}
 		}
+	}
+
+	void readMeasure(ref const(ubyte)[] buffer, ref Track t, Measure* m)
+	{
+		int numVoices = ver >= 0x500 ? 2 : 1;
+		foreach(int v; 0..numVoices)
+		{
+			int numBeats = buffer.getFrontAs!int();
+			assert(numBeats >= 0 && numBeats <= 128, "insane number of beats");
+
+			m.voices[v].beat = cast(uint)t.beats.length;
+			m.voices[v].numBeats = numBeats;
+
+			foreach(_; 0..numBeats)
+				readBeat(buffer, t);
+		}
+	}
+
+	void readBeat(ref const(ubyte)[] buffer, ref Track t)
+	{
+		Beat b;
+
+		b.bitmask = buffer.getFront();
+
+		if(b.has(Beat.Bits.Silent))
+			b.pauseKind = buffer.getFrontAs!(Beat.PauseKind)(); // GREYFIX: pause_kind
+
+		// Guitar Pro 4 beat lengths are as following:
+		// -2 = 1    => 480     3-l = 5  2^(3-l)*15
+		// -1 = 1/2  => 240           4
+		//  0 = 1/4  => 120           3
+		//  1 = 1/8  => 60            2
+		//  2 = 1/16 => 30 ... etc    1
+		//  3 = 1/32 => 15            0
+		b.length = buffer.getFront();
+
+		if(b.has(Beat.Bits.N_Tuplet))
+		{
+			b.tuple = buffer.getFrontAs!int();
+			assert(b.tuple >= 3 && b.tuple <= 13, "Invalid tuple?");
+		}
+
+		if(b.has(Beat.Bits.ChordDiagram))
+			b.chord = readChord(buffer, t.strings.length);
+
+		if(b.has(Beat.Bits.Text))
+			b.text = buffer.readDelphiString().idup;
+
+		if(b.has(Beat.Bits.Effects))
+			b.effects = readColumnEffects(buffer);
+
+		if(b.has(Beat.Bits.MixChange))
+		{
+			Beat.MixChange* mix = new Beat.MixChange;
+
+			mix.patch = buffer.getFront();
+
+			if(ver >= 0x500)
+				buffer.getFrontN(16);
+
+			mix.volume = buffer.getFront();
+			mix.pan = buffer.getFront();
+			mix.chorus = buffer.getFront();
+			mix.reverb = buffer.getFront();
+			mix.phase = buffer.getFront();
+			mix.tremolo = buffer.getFront();
+
+			if(ver >= 0x500)
+				readDelphiString(buffer); // tempo name
+
+			mix.tempo = buffer.getFrontAs!int();
+
+			// transitions
+			if(mix.volume != -1)   mix.volumeTrans = buffer.getFront();
+			if(mix.pan != -1)      mix.panTrans = buffer.getFront();
+			if(mix.chorus != -1)   mix.chorusTrans = buffer.getFront();
+			if(mix.reverb != -1)   mix.reverbTrans = buffer.getFront();
+			if(mix.phase != -1)    mix.phaseTrans = buffer.getFront();
+			if(mix.tremolo != -1)  mix.tremoloTrans = buffer.getFront();
+			if(mix.tempo != -1)
+			{
+				mix.tempoTrans = buffer.getFront();
+				if(ver > 0x500)
+					buffer.getFront(); // unknown?
+			}
+
+			if(ver >= 0x400)
+			{
+				// bitmask: what should be applied to all tracks
+				mix.maskAll = buffer.getFront();
+			}
+
+			if(ver >= 0x500)
+			{
+				buffer.getFront();
+				if(ver > 0x500)
+				{
+					readDelphiString(buffer);
+					readDelphiString(buffer);
+				}
+			}
+
+			b.mix = mix;
+		}
+
+		int strings = buffer.getFront();
+		if(strings)
+		{
+			foreach(s; 0..t.numStrings)
+			{
+				if(strings & (1 << 6-s))
+					b.notes[t.numStrings - s - 1] = readNote(buffer);
+			}
+		}
+
+		if(ver >= 0x500)
+		{
+			buffer.getFront(); // unknown?
+
+			int read = buffer.getFront(); // unknown?
+			//if(read == 8 || read == 10 || read == 24)
+			if(read & 0x08)
+				buffer.getFront(); // unknown?
+		}
+
+		t.beats ~= b;
 	}
 
 	Note* readNote(ref const(ubyte)[] buffer)
@@ -683,10 +803,13 @@ private:
 		if(n.has(Note.Bits.Type))
 			n.type = buffer.getFrontAs!(Note.Type)();
 
-		if(n.has(Note.Bits.Duration))
+		if(ver < 0x500)
 		{
-			n.length = buffer.getFront();
-			n.tuple = buffer.getFront();
+			if(n.has(Note.Bits.Duration))
+			{
+				n.length = buffer.getFront();
+				n.tuple = buffer.getFront();
+			}
 		}
 
 		if(n.has(Note.Bits.Dotted))
@@ -704,6 +827,14 @@ private:
 			n.right = buffer.getFront();
 		}
 
+		if(ver >= 0x500)
+		{
+			if(n.has(Note.Bits.Duration))
+				buffer.getFrontN(8); // duration data has changed?
+
+			buffer.getFront(); // unknown?
+		}
+
 		if(n.has(Note.Bits.HasEffects))
 			n.effect = readNoteEffect(buffer);
 
@@ -715,7 +846,7 @@ private:
 		NoteEffect* e = new NoteEffect;
 
 		e.bitmask1 = buffer.getFront();
-		e.bitmask2 = versionMajor >= 4 ? buffer.getFront() : 0;
+		e.bitmask2 = ver >= 0x400 ? buffer.getFront() : 0;
 
 		if(e.has(NoteEffect.Bits1.Bend))
 			e.bend = readBend(buffer);
@@ -725,15 +856,29 @@ private:
 			e.graceNote.dynamic = buffer.getFront();
 			e.graceNote.transition = buffer.getFront();
 			e.graceNote.duration = buffer.getFront();
+			if(ver >= 0x500)
+				e.graceNote.flags = buffer.getFront();
 		}
-		if(versionMajor >= 4)
+		if(ver >= 0x400)
 		{
 			if(e.has(NoteEffect.Bits2.TremloPicking))
 				e.tremloRate = buffer.getFront();
 			if(e.has(NoteEffect.Bits2.Slide))
 				e.slideType = buffer.getFront();
 			if(e.has(NoteEffect.Bits2.Harmonic))
+			{
 				e.harmonicType = buffer.getFront();
+				if(ver >= 0x500)
+				{
+					switch(e.harmonicType)
+					{
+						case 2: buffer.getFrontN(3); break;
+						case 3: buffer.getFront(); break;
+						case 1, 4, 5:
+						default:
+					}
+				}
+			}
 			if(e.has(NoteEffect.Bits2.Trill))
 			{
 				e.trillFret = buffer.getFront();
@@ -766,12 +911,12 @@ private:
 	{
 		BeatEffect* e = new BeatEffect;
 		e.bitmask1 = buffer.getFront();
-		e.bitmask2 = versionMajor >= 4 ? buffer.getFront() : 0;
+		e.bitmask2 = ver >= 0x400 ? buffer.getFront() : 0;
 
 		if(e.has(BeatEffect.Bits1.TapSlap))
 		{
 			ubyte effect = buffer.getFront();
-			if(versionMajor < 4)
+			if(ver < 0x400)
 			{
 				switch(effect)
 				{
@@ -798,8 +943,16 @@ private:
 			e.bend = readBend(buffer);
 		if(e.has(BeatEffect.Bits1.StrokeEffect))
 		{
-			e.downStroke = buffer.getFront();
-			e.upStroke = buffer.getFront();
+			if(ver > 0x500)
+			{
+				e.upStroke = buffer.getFront();
+				e.downStroke = buffer.getFront();
+			}
+			else
+			{
+				e.downStroke = buffer.getFront();
+				e.upStroke = buffer.getFront();
+			}
 		}
 		if(e.has(BeatEffect.Bits2.Pickstroke))
 			e.strokeType = buffer.getFrontAs!(BeatEffect.StrokeType)();
@@ -814,17 +967,59 @@ private:
 		return e;
 	}
 
-	ChordDiagram* readChord(ref const(ubyte)[] buffer)
+	ChordDiagram* readChord(ref const(ubyte)[] buffer, size_t numStrings)
 	{
-		assert(false);
-
-		ubyte ver = buffer.getFront();
-		if((ver & 1) == 0)
+		if(ver < 0x500)
 		{
-
+			ubyte v = buffer.getFront();
+			if((v & 0x01) == 0)
+			{
+				string name = readDelphiString(buffer).idup;
+				int firstFret = buffer.getFrontAs!int();
+				if(firstFret != 0)
+				{
+					foreach(i; 0..6)
+					{
+						int fret = buffer.getFrontAs!int();
+						if(i < numStrings)
+						{
+//							chord.addFretValue(i,fret);
+						}
+					}
+				}
+			}
+			else
+			{
+				buffer.getFrontN(16);
+				string name = buffer.readPascalString(21).idup;
+				buffer.getFrontN(4);
+				int firstFret = buffer.getFrontAs!int();
+				foreach(i; 0..7)
+				{
+					int fret = buffer.getFrontAs!int();
+					if(i < numStrings)
+					{
+//						chord.addFretValue(i,fret);
+					}
+				}
+				buffer.getFrontN(32);
+			}
 		}
 		else
 		{
+			buffer.getFrontN(17);
+			string name = buffer.readPascalString(21).idup;
+			buffer.getFrontN(4);
+			int firstFret = buffer.getFrontAs!int();
+			foreach(i; 0..7)
+			{
+				int fret = buffer.getFrontAs!int();
+				if(i < numStrings)
+				{
+//					chord.addFretValue(i,fret);
+				}
+			}
+			buffer.getFrontN(32);
 		}
 
 		return null;
@@ -874,15 +1069,15 @@ const(char)[] readPascalString(ref inout(ubyte)[] buffer, int maxlen)
 {
 	ubyte l = buffer.getFront();
 	auto s = buffer.getFrontN(l);
-	buffer.getFrontN(maxlen - l);
+	if(maxlen - l > 0)
+		buffer.getFrontN(maxlen - l);
 	return cast(const(char)[])s;
 }
 
 const(char)[] readWordPascalString(ref inout(ubyte)[] buffer)
 {
 	int l = buffer.getFrontAs!int();
-	auto s = buffer.getFrontN(l);
-	return cast(const(char)[])s;
+	return cast(const(char)[])buffer.getFrontN(l);
 }
 
 const(char)[] readDelphiString(ref inout(ubyte)[] buffer)

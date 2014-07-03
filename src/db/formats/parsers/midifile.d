@@ -1,4 +1,4 @@
-module db.tools.midifile;
+module db.formats.parsers.midifile;
 
 import fuji.fuji;
 import fuji.filesystem;
