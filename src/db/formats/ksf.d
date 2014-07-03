@@ -42,7 +42,6 @@ Song LoadKSF(DirEntry file, SongLibrary library)
 		foreach(f; dirEntries(path ~ "*", SpanMode.shallow))
 		{
 			string filename = f.filename.toLower;
-			string ext = filename.extension;
 			string fn = filename.stripExtension;
 			if(isImageFile(filename))
 			{

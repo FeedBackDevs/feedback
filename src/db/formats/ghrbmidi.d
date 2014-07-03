@@ -76,9 +76,6 @@ Song LoadGHRBMidi(DirEntry file)
 	// search for the music and other stuff...
 	foreach(f; dirEntries(path ~ "*", SpanMode.shallow))
 	{
-		static immutable imageTypes = [ ".png", ".jpg", ".jpeg", ".tga", ".dds", ".bmp" ];
-		static immutable musicTypes = [ ".ogg", ".mp3", ".flac", ".wav" ];
-
 		string filename = f.filename.toLower;
 		if(isImageFile(filename))
 		{

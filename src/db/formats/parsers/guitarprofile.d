@@ -12,6 +12,15 @@ import std.exception;
 import db.tools.range;
 import db.formats.parsers.midifile;
 
+
+private static int numBitsSet(int i)
+{
+	i = i - ((i >> 1) & 0x55555555);
+	i = (i & 0x33333333) + ((i >> 2) & 0x33333333);
+	return (((i + (i >> 4)) & 0x0F0F0F0F) * 0x01010101) >> 24;
+}
+
+
 class GuitarProFile
 {
 	this(const(char)[] filename)
@@ -23,89 +32,7 @@ class GuitarProFile
 
 	this(const(ubyte)[] buffer)
 	{
-		readSignature(buffer);
-
-		// read attributes
-		title = buffer.readDelphiString().idup;
-		subtitle = buffer.readDelphiString().idup;
-		artist = buffer.readDelphiString().idup;
-		album = buffer.readDelphiString().idup;
-		composer = buffer.readDelphiString().idup;
-		if(ver >= 0x500)
-			buffer.readDelphiString();
-		copyright = buffer.readDelphiString().idup;
-		transcriber = buffer.readDelphiString().idup;
-		instructions = buffer.readDelphiString().idup;
-
-		// notice lines
-		int n = buffer.getFrontAs!int();
-		foreach(i; 0..n)
-		{
-			auto line = buffer.readDelphiString();
-			commments ~= i > 0 ? "\n" ~ line : line;
-		}
-
-		byte shuffleFeel;
-		if(ver < 0x500)
-			shuffleFeel = buffer.getFront();
-
-		if(ver >= 0x400)
-		{
-			// Lyrics
-			int lyricTrack = buffer.getFrontAs!int();		// GREYFIX: Lyric track number start
-
-			for(int i = 0; i < LYRIC_LINES_MAX_NUMBER; i++)
-			{
-				int bar = buffer.getFrontAs!int();			// GREYFIX: Start from bar
-				auto lyric = buffer.readWordPascalString();	// GREYFIX: Lyric line
-			}
-		}
-
-		if(ver >= 0x500)
-		{
-			// page setup...
-			buffer.getFrontN(ver > 0x500 ? 49 : 30);
-			foreach(i; 0..11)
-			{
-				auto s = buffer.readDelphiString();
-			}
-		}
-
-		tempo = buffer.getFrontAs!int();
-
-		if(ver > 0x500)
-			buffer.getFront(); // unknown?
-
-		key = buffer.getFront();
-		buffer.getFrontN(3); // unknown?
-
-		if(ver >= 0x400)
-			octave = buffer.getFront();
-
-		readTrackDefaults(buffer);
-
-		if(ver >= 0x500)
-			buffer.getFrontN(42); // unknown?
-
-		int numBars = buffer.getFrontAs!int();           // Number of bars
-		assert(numBars > 0 && numBars < 16384, "Insane number of bars");
-		measures = new MeasureInfo[numBars];
-
-		int numTracks = buffer.getFrontAs!int();         // Number of tracks
-		assert(numTracks > 0 && numTracks <= 32, "Insane number of tracks");
-		tracks = new Track[numTracks];
-
-		readBarProperties(buffer, shuffleFeel);
-		readTrackProperties(buffer);
-
-		readTabs(buffer);
-
-		if(!buffer.empty)
-		{
-			int ex = buffer.getFrontAs!int();            // Exit code: 00 00 00 00
-			assert(ex == 0, "File should terminate with 00 00 00 00");
-			assert(buffer.empty, "File not ended!");
-		}
+		readFile(buffer);
 	}
 
 	enum
@@ -153,6 +80,8 @@ class GuitarProFile
 
 		string section;
 		int colour;
+
+		uint tick;
 
 		bool has(Bits bit) { return (bitmask & MFBit(bit)) != 0; }
 	}
@@ -202,6 +131,9 @@ class GuitarProFile
 		ubyte bitmask;
 
 		byte length; // quarter_note / 2^length
+
+		uint tick;
+		uint duration; // in ticks
 
 		PauseKind pauseKind;
 		int tuple;
@@ -401,7 +333,7 @@ class GuitarProFile
 			int numBeats;
 		}
 
-		MeasureInfo *pInfo;
+		MeasureInfo *info;
 		Beat[2] voices;
 	}
 
@@ -458,6 +390,8 @@ class GuitarProFile
 	int key;
 	int octave;
 
+	uint ticksPerBeat;
+
 	MidiTrack[16][4] midiTracks;
 
 	MeasureInfo[] measures;
@@ -466,6 +400,95 @@ class GuitarProFile
 
 
 private:
+	void readFile(const(ubyte)[] buffer)
+	{
+		readSignature(buffer);
+
+		// read attributes
+		title = buffer.readDelphiString().idup;
+		subtitle = buffer.readDelphiString().idup;
+		artist = buffer.readDelphiString().idup;
+		album = buffer.readDelphiString().idup;
+		composer = buffer.readDelphiString().idup;
+		if(ver >= 0x500)
+			buffer.readDelphiString();
+		copyright = buffer.readDelphiString().idup;
+		transcriber = buffer.readDelphiString().idup;
+		instructions = buffer.readDelphiString().idup;
+
+		// notice lines
+		int n = buffer.getFrontAs!int();
+		foreach(i; 0..n)
+		{
+			auto line = buffer.readDelphiString();
+			commments ~= i > 0 ? "\n" ~ line : line;
+		}
+
+		byte shuffleFeel;
+		if(ver < 0x500)
+			shuffleFeel = buffer.getFront();
+
+		if(ver >= 0x400)
+		{
+			// Lyrics
+			int lyricTrack = buffer.getFrontAs!int();		// GREYFIX: Lyric track number start
+
+			for(int i = 0; i < LYRIC_LINES_MAX_NUMBER; i++)
+			{
+				int bar = buffer.getFrontAs!int();			// GREYFIX: Start from bar
+				auto lyric = buffer.readWordPascalString();	// GREYFIX: Lyric line
+			}
+		}
+
+		if(ver >= 0x500)
+		{
+			// page setup...
+			buffer.getFrontN(ver > 0x500 ? 49 : 30);
+			foreach(i; 0..11)
+			{
+				auto s = buffer.readDelphiString();
+			}
+		}
+
+		tempo = buffer.getFrontAs!int();
+
+		if(ver > 0x500)
+			buffer.getFront(); // unknown?
+
+		key = buffer.getFront();
+		buffer.getFrontN(3); // unknown?
+
+		if(ver >= 0x400)
+			octave = buffer.getFront();
+
+		readTrackDefaults(buffer);
+
+		if(ver >= 0x500)
+			buffer.getFrontN(42); // unknown?
+
+		int numBars = buffer.getFrontAs!int();           // Number of bars
+		assert(numBars > 0 && numBars < 16384, "Insane number of bars");
+		measures = new MeasureInfo[numBars];
+
+		int numTracks = buffer.getFrontAs!int();         // Number of tracks
+		assert(numTracks > 0 && numTracks <= 32, "Insane number of tracks");
+		tracks = new Track[numTracks];
+
+		readBarProperties(buffer, shuffleFeel);
+		readTrackProperties(buffer);
+
+		readTabs(buffer);
+
+		if(!buffer.empty)
+		{
+			int ex = buffer.getFrontAs!int();            // Exit code: 00 00 00 00
+			assert(ex == 0, "File should terminate with 00 00 00 00");
+			assert(buffer.empty, "File not ended!");
+		}
+
+		// calculate the timing
+		calculateTiming();
+	}
 
 	void readSignature(ref const(ubyte)[] buffer)
 	{
@@ -662,7 +685,7 @@ private:
 					buffer.getFront(); // unknown? Note: Doesn't seem to be present for the very first measure
 
 				Measure* m = &t.measures[i];
-				m.pInfo = &mi;
+				m.info = &mi;
 
 				readMeasure(buffer, t, m);
 			}
@@ -1059,6 +1082,116 @@ private:
 
 		kdDebug() << "after chord, position: " << stream->device()->at() << "\n";
 +/
+	}
+
+	void calculateTiming()
+	{
+		bool bTuple = false;
+		int tupleTicksAbsolute; // the number of ticks this tuple should occupy
+		int tupleTicksRelative; // the number of ticks relative to the tuple
+		float tupleRatio;
+		int tupleStart;
+
+		ticksPerBeat = 480;
+
+		int n = 4, d = 4;
+		uint offset = 0;
+
+		foreach(i, ref m; measures)
+		{
+			m.tick = offset;
+
+			if(m.has(MeasureInfo.Bits.TSNumerator))
+				n = m.tn;
+			if(m.has(MeasureInfo.Bits.TSDenimonator))
+				d = m.td;
+			uint measureLength = n*(4*ticksPerBeat / d);
+
+			foreach(ref t; tracks)
+			{
+				Measure* tm = &t.measures[i];
+
+				foreach(v; 0..2)
+				{
+					uint measureOffset = offset;
+
+					Beat[] beats = t.beats[tm.voices[v].beat .. tm.voices[v].beat+tm.voices[v].numBeats];
+					if(beats.length > 0)
+					{
+						bool bHasEmptySpace = false;
+
+						foreach(b; beats)
+						{
+							if(b.has(Beat.Bits.N_Tuplet) && !bTuple)
+							{
+								bTuple = true;
+								tupleStart = measureOffset;
+								tupleTicksRelative = ticksPerBeat * b.tuple;
+								switch(b.tuple)
+								{
+									case 3: tupleTicksAbsolute = ticksPerBeat * 2; break;
+									case 5: tupleTicksAbsolute = ticksPerBeat * 4; break;
+									case 6: tupleTicksAbsolute = ticksPerBeat * 4; break;
+									case 7: tupleTicksAbsolute = ticksPerBeat * 4; break;
+									case 9: tupleTicksAbsolute = ticksPerBeat * 8; break;
+									case 10: tupleTicksAbsolute = ticksPerBeat * 8; break;
+									case 11: tupleTicksAbsolute = ticksPerBeat * 8; break;
+									case 12: tupleTicksAbsolute = ticksPerBeat * 8; break;
+									case 13: tupleTicksAbsolute = ticksPerBeat * 8; break;
+									default:
+										assert("Unexpected tuple!");
+								}
+
+								tupleRatio = cast(float)tupleTicksAbsolute / cast(float)tupleTicksRelative;
+							}
+							if(bTuple != b.has(Beat.Bits.N_Tuplet))
+								assert(bTuple == b.has(Beat.Bits.N_Tuplet), "Expected: tuple?");
+							
+							int div = 1 << (b.length + 2);
+							uint duration = 4*ticksPerBeat / div;
+
+							if(b.has(Beat.Bits.Dotted))
+								duration += duration / 2;
+
+							if(bTuple)
+							{
+								uint tupleNoteOffset = measureOffset - tupleStart;
+								uint tupleNoteEnd = measureOffset + duration - tupleStart;
+
+								b.tick = tupleStart + cast(uint)(tupleNoteOffset*tupleRatio + 0.5f);
+								b.duration = tupleStart + cast(uint)(tupleNoteEnd*tupleRatio + 0.5f) - b.tick;
+
+								if(tupleNoteOffset > 0 && numBitsSet(tupleNoteEnd*1024 / tupleTicksRelative) == 1)
+								{
+									bTuple = false;
+									uint tupleLength = cast(uint)(tupleNoteEnd*tupleRatio + 0.5f);
+									measureOffset = tupleStart + tupleLength;
+								}
+								else
+									measureOffset += duration;
+							}
+							else
+							{
+								b.tick = measureOffset;
+								b.duration = duration;
+
+								measureOffset += duration;
+							}
+
+							bHasEmptySpace |= b.has(Beat.Bits.Silent) && b.pauseKind == Beat.PauseKind.Empty;
+						}
+
+						if(!bHasEmptySpace)
+						{
+							if(measureOffset != offset + measureLength)
+								assert(measureOffset == offset + measureLength, "Incorrect measure length!");
+						}
+					}
+				}
+			}
+
+			offset += measureLength;
+		}
 	}
 }
 

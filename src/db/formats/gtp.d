@@ -32,16 +32,23 @@ bool LoadGPx(Song song, GuitarProFile gpx)
 {
 	with(song) with(GuitarProFile)
 	{
-		// parse timing
-
 		// creating starting BPM event
-//		gpx.tempo;
+		Event ev;
+		ev.tick = 0;
+		ev.event = EventType.BPM;
+		ev.bpm.usPerBeat = cast(int)(60_000_000.0 / to!double(gpx.tempo) + 0.5);
+		sync ~= ev;
 
 		foreach(ref m; gpx.measures)
 		{
 			if(m.has(MeasureInfo.Bits.TSNumerator) || m.has(MeasureInfo.Bits.TSDenimonator))
 			{
 				// time signature event...
+				ev.tick = m.tick;
+				ev.event = EventType.TimeSignature;
+				ev.ts.numerator = m.tn;
+				ev.ts.denominator = m.td;
+				sync ~= ev;
 			}
 		}
 
@@ -55,6 +62,7 @@ bool LoadGPx(Song song, GuitarProFile gpx)
 					{
 						if(b.mix && b.mix.tempo != -1)
 						{
+							int x = 0;
 							// bpm event
 						}
 					}

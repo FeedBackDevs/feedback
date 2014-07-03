@@ -33,11 +33,7 @@ Song LoadSM(DirEntry file)
 	string songName = file.filename.stripExtension.toLower;
 	foreach(f; dirEntries(path ~ "*", SpanMode.shallow))
 	{
-		static immutable imageTypes = [ ".png", ".jpg", ".jpeg", ".tga", ".dds", ".bmp" ];
-		static immutable musicTypes = [ ".ogg", ".mp3", ".flac", ".wav" ];
-
 		string filename = f.filename.toLower;
-		string ext = filename.extension;
 		string fn = filename.stripExtension;
 		if(isImageFile(filename))
 		{
