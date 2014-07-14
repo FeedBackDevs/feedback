@@ -116,6 +116,12 @@ Sequence FabricateSequence(Song song, string type, Sequence from)
 				}
 			}
 
+			if(targetDrums < 8)
+			{
+				if(key == DrumNotes.Hat)
+					pEv.note.key = DrumNotes.Crash;
+			}
+
 			if(targetDrums == 4)
 			{
 				// if the source has only 2 cymbals, we need to know where to put the ride
@@ -123,15 +129,21 @@ Sequence FabricateSequence(Song song, string type, Sequence from)
 				{
 					// ride -> bFallbackBlue ? tom2 : tom3
 					if(key == DrumNotes.Ride)
-						pEv.note.key = bFallbackBlue ? DrumNotes.Tom2 : DrumNotes.Tom2;
+						pEv.note.key = bFallbackBlue ? DrumNotes.Tom2 : DrumNotes.Tom3;
 				}
 				else
 				{
 					// hat -> tom1
-					// cymbal -> tom2
-					// ride -> tim3
-					if(key == DrumNotes.Hat || key == DrumNotes.Crash || key == DrumNotes.Ride)
-						pEv.note.key = key + 1; // shift cymbal onto drum
+					// crash/splash -> tom2
+					// ride -> tom3
+					switch(key)
+					{
+						case DrumNotes.Hat: pEv.note.key = DrumNotes.Tom1; break;
+						case DrumNotes.Crash: pEv.note.key = DrumNotes.Tom2; break;
+						case DrumNotes.Splash: pEv.note.key = DrumNotes.Tom2; break;
+						case DrumNotes.Ride: pEv.note.key = DrumNotes.Tom3; break;
+						default:
+					}
 				}
 			}
 

@@ -14,7 +14,8 @@ enum float TextHeight = 20;
 void WriteLog(const(char)[] text, MFVector colour = MFVector.white)
 {
 	MFDebug_Log(0, text);
-//	messages ~= Message(colour, LogDisplayTime, text.toStringz);
+//	auto s = Stringz!(256)(text);
+//	messages ~= Message(colour, LogDisplayTime, s);
 }
 
 void DrawLog()

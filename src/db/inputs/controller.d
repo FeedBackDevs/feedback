@@ -38,10 +38,15 @@ class Controller : InputDevice
 			instrumentType = InstrumentType.Drums;
 
 			// Note: I think the most we can detect from the USB id's is whether it is meant for GH or RB
-			features |= flags & MFGamepadFlags.Drums_Has5Drums ? MFBit!(DrumFeatures.HasCymbals) : MFBit!(DrumFeatures.Has4Drums);
+			features |= flags & MFGamepadFlags.Drums_Has5Drums ? MFBit!(DrumFeatures.Has2Cymbals) : MFBit!(DrumFeatures.Has4Drums);
 
 			// TODO: is it possible to detect RockBand drums with the cymbals attached?
 			// Probably not, we'll probably need to offer UI to specialise the options...
+//			if(rbDrums)
+//				features |= MFBit!(DrumFeatures.Has3Cymbals);
+
+			if(features & (MFBit!(DrumFeatures.Has2Cymbals) | MFBit!(DrumFeatures.Has3Cymbals)))
+				features |= MFBit!(DrumFeatures.HasAnyCymbals);
 		}
 
 		// TODO: detect other types of controllers from other games...
@@ -115,7 +120,7 @@ class Controller : InputDevice
 						switch(e.input) with(MFGamepadButton)
 						{
 							case Drum_Red:		ie.key = DrumInput.Snare;		break;
-							case Drum_Yellow:	ie.key = (features & MFBit!(DrumFeatures.HasCymbals)) ? DrumInput.Cymbal1 : DrumInput.Tom1;		break;
+							case Drum_Yellow:	ie.key = !(features & MFBit!(DrumFeatures.Has4Drums)) ? DrumInput.Cymbal1 : DrumInput.Tom1;		break;
 							case Drum_Blue:		ie.key = DrumInput.Tom2;		break;
 							case Drum_Green:	ie.key = DrumInput.Tom3;		break;
 							case Drum_Cymbal:	ie.key = DrumInput.Cymbal3;		break;

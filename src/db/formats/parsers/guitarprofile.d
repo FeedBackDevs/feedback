@@ -132,10 +132,11 @@ class GuitarProFile
 
 		byte length; // quarter_note / 2^length
 
+		PauseKind pauseKind;
+
 		uint tick;
 		uint duration; // in ticks
 
-		PauseKind pauseKind;
 		int tuple;
 		ChordDiagram* chord;
 		string text;
@@ -219,6 +220,9 @@ class GuitarProFile
 
 		byte length; // quarter_note / 2^length
 		byte tuple;
+
+		uint tick;
+		uint duration; // in ticks
 
 		byte dynamic = 6;
 
@@ -1086,12 +1090,6 @@ private:
 
 	void calculateTiming()
 	{
-		bool bTuple = false;
-		int tupleTicksAbsolute; // the number of ticks this tuple should occupy
-		int tupleTicksRelative; // the number of ticks relative to the tuple
-		float tupleRatio;
-		int tupleStart;
-
 		ticksPerBeat = 480;
 
 		int n = 4, d = 4;
@@ -1120,71 +1118,66 @@ private:
 					{
 						bool bHasEmptySpace = false;
 
-						foreach(b; beats)
+						int tuple = 1;
+						int tupleBase = 1;
+						uint tupleOffset = measureOffset;
+
+						foreach(ref b; beats)
 						{
-							if(b.has(Beat.Bits.N_Tuplet) && !bTuple)
+							int newTuple = b.has(Beat.Bits.N_Tuplet) ? b.tuple : 1;
+							if(tuple != newTuple)
 							{
-								bTuple = true;
-								tupleStart = measureOffset;
-								tupleTicksRelative = ticksPerBeat * b.tuple;
-								switch(b.tuple)
+								measureOffset = tupleOffset + (measureOffset - tupleOffset)/tuple;
+
+								tuple = newTuple;
+								tupleOffset = measureOffset;
+
+								switch(tuple)
 								{
-									case 3: tupleTicksAbsolute = ticksPerBeat * 2; break;
-									case 5: tupleTicksAbsolute = ticksPerBeat * 4; break;
-									case 6: tupleTicksAbsolute = ticksPerBeat * 4; break;
-									case 7: tupleTicksAbsolute = ticksPerBeat * 4; break;
-									case 9: tupleTicksAbsolute = ticksPerBeat * 8; break;
-									case 10: tupleTicksAbsolute = ticksPerBeat * 8; break;
-									case 11: tupleTicksAbsolute = ticksPerBeat * 8; break;
-									case 12: tupleTicksAbsolute = ticksPerBeat * 8; break;
-									case 13: tupleTicksAbsolute = ticksPerBeat * 8; break;
+									case 1: tupleBase = 1; break;
+									case 3: tupleBase = 2; break;
+									case 5: tupleBase = 4; break;
+									case 6: tupleBase = 4; break;
+									case 7: tupleBase = 4; break;
+									case 9: tupleBase = 8; break;
+									case 10: tupleBase = 8; break;
+									case 11: tupleBase = 8; break;
+									case 12: tupleBase = 8; break;
+									case 13: tupleBase = 8; break;
 									default:
 										assert("Unexpected tuple!");
 								}
-
-								tupleRatio = cast(float)tupleTicksAbsolute / cast(float)tupleTicksRelative;
 							}
-							if(bTuple != b.has(Beat.Bits.N_Tuplet))
-								assert(bTuple == b.has(Beat.Bits.N_Tuplet), "Expected: tuple?");
-							
+
 							int div = 1 << (b.length + 2);
 							uint duration = 4*ticksPerBeat / div;
 
 							if(b.has(Beat.Bits.Dotted))
 								duration += duration / 2;
 
-							if(bTuple)
-							{
-								uint tupleNoteOffset = measureOffset - tupleStart;
-								uint tupleNoteEnd = measureOffset + duration - tupleStart;
+							b.tick = tupleOffset + (measureOffset - tupleOffset)/tuple;
 
-								b.tick = tupleStart + cast(uint)(tupleNoteOffset*tupleRatio + 0.5f);
-								b.duration = tupleStart + cast(uint)(tupleNoteEnd*tupleRatio + 0.5f) - b.tick;
-
-								if(tupleNoteOffset > 0 && numBitsSet(tupleNoteEnd*1024 / tupleTicksRelative) == 1)
-								{
-									bTuple = false;
-									uint tupleLength = cast(uint)(tupleNoteEnd*tupleRatio + 0.5f);
-									measureOffset = tupleStart + tupleLength;
-								}
-								else
-									measureOffset += duration;
-							}
-							else
-							{
-								b.tick = measureOffset;
-								b.duration = duration;
-
-								measureOffset += duration;
-							}
+							measureOffset += duration*tupleBase;
+							b.duration = tupleOffset + (measureOffset - tupleOffset)/tuple - b.tick;
 
 							bHasEmptySpace |= b.has(Beat.Bits.Silent) && b.pauseKind == Beat.PauseKind.Empty;
+
+							foreach(note; b.notes) if(note)
+							{
+								if(note.has(Note.Bits.Duration))
+								{
+									// TODO: we might need to understand this. TuxGuitar ignores it... :/
+								}
+
+								note.tick = b.tick;
+								note.duration = b.duration;
+							}
 						}
 
 						if(!bHasEmptySpace)
 						{
-							if(measureOffset != offset + measureLength)
-								assert(measureOffset == offset + measureLength, "Incorrect measure length!");
+//							if(measureOffset != offset + measureLength)
+//								assert(measureOffset == offset + measureLength, "Incorrect measure length!");
 						}
 					}
 				}

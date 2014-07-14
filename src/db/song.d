@@ -194,17 +194,21 @@ class Song
 		if(part == Part.Drums)
 		{
 			// each drums configuration has a different preference for conversion
-			if(!(player.input.device.features & MFBit!(DrumFeatures.HasCymbals)))
-				preferences = [ "-4drums", "-7drums", "-6drums", "-5drums" ];
-			else if(!(player.input.device.features & MFBit!(DrumFeatures.Has3Cymbals)))
-			{
-				if(!(player.input.device.features & MFBit!(DrumFeatures.Has4Drums)))
-					preferences = [ "-5drums", "-6drums", "-7drums", "-4drums" ];
-				else
-					preferences = [ "-6drums", "-7drums", "-5drums", "-4drums" ];
-			}
+			auto device = player.input.device;
+			if((device.features & MFBit!(DrumFeatures.Has4Drums)) && (device.features & MFBit!(DrumFeatures.Has3Cymbals)) && (device.features & MFBit!(DrumFeatures.HasHiHat)))
+				preferences = [ "-8drums", "-7drums", "-6drums", "-5drums", "-4drums" ];
+			else if((device.features & MFBit!(DrumFeatures.Has4Drums)) && (device.features & MFBit!(DrumFeatures.Has2Cymbals)) && (device.features & MFBit!(DrumFeatures.HasHiHat)))
+				preferences = [ "-8drums", "-7drums", "-6drums", "-5drums", "-4drums" ];
+			else if((device.features & MFBit!(DrumFeatures.Has4Drums)) && (device.features & MFBit!(DrumFeatures.Has3Cymbals)))
+				preferences = [ "-7drums", "-8drums", "-6drums", "-5drums", "-4drums" ];
+			else if((device.features & MFBit!(DrumFeatures.Has4Drums)) && (device.features & MFBit!(DrumFeatures.Has2Cymbals)))
+				preferences = [ "-6drums", "-7drums", "-8drums", "-5drums", "-4drums" ];
+			else if(device.features & MFBit!(DrumFeatures.Has2Cymbals))
+				preferences = [ "-5drums", "-6drums", "-7drums", "-8drums", "-4drums" ];
+			else if(device.features & MFBit!(DrumFeatures.Has4Drums))
+				preferences = [ "-4drums", "-7drums", "-8drums", "-6drums", "-5drums" ];
 			else
-				preferences = [ "-7drums", "-6drums", "-5drums", "-4drums" ];
+				assert(false, "What kind of kit is this?!");
 
 			// find the appropriate variation for the player's kit
 			outer: foreach(i, pref; preferences)

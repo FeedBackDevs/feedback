@@ -39,32 +39,42 @@ class GHDrums : NoteTrack
 		edge.parameters.zread = false;
 
 		InputDevice input = performer.scoreKeeper.inputDevice;
-		if(!(input.features & MFBit!(DrumFeatures.HasCymbals)))
+		if((input.features & MFBit!(DrumFeatures.Has4Drums)) && (input.features & MFBit!(DrumFeatures.Has3Cymbals)) && (input.features & MFBit!(DrumFeatures.HasHiHat)))
 		{
-			numLanes = 4;
-			laneMap = [ 0, -1, 1, -1, 2, -1, 3, 7 ];
+			// real kit - 3 cymbals
+			numLanes = 8;
+			laneMap = [ 0, 1, 2, 3, 4, 5, 6, 7, 8 ];
 		}
-		else if(!(input.features & MFBit!(DrumFeatures.Has3Cymbals)))
+		else if((input.features & MFBit!(DrumFeatures.Has4Drums)) && (input.features & MFBit!(DrumFeatures.Has2Cymbals)) && (input.features & MFBit!(DrumFeatures.HasHiHat)))
 		{
-			if(!(input.features & MFBit!(DrumFeatures.Has4Drums)))
-			{
-				numLanes = 5;
-				laneMap = [ 0, 1, -1, -1, 2, 3, 4, 7 ];
-			}
-			else
-			{
-				numLanes = 6;
-				laneMap = [ 0, 1, 2, -1, 3, 4, 5, 7 ];
-			}
-		}
-		else
-		{
+			// real kit - 2 cymbals
 			numLanes = 7;
-			laneMap = [ 0, 1, 2, 3, 4, 5, 6, 7 ];
+			laneMap = [ 0, 1, 2, 3, 4, -1, 5, 6, 8 ];
 		}
-
-//		numLanes = 7;
-//		laneMap = [ 0, 1, 2, 3, 4, 5, 6, 7 ];
+		else if((input.features & MFBit!(DrumFeatures.Has4Drums)) && (input.features & MFBit!(DrumFeatures.Has3Cymbals)))
+		{
+			// RB - 3 cymbals
+			numLanes = 7;
+			laneMap = [ -1, 0, 1, 2, 4, 3, 6, 5, 8 ];
+		}
+		else if((input.features & MFBit!(DrumFeatures.Has4Drums)) && (input.features & MFBit!(DrumFeatures.Has2Cymbals)))
+		{
+			// RB - 2 cymbals
+			numLanes = 6;
+			laneMap = [ -1, 0, 1, 2, 3, -1, 5, 4, 8 ];
+		}
+		else if(input.features & MFBit!(DrumFeatures.Has2Cymbals))
+		{
+			// GH
+			numLanes = 5;
+			laneMap = [ -1, 0, 1, -1, 2, -1, 4, 3, 8 ];
+		}
+		else if(input.features & MFBit!(DrumFeatures.Has4Drums))
+		{
+			// RB
+			numLanes = 4;
+			laneMap = [ -1, 0, -1, 1, 2, -1, 3, -1, 8 ];
+		}
 	}
 
 	override @property Orientation orientation()
@@ -267,9 +277,10 @@ class GHDrums : NoteTrack
 		// draw the notes
 		auto notes = performer.sequence.notes.BetweenTimes(bottomTime, topTime);
 
-		static __gshared immutable MFVector[8] fourColours = [ MFVector.red, MFVector(1,1,0,1), MFVector(1,1,0,1), MFVector.blue, MFVector.blue, MFVector.green, MFVector.green, MFVector(1,0,1,1) ];
-		static __gshared immutable MFVector[8] fiveColours = [ MFVector.red, MFVector(1,1,0,1), MFVector(1,1,0,1), MFVector.blue, MFVector.blue, MFVector(1,0.5,0,1), MFVector.green, MFVector(1,0,1,1) ];
-		immutable MFVector[] colours = !(performer.scoreKeeper.inputDevice.features & MFBit!(DrumFeatures.Has4Drums)) ? fiveColours : fourColours;
+		static __gshared immutable MFVector[9] realColours = [ MFVector.red * MFVector.grey, MFVector.red, MFVector.yellow * MFVector.grey, MFVector.yellow, MFVector.blue, MFVector.blue * MFVector.grey, MFVector.green, MFVector.green * MFVector.grey, MFVector.magenta ];
+		static __gshared immutable MFVector[9] rbColours = [ MFVector.red * MFVector.grey, MFVector.red, MFVector.yellow * MFVector.grey, MFVector.yellow, MFVector.blue, MFVector.blue * MFVector.grey, MFVector.green, MFVector.green * MFVector.grey, MFVector.magenta ];
+		static __gshared immutable MFVector[9] ghColours = [ MFVector.red * MFVector.grey, MFVector.red, MFVector.yellow, MFVector.yellow, MFVector.blue, MFVector.blue, MFVector.green, MFVector.orange, MFVector.magenta ];
+		immutable MFVector[] colours = (performer.scoreKeeper.inputDevice.features & MFBit!(DrumFeatures.HasHiHat)) ? realColours : (!(performer.scoreKeeper.inputDevice.features & MFBit!(DrumFeatures.Has4Drums)) ? ghColours : rbColours);
 
 		foreach(ref e; notes)
 		{
@@ -298,7 +309,7 @@ class GHDrums : NoteTrack
 			}
 			else
 			{
-				pos = GetPosForTime(offset, e.time, Lane(key - DrumNotes.Snare));
+				pos = GetPosForTime(offset, e.time, Lane(key - DrumNotes.Hat));
 				noteWidth = columnWidth*0.3f;
 				noteDepth = columnWidth*0.3f;
 				noteHeight = columnWidth*0.2f;

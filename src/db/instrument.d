@@ -87,12 +87,14 @@ enum GuitarNoteFlags
 enum DrumFeatures
 {
 	Has4Drums,
-	HasCymbals,
+	HasAnyCymbals,
+	Has2Cymbals,
 	Has3Cymbals,
-	HasHatPedal,
+	HasHiHat,
+	HasHiHatPedal,
 	HasRims,
-	HasVelocity,
-	HasCymbalZone
+	HasCymbalBells,
+	HasVelocity
 }
 
 enum DrumInput
@@ -112,13 +114,14 @@ enum DrumInput
 
 enum DrumNotes
 {				// RB kit		GH kit
-	Snare,		//   R			  R
 	Hat,		//   Y			  Y
+	Snare,		//   R			  R
+	Crash,		//   B			  Y(/O?)
 	Tom1,		//   Y			  B
-	Crash,		//   B			  Y/O?
 	Tom2,		//   B			  B(/G?)
-	Ride,		//   G			  O
+	Splash,		//   B/G?		  (Y?/)O
 	Tom3,		//   G			  G
+	Ride,		//   G			  O
 	Kick,
 //	Cowbell,	// cowbell or tambourine
 }

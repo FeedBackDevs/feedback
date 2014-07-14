@@ -98,7 +98,7 @@ bool LoadRawMidi(Song song, MIDIFile midi)
 					part = Part.Drums;
 					pPart = &parts[part];
 					pPart.part = part;
-					pPart.variations ~= Variation("Track " ~ to!string(track + 1) ~ "-7drums");
+					pPart.variations ~= Variation("Track " ~ to!string(track + 1) ~ "-8drums");
 					pVariation = &pPart.variations[$-1];
 
 					Sequence seq = new Sequence();
@@ -133,8 +133,8 @@ bool LoadRawMidi(Song song, MIDIFile midi)
 							ev.event = EventType.TimeSignature;
 							ev.ts.numerator = e.timeSignature.numerator;
 							ev.ts.denominator = 1 << e.timeSignature.denominator;
-							//							x = e.timeSignature.clocks;
-							//							y = e.timeSignature.d;
+//							x = e.timeSignature.clocks;
+//							y = e.timeSignature.d;
 							sync ~= ev;
 							break;
 						case Tempo:
@@ -243,12 +243,12 @@ bool LoadRawMidi(Song song, MIDIFile midi)
 							{ DrumNotes.Crash, 0 }, //49 Crash Cymbal 1
 							{ DrumNotes.Tom1, 0 }, //50 High Tom 1
 							{ DrumNotes.Ride, 0 }, //51 Ride Cymbal 1
-							{ DrumNotes.Crash, 0 }, //52 Chinese Cymbal
+							{ DrumNotes.Splash, 0 }, //52 Chinese Cymbal
 							{ DrumNotes.Ride, MFBit!(DrumNoteFlags.CymbalBell) }, //53 Ride Bell
 							{ -1, 0 },//DrumNotes.Cowbell, 0 }, //54 Tambourine
-							{ DrumNotes.Crash, 0 }, //55 Splash Cymbal
+							{ DrumNotes.Splash, 0 }, //55 Splash Cymbal
 							{ -1, 0 },//DrumNotes.Cowbell, 0 }, //56 Cowbell
-							{ DrumNotes.Crash, 0 }, //57 Crash Cymbal 2
+							{ DrumNotes.Splash, 0 }, //57 Crash Cymbal 2
 							{ -1, 0 }, //58 Vibra Slap
 							{ DrumNotes.Ride, 0 }, //59 Ride Cymbal 2
 							{ -1, 0 }, //60 High Bongo
