@@ -13,12 +13,12 @@ solution "FeedBack"
 	local linkFujiDirectly = not os.is("linux") or true
 	if linkFujiDirectly then
 --		fujiDll = true
-		dofile  "../fuji/Fuji/Project/fujiproj.lua"
-		dofile  "../fuji/Fuji/Project/fujidproj.lua"
+		dofile  "fuji/Fuji/Project/fujiproj.lua"
+		dofile  "fuji/Fuji/Project/fujidproj.lua"
 	end
 
 	-- include the Haku project...
---	dofile "../fuji/Haku/Project/hakuproj.lua"
+--	dofile "fuji/Haku/Project/hakuproj.lua"
 
 	project "FeedBack"
 		kind "WindowedApp"
@@ -33,8 +33,9 @@ solution "FeedBack"
 --		targetdir "bin"
 		objdir "build"
 
-		dofile "../fuji/dist/Project/fujiconfig.lua"
---		dofile "../fuji/dist/Project/hakuconfig.lua"
+		dofile "fuji/dist/Project/fujiconfig.lua"
+--		dofile "fuji/dist/Project/hakuconfig.lua"
 
 		configuration { "windows" }
 			links { "Gdi32.lib", "Ole32.lib", "oleaut32.lib", "FujiMiddleware.lib" }
+
