@@ -182,3 +182,13 @@ Makefile
 *.userprefs
 *.md.pc
 
+# Code::Blocks
+*.workspace
+*.cbp
+
+# CodeLite
+*.project
+*.tags
+
+
+*.workspace.*
