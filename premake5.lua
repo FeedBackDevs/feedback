@@ -37,5 +37,5 @@ solution "FeedBack"
 --		dofile "fuji/dist/Project/hakuconfig.lua"
 
 		configuration { "windows" }
-			links { "Gdi32.lib", "Ole32.lib", "oleaut32.lib", "FujiMiddleware.lib" }
-
+			links { "Gdi32.lib", "Ole32.lib", "oleaut32.lib" }
+			links { "FujiMiddleware.lib" }

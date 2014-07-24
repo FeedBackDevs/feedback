@@ -5,6 +5,7 @@ import fuji.system;
 import fuji.filesystem;
 import fuji.fs.native;
 import fuji.input;
+import fuji.display;
 
 import db.tools.log;
 import db.renderer;
@@ -14,99 +15,13 @@ import db.player;
 import db.profile;
 import db.performance;
 import db.sequence;
+import db.settings;
 
 import db.i.inputdevice;
 
-import std.xml;
-import std.file;
-
-struct Settings
-{
-	void Load()
-	{
-		try
-		{
-			string s = readText("settings.xml");
-
-			// parse xml
-			auto xml = new DocumentParser(s);
-			xml.onEndTag["videoDriver"]			= (in Element e) { videoDriver			= to!int(e.text()); };
-			xml.onEndTag["audioDriver"]			= (in Element e) { audioDriver			= to!int(e.text()); };
-			xml.onEndTag["audioLatency"]		= (in Element e) { audioLatency			= to!long(e.text()); };
-			xml.onEndTag["videoLatency"]		= (in Element e) { videoLatency			= to!long(e.text()); };
-			xml.onEndTag["controllerLatency"]	= (in Element e) { controllerLatency	= to!long(e.text()); };
-			xml.onEndTag["midiLatency"]			= (in Element e) { midiLatency			= to!long(e.text()); };
-			xml.onEndTag["micLatency"]			= (in Element e) { micLatency			= to!long(e.text()); };
-
-			xml.onStartTag["devices"] = (ElementParser xml)
-			{
-				xml.onStartTag["device"] = (ElementParser xml)
-				{
-					Device device;
-					//xml.tag.attr["id"];
-
-					xml.onEndTag["latency"] = (in Element e) { device.latency = to!int(e.text()); };
-
-					xml.parse();
-
-					devices ~= device;
-				};
-				xml.parse();
-			};
-			xml.parse();
-		}
-		catch
-		{
-		}
-	}
-
-	void Save()
-	{
-		auto doc = new Document(new Tag("settings"));
-
-		doc ~= new Element("videoDriver", to!string(videoDriver));
-		doc ~= new Element("audioDriver", to!string(audioDriver));
-		doc ~= new Element("audioLatency", to!string(audioLatency));
-		doc ~= new Element("videoLatency", to!string(videoLatency));
-		doc ~= new Element("controllerLatency", to!string(controllerLatency));
-		doc ~= new Element("midiLatency", to!string(midiLatency));
-		doc ~= new Element("micLatency", to!string(micLatency));
-
-		auto devs = new Element("devices");
-		foreach(device; devices)
-		{
-			auto dev = new Element("Device");
-//			dev.tag.attr["id"] = book.id;
-
-			dev ~= new Element("latency", to!string(device.latency));
-
-			devs ~= dev;
-		}
-		doc ~= devs;
-
-		string xml = join(doc.pretty(3),"\n");
-		write("settings.xml", xml);
-	}
-
-	int videoDriver;
-	int audioDriver;
-
-	long audioLatency;
-	long videoLatency;
-	long controllerLatency;
-	long midiLatency;
-	long micLatency;
-
-	struct Device
-	{
-		// device type
-		// controller/midi/audio
-
-		long latency;
-	}
-
-	Device[] devices;
-}
+import db.ui.ui;
+import db.ui.layoutdescriptor;
+import db.ui.widget;
 
 class Game
 {
@@ -186,10 +101,58 @@ class Game
 			performance = new Performance(songLibrary.songs[0], players);
 			performance.Begin();
 		}
+
+		// init UI
+		MFRect rect;
+		MFDisplay_GetDisplayRect(&rect);
+
+		ui = new UserInterface(rect);
+
+		__gshared MFSystemCallbackFunction pChainResizeCallback;
+		extern(C) static void resizeCallback() nothrow
+		{
+			try
+			{
+				UserInterface ui = UserInterface.getActive();
+				if(ui)
+				{
+					MFRect rect;
+					MFDisplay_GetDisplayRect(&rect);
+
+					ui.displayRect = rect;
+				}
+			}
+			catch(Exception e)
+			{
+				MFDebug_Error(e.msg.toStringz);
+			}
+			finally
+			{
+				if(pChainResizeCallback)
+					pChainResizeCallback();
+			}
+		}
+
+//		pChainResizeCallback = MFSystem_RegisterSystemCallback(MFCallback.DisplayResize, resizeCallback);
+		pChainResizeCallback = MFSystem_RegisterSystemCallback(MFCallback.DisplayReset, &resizeCallback);
+
+		UserInterface.setActive(ui);
+
+		// load a test UI
+/+
+		LayoutDescriptor desc = new LayoutDescriptor("ui-test.xml");
+		Widget testLayout = desc.spawn();
+//		Widget testLayout = HKWidget_CreateFromXML("ui-test.xml");
+//		MFDebug_Assert(pTestLayout != NULL, "Couldn't load UI!");
+
+		ui.addTopLevelWidget(testLayout);
++/
 	}
 
 	void Deinit()
 	{
+		ui = null;
+
 		renderer.Destroy();
 	}
 
@@ -197,6 +160,8 @@ class Game
 	{
 		if(performance)
 			performance.Update();
+
+		ui.update();
 	}
 
 	void Draw()
@@ -210,14 +175,21 @@ class Game
 			// where are we? in menus and stuff?
 		}
 
-		// TODO: Draw the UI
+		MFView_Push();
+
+		// draw the UI
 		renderer.SetCurrentLayer(RenderLayers.UI);
+
+		MFRect rect;
+		MFDisplay_GetDisplayRect(&rect);
+		MFView_SetOrtho(&rect);
+
+		ui.draw();
 
 		// render debug stuff...
 		renderer.SetCurrentLayer(RenderLayers.Debug);
-		MFView_Push();
 
-		MFRect rect = MFRect(0, 0, 1920, 1080);
+		rect = MFRect(0, 0, 1920, 1080);
 		MFView_SetOrtho(&rect);
 
 		DrawLog();
@@ -243,6 +215,8 @@ class Game
 
 	Performance performance;
 
+	UserInterface ui;
+
 	// singleton stuff
 	static @property Game Instance() { if(instance is null) instance = new Game; return instance; }
 
@@ -252,9 +226,9 @@ class Game
 		{
 			instance.InitFileSystem();
 		}
-		catch
+		catch(Exception e)
 		{
-			//...?
+			MFDebug_Error(e.msg);
 		}
 	}
 
@@ -264,9 +238,9 @@ class Game
 		{
 			instance.Init();
 		}
-		catch
+		catch(Exception e)
 		{
-			//...?
+			MFDebug_Error(e.msg);
 		}
 	}
 
@@ -277,9 +251,9 @@ class Game
 			instance.Deinit();
 			instance = null;
 		}
-		catch
+		catch(Exception e)
 		{
-			//...?
+			MFDebug_Error(e.msg);
 		}
 	}
 
@@ -289,9 +263,9 @@ class Game
 		{
 			instance.Update();
 		}
-		catch
+		catch(Exception e)
 		{
-			//...?
+			MFDebug_Error(e.msg);
 		}
 	}
 
@@ -301,9 +275,9 @@ class Game
 		{
 			instance.Draw();
 		}
-		catch
+		catch(Exception e)
 		{
-			//...?
+			MFDebug_Error(e.msg);
 		}
 	}
 

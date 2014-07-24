@@ -51,6 +51,9 @@ class Renderer
 		MFRenderLayer_SetClear(pLayer, MFRenderClearFlags.DepthStencil);
 		MFRenderLayer_SetLayerSortMode(pLayer, MFRenderLayerSortMode.MFRL_SM_None);
 
+		pLayer = GetRenderLayer(RenderLayers.UI);
+		MFRenderLayer_SetLayerSortMode(pLayer, MFRenderLayerSortMode.MFRL_SM_None);
+
 		SetCurrentLayer(RenderLayers.Background);
 	}
 

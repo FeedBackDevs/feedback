@@ -5,33 +5,34 @@ import db.sequence;
 import fuji.vector;
 
 
-struct Settings
-{
-	MFVector colour = MFVector.red;
-
-	bool bLefty = false;
-	bool bAllDrumLanes = false;
-}
-
-struct Score
-{
-	struct Record
-	{
-		int score;
-		int numPlays;
-	}
-
-	int Score(Part part, int variation, int difficulty)
-	{
-		return variations[part][variation][difficulty].score;
-	}
-
-	// [numDifficulties][numVariations][Part.Count]
-	Record[][][Part.Count] variations;
-}
-
 class Profile
 {
+	struct Settings
+	{
+		MFVector colour = MFVector.red;
+
+		bool bLefty = false;
+		bool bAllDrumLanes = false;
+	}
+
+	struct Score
+	{
+		struct Record
+		{
+			int score;
+			int numPlays;
+		}
+
+		int Score(Part part, int variation, int difficulty)
+		{
+			return variations[part][variation][difficulty].score;
+		}
+
+		// [numDifficulties][numVariations][Part.Count]
+		Record[][][Part.Count] variations;
+	}
+
+
 	// login/logout
 	// read/write profile
 	// personal settings/preferences

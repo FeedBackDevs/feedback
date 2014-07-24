@@ -48,9 +48,11 @@ enum DrumsType
 {
 	Unknown = -1,
 
-	FourDrums = 0,
-	FiveDrums,
-	SevenDrums
+	FourDrums = 0,	// 4 drums in line
+	FiveDrums,		// 3 drums, 2 cymbals
+	SixDrums,		// 4 drums, 2 cymbals
+	SevenDrums,		// 4 drums, 3 cymbals
+	EightDrums		// 4 drums, 3 cymbals, hihat
 }
 
 struct SongPart
