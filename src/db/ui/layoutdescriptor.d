@@ -9,6 +9,9 @@ import fuji.heap;
 import fuji.filesystem;
 
 import std.xml;
+import std.algorithm;
+import std.ascii;
+import std.range;
 
 class LayoutDescriptor
 {
@@ -115,9 +118,7 @@ protected:
 		node.type = xml.tag.name;
 
 		foreach(p, v; xml.tag.attr)
-		{
 			node.attributes ~= Node.Attribute(p, v);
-		}
 
 		xml.onStartTag[null] = (ElementParser xml)
 		{
@@ -125,8 +126,25 @@ protected:
 			if(child)
 				node.children ~= child;
 		};
+
+		xml.onPI((string text) {
+			if(text.empty || isWhite(text[0]))
+				return;
+			string tag = text.splitter.front;
+			if(tag == "lua")
+				parseLuaScript(text.drop(tag.length));
+			else
+				MFDebug_Warn(2, "Unsupported script language: " ~ tag);
+		});
+
 		xml.parse();
 
 		return node;
+	}
+
+	static void parseLuaScript(string text)
+	{
+		// load script
+		// todo...
 	}
 }

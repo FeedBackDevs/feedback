@@ -2,9 +2,14 @@
 # FeedBack files
 # ==============
 
+songs/
+
 FeedBack
 FeedBack-debug
+
 FeedBack.exe
+FeedBack_Debug.exe
+FeedBack_Release.exe
 
 settings.xml
 
@@ -13,6 +18,14 @@ settings.xml
 # =============
 
 *.sln
+*.vcxproj
+*.vcxproj.filters
+*.visualdproj
+
+*.lib
+*.dll
+*.exp
+
 
 # User-specific files
 *.suo

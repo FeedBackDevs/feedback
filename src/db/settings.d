@@ -16,8 +16,12 @@ struct Settings
 
 			// parse xml
 			auto xml = new DocumentParser(s);
+
+			xml.onEndTag["theme"]				= (in Element e) { theme				= e.text(); };
+
 			xml.onEndTag["videoDriver"]			= (in Element e) { videoDriver			= to!int(e.text()); };
 			xml.onEndTag["audioDriver"]			= (in Element e) { audioDriver			= to!int(e.text()); };
+
 			xml.onEndTag["audioLatency"]		= (in Element e) { audioLatency			= to!long(e.text()); };
 			xml.onEndTag["videoLatency"]		= (in Element e) { videoLatency			= to!long(e.text()); };
 			xml.onEndTag["controllerLatency"]	= (in Element e) { controllerLatency	= to!long(e.text()); };
@@ -29,10 +33,9 @@ struct Settings
 				xml.onStartTag["device"] = (ElementParser xml)
 				{
 					Device device;
-					//xml.tag.attr["id"];
+					device.id = xml.tag.attr["id"];
 
 					xml.onEndTag["latency"] = (in Element e) { device.latency = to!int(e.text()); };
-
 					xml.parse();
 
 					devices ~= device;
@@ -50,8 +53,11 @@ struct Settings
 	{
 		auto doc = new Document(new Tag("settings"));
 
+		doc ~= new Element("theme", theme);
+
 		doc ~= new Element("videoDriver", to!string(videoDriver));
 		doc ~= new Element("audioDriver", to!string(audioDriver));
+
 		doc ~= new Element("audioLatency", to!string(audioLatency));
 		doc ~= new Element("videoLatency", to!string(videoLatency));
 		doc ~= new Element("controllerLatency", to!string(controllerLatency));
@@ -62,7 +68,8 @@ struct Settings
 		foreach(device; devices)
 		{
 			auto dev = new Element("Device");
-			//			dev.tag.attr["id"] = book.id;
+
+			dev.tag.attr["id"] = device.id;
 
 			dev ~= new Element("latency", to!string(device.latency));
 
@@ -73,6 +80,8 @@ struct Settings
 		string xml = join(doc.pretty(3),"\n");
 		write("settings.xml", xml);
 	}
+
+	string theme = "default";
 
 	int videoDriver;
 	int audioDriver;
@@ -88,6 +97,7 @@ struct Settings
 		// device type
 		// controller/midi/audio
 
+		string id;
 		long latency;
 	}
 

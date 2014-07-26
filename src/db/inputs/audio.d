@@ -16,7 +16,7 @@ class Audio : InputDevice
 
 	override @property long inputTime()
 	{
-		return Game.Instance.performance.time - (deviceLatency + Game.Instance.settings.micLatency)*1_000;
+		return Game.instance.performance.time - (deviceLatency + Game.instance.settings.micLatency)*1_000;
 	}
 
 	override void Update()

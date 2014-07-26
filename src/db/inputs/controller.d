@@ -45,6 +45,8 @@ class Controller : InputDevice
 //			if(rbDrums)
 //				features |= MFBit!(DrumFeatures.Has3Cymbals);
 
+//			features = MFBit!(DrumFeatures.Has3Cymbals) | MFBit!(DrumFeatures.Has4Drums) | MFBit!(DrumFeatures.HasHiHat);
+
 			if(features & (MFBit!(DrumFeatures.Has2Cymbals) | MFBit!(DrumFeatures.Has3Cymbals)))
 				features |= MFBit!(DrumFeatures.HasAnyCymbals);
 		}
@@ -54,7 +56,7 @@ class Controller : InputDevice
 
 	override @property long inputTime()
 	{
-		return Game.Instance.performance.time - (deviceLatency + Game.Instance.settings.controllerLatency)*1_000;
+		return Game.instance.performance.time - (deviceLatency + Game.instance.settings.controllerLatency)*1_000;
 	}
 
 	override void Begin(SyncSource sync)
@@ -79,7 +81,7 @@ class Controller : InputDevice
 				if(e.event == MFInputEventType.Change)
 				{
 					InputEvent ie;
-					ie.timestamp = (e.timestamp - startTime) * 1_000_000 / rtcFreq - (deviceLatency + Game.Instance.settings.controllerLatency)*1_000;
+					ie.timestamp = (e.timestamp - startTime) * 1_000_000 / rtcFreq - (deviceLatency + Game.instance.settings.controllerLatency)*1_000;
 					ie.key = e.input;
 					ie.velocity = e.state;
 

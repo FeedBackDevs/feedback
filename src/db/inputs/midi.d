@@ -30,7 +30,7 @@ class Midi : InputDevice
 
 	override @property long inputTime()
 	{
-		return Game.Instance.performance.time - (deviceLatency + Game.Instance.settings.midiLatency)*1_000;
+		return Game.instance.performance.time - (deviceLatency + Game.instance.settings.midiLatency)*1_000;
 	}
 
 	override void Begin(SyncSource sync)
@@ -58,7 +58,7 @@ class Midi : InputDevice
 				if(e.command >= 0x80 || e.command <= 0xA0)
 				{
 					InputEvent ie;
-					ie.timestamp = cast(long)e.timestamp * 1_000 - (deviceLatency + Game.Instance.settings.midiLatency)*1_000; // feedback times are microseconds
+					ie.timestamp = cast(long)e.timestamp * 1_000 - (deviceLatency + Game.instance.settings.midiLatency)*1_000; // feedback times are microseconds
 					ie.event = (e.command == 0x80 || (e.command == 0x90 && e.data1 == 0)) ? InputEventType.Off : (e.command == 0x90 ? InputEventType.On : InputEventType.Change);
 					ie.key = e.data0;
 					ie.velocity = e.data1 * (1 / 127.0f);

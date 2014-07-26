@@ -57,7 +57,7 @@ class DanceScoreKeeper : ScoreKeeper
 
 	override void Update()
 	{
-		long audioLatency = Game.Instance.settings.audioLatency*1_000;
+		long audioLatency = Game.instance.settings.audioLatency*1_000;
 		long time = inputDevice.inputTime - audioLatency;
 
 		inputDevice.Update();

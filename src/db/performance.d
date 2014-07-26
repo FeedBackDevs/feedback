@@ -170,15 +170,15 @@ class Performance
 		MFView_Push();
 
 		// TODO: draw the background
-		Renderer.Instance.SetCurrentLayer(RenderLayers.Background);
+		Renderer.instance.SetCurrentLayer(RenderLayers.Background);
 
 		// draw the tracks
-		Renderer.Instance.SetCurrentLayer(RenderLayers.Game);
+		Renderer.instance.SetCurrentLayer(RenderLayers.Game);
 		foreach(p; performers)
-			p.Draw(time + (-Game.Instance.settings.audioLatency + Game.Instance.settings.videoLatency)*1_000);
+			p.Draw(time + (-Game.instance.settings.audioLatency + Game.instance.settings.videoLatency)*1_000);
 
 		// draw the UI
-		Renderer.Instance.SetCurrentLayer(RenderLayers.UI);
+		Renderer.instance.SetCurrentLayer(RenderLayers.UI);
 
 		MFRect rect = MFRect(0, 0, 1920, 1080);
 		MFView_SetOrtho(&rect);

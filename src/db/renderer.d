@@ -77,7 +77,7 @@ class Renderer
 		MFRenderer_SetRenderLayerSet(pRenderer, &layerSet);
 	}
 
-	static @property Renderer Instance() { return Game.Instance.renderer; }
+	static @property Renderer instance() { return Game.instance.renderer; }
 
 	MFRenderer *pRenderer;
 	MFStateBlock *pDefaultStates;

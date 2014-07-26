@@ -10,6 +10,7 @@ import fuji.display;
 import db.tools.log;
 import db.renderer;
 import db.songlibrary;
+import db.theme;
 import db.instrument;
 import db.player;
 import db.profile;
@@ -25,34 +26,55 @@ import db.ui.widget;
 
 class Game
 {
+	static void registerCallbacks()
+	{
+		MFSystem_RegisterSystemCallback(MFCallback.FileSystemInit, &staticInitFileSystem);
+		MFSystem_RegisterSystemCallback(MFCallback.InitDone, &staticInit);
+		MFSystem_RegisterSystemCallback(MFCallback.Deinit, &staticDeinit);
+		MFSystem_RegisterSystemCallback(MFCallback.Update, &staticUpdate);
+		MFSystem_RegisterSystemCallback(MFCallback.Draw, &staticDraw);
+
+//		pChainResizeCallback = MFSystem_RegisterSystemCallback(MFCallback.DisplayResize, resizeCallback);
+		pChainResizeCallback = MFSystem_RegisterSystemCallback(MFCallback.DisplayReset, &resizeCallback);
+	}
+
 	this()
 	{
 		settings.Load();
 	}
 
-	void InitFileSystem()
+	void initFileSystem()
 	{
 		MFFileSystemHandle hNative = MFFileSystem_GetInternalFileSystemHandle(MFFileSystemHandles.NativeFileSystem);
+
 		MFMountDataNative mountData;
+		mountData.priority = MFMountPriority.Normal;
+		mountData.flags = MFMountFlags.DontCacheTOC | MFMountFlags.OnlyAllowExclusiveAccess;
+		mountData.pMountpoint = "system";
+		mountData.pPath = MFFile_SystemPath();
+		MFFileSystem_Mount(hNative, mountData);
+
 		mountData.priority = MFMountPriority.Normal;
 		mountData.flags = MFMountFlags.FlattenDirectoryStructure | MFMountFlags.Recursive;
 		mountData.pMountpoint = "data";
 		mountData.pPath = MFFile_SystemPath("data/".ptr);
 		MFFileSystem_Mount(hNative, mountData);
 
-		mountData.flags = MFMountFlags.DontCacheTOC;
+		mountData.flags = MFMountFlags.DontCacheTOC | MFMountFlags.OnlyAllowExclusiveAccess;
 		mountData.pMountpoint = "cache";
-		mountData.pPath = MFFile_SystemPath("data/cache".ptr);
+		mountData.pPath = MFFile_SystemPath("cache/".ptr);
 		MFFileSystem_Mount(hNative, mountData);
 
-		// songs mounted separately, remocated to a network drive for instance
+		// songs mounted separately; a network drive for instance
 		mountData.flags = MFMountFlags.DontCacheTOC;
 		mountData.pMountpoint = "songs";
-		mountData.pPath = MFFile_SystemPath("data/Songs".ptr);
+		mountData.pPath = MFFile_SystemPath("songs/".ptr);
 		MFFileSystem_Mount(hNative, mountData);
+
+		Theme.initFilesystem();
 	}
 
-	void Init()
+	void init()
 	{
 		renderer = new Renderer;
 
@@ -69,7 +91,7 @@ class Game
 		InputDevice[] inputs = DetectInstruments();
 
 		// save the settings (detected inputs and stuff)
-		SaveSettings();
+		saveSettings();
 
 		// HACK: configure a player for each detected input
 		int i = 0;
@@ -107,56 +129,27 @@ class Game
 		MFDisplay_GetDisplayRect(&rect);
 
 		ui = new UserInterface(rect);
-
-		__gshared MFSystemCallbackFunction pChainResizeCallback;
-		extern(C) static void resizeCallback() nothrow
-		{
-			try
-			{
-				UserInterface ui = UserInterface.getActive();
-				if(ui)
-				{
-					MFRect rect;
-					MFDisplay_GetDisplayRect(&rect);
-
-					ui.displayRect = rect;
-				}
-			}
-			catch(Exception e)
-			{
-				MFDebug_Error(e.msg.toStringz);
-			}
-			finally
-			{
-				if(pChainResizeCallback)
-					pChainResizeCallback();
-			}
-		}
-
-//		pChainResizeCallback = MFSystem_RegisterSystemCallback(MFCallback.DisplayResize, resizeCallback);
-		pChainResizeCallback = MFSystem_RegisterSystemCallback(MFCallback.DisplayReset, &resizeCallback);
-
 		UserInterface.setActive(ui);
 
-		// load a test UI
-/+
-		LayoutDescriptor desc = new LayoutDescriptor("ui-test.xml");
-		Widget testLayout = desc.spawn();
-//		Widget testLayout = HKWidget_CreateFromXML("ui-test.xml");
-//		MFDebug_Assert(pTestLayout != NULL, "Couldn't load UI!");
+		// load the bootup UI
+		LayoutDescriptor desc = new LayoutDescriptor("boot.xml");
+		assert(desc, "Couldn't load boot.xml");
+		Widget boot = desc.spawn();
+		assert(boot, "Couldn't spawn boot.xml!");
+		ui.addTopLevelWidget(boot);
 
-		ui.addTopLevelWidget(testLayout);
-+/
+		theme = Theme.load(settings.theme);
+		ui.addTopLevelWidget(theme.ui);
 	}
 
-	void Deinit()
+	void deinit()
 	{
 		ui = null;
 
 		renderer.Destroy();
 	}
 
-	void Update()
+	void update()
 	{
 		if(performance)
 			performance.Update();
@@ -164,7 +157,7 @@ class Game
 		ui.update();
 	}
 
-	void Draw()
+	void draw()
 	{
 		if(performance)
 		{
@@ -197,11 +190,12 @@ class Game
 		MFView_Pop();
 	}
 
-	void SaveSettings()
+	void saveSettings()
 	{
 		settings.Save();
 	}
 
+	//-------------------------------------------------------------------------------------------------------
 	// data
 	MFInitParams initParams;
 
@@ -216,15 +210,19 @@ class Game
 	Performance performance;
 
 	UserInterface ui;
+	Widget bootup;
+
+	Theme theme;
+
 
 	// singleton stuff
-	static @property Game Instance() { if(instance is null) instance = new Game; return instance; }
+	static @property Game instance() { if(_instance is null) _instance = new Game; return _instance; }
 
-	static extern (C) void Static_InitFileSystem() nothrow
+	static extern (C) void staticInitFileSystem() nothrow
 	{
 		try
 		{
-			instance.InitFileSystem();
+			_instance.initFileSystem();
 		}
 		catch(Exception e)
 		{
@@ -232,11 +230,11 @@ class Game
 		}
 	}
 
-	static extern (C) void Static_Init() nothrow
+	static extern (C) void staticInit() nothrow
 	{
 		try
 		{
-			instance.Init();
+			_instance.init();
 		}
 		catch(Exception e)
 		{
@@ -244,12 +242,12 @@ class Game
 		}
 	}
 
-	static extern (C) void Static_Deinit() nothrow
+	static extern (C) void staticDeinit() nothrow
 	{
 		try
 		{
-			instance.Deinit();
-			instance = null;
+			_instance.deinit();
+			_instance = null;
 		}
 		catch(Exception e)
 		{
@@ -257,11 +255,11 @@ class Game
 		}
 	}
 
-	static extern (C) void Static_Update() nothrow
+	static extern (C) void staticUpdate() nothrow
 	{
 		try
 		{
-			instance.Update();
+			_instance.update();
 		}
 		catch(Exception e)
 		{
@@ -269,18 +267,42 @@ class Game
 		}
 	}
 
-	static extern (C) void Static_Draw() nothrow
+	static extern (C) void staticDraw() nothrow
 	{
 		try
 		{
-			instance.Draw();
+			_instance.draw();
 		}
 		catch(Exception e)
 		{
 			MFDebug_Error(e.msg);
+		}
+	}
+
+	static extern(C) void resizeCallback() nothrow
+	{
+		try
+		{
+			if(_instance.ui)
+			{
+				MFRect rect;
+				MFDisplay_GetDisplayRect(&rect);
+
+				_instance.ui.displayRect = rect;
+			}
+		}
+		catch(Exception e)
+		{
+			MFDebug_Error(e.msg);
+		}
+		finally
+		{
+			if(pChainResizeCallback)
+				pChainResizeCallback();
 		}
 	}
 
 private:
-	__gshared Game instance;
+	__gshared Game _instance;
+	__gshared MFSystemCallbackFunction pChainResizeCallback;
 }

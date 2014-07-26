@@ -19,7 +19,7 @@ version(Windows)
 	    {
 			rt_init();
 
-			Game game = Game.Instance;
+			Game game = Game.instance;
 
 			game.initParams.hInstance = hInstance;
 			game.initParams.pCommandLine = lpCmdLine;
@@ -74,7 +74,7 @@ int Start()
 {
 	gDefaults.midi.useMidi = true;
 
-	Game game = Game.Instance;
+	Game game = Game.instance;
 
 	game.initParams.hideSystemInfo = false;
 
@@ -87,11 +87,7 @@ int Start()
 
 	Fuji_CreateEngineInstance();
 
-	MFSystem_RegisterSystemCallback(MFCallback.FileSystemInit, &Game.Static_InitFileSystem);
-	MFSystem_RegisterSystemCallback(MFCallback.InitDone, &Game.Static_Init);
-	MFSystem_RegisterSystemCallback(MFCallback.Deinit, &Game.Static_Deinit);
-	MFSystem_RegisterSystemCallback(MFCallback.Update, &Game.Static_Update);
-	MFSystem_RegisterSystemCallback(MFCallback.Draw, &Game.Static_Draw);
+	Game.registerCallbacks();
 
 	int r = MFMain(game.initParams);
 
