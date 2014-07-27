@@ -222,7 +222,7 @@ class MIDIFile
 						int eventType = status & 0xF0;
 
 						int param1 = ReadVarLen(track);
-						int param2 = 0;
+						int param2;
 						if(eventType != MIDIEventType.ProgramChange && eventType != MIDIEventType.ChannelAfterTouch)
 							param2 = ReadVarLen(track);
 

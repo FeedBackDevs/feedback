@@ -9,25 +9,27 @@ import db.sequence;
 import db.instrument;
 import db.formats.parsers.midifile;
 import db.tools.filetypes;
+import db.songlibrary;
 
 import std.string;
 import std.path;
 
-Song LoadRawMidi(DirEntry file)
+bool LoadRawMidi(Track* track, DirEntry file)
 {
 	string path = file.directory ~ "/";
 
 	MFDebug_Log(2, "Loading song: '" ~ file.filepath ~ "'");
 
-	Song song = new Song;
-	song.songPath = path;
-	song.id = file.filename.stripExtension;
-	song.name = song.id;
+	track.contentPath = path;
+	track.song = new Song;
+//	track.song.songPath = path;
+//	track.song.id = file.filename.stripExtension;
+	track.song.name = file.filename.stripExtension;
 
 	MIDIFile midi = new MIDIFile(file);
 //	midi.WriteText(file.filepath.stripExtension ~ ".txt");
 
-	song.LoadRawMidi(midi);
+	track.song.LoadRawMidi(midi);
 
 	// search for the music and other stuff...
 	string songName = file.filename.stripExtension.toLower;
@@ -38,25 +40,25 @@ Song LoadRawMidi(DirEntry file)
 		if(isImageFile(filename))
 		{
 			if(fn[] == songName)
-				song.cover = f.filename;
+				track.cover = f.filename;
 			else if(fn[] == songName || fn[] == songName ~ "-bg")
-				song.background = f.filename;
+				track.background = f.filename;
 		}
 		else if(isAudioFile(filename))
 		{
 			if(fn[] == songName)
-				song.musicFiles[MusicFiles.Song] = f.filename;
+				track.addSource().addStream(f.filename);
 			if(fn[] == songName ~ "-intro")
-				song.musicFiles[MusicFiles.Preview] = f.filename;
+				track.preview = f.filename;
 		}
 		else if(isVideoFile(filename))
 		{
 			if(fn[] == songName)
-				song.video = f.filename;
+				track.video = f.filename;
 		}
 	}
 
-	return song;
+	return true;
 }
 
 bool LoadRawMidi(Song song, MIDIFile midi)

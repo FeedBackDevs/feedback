@@ -12,6 +12,7 @@ import db.instrument;
 import db.performance;
 import db.renderer;
 import db.song;
+import db.songlibrary;
 import db.sequence;
 
 import db.formats.parsers.midifile;
@@ -26,10 +27,11 @@ class ProKeysTrack : NoteTrack
 	{
 		super(performer);
 
-		Song song = performer.performance.song;
+		Track* t = performer.performance.track;
+		Song song = t.song;
 		this.song = song;
 
-		string fb = song.fretboard ? song.fretboard : "fretboard0";
+		string fb = t.fretboard ? t.fretboard : "fretboard0";
 		fretboard = Material(fb);
 		auto params = fretboard.parameters;
 		params.zread = false;

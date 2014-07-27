@@ -4,9 +4,11 @@ import db.instrument;
 import db.sequence;
 import db.player;
 import db.tools.range;
+import db.tools.enumkvp;
 import db.formats.parsers.midifile;
 import db.formats.parsers.guitarprofile;
 import db.scorekeepers.drums;
+import db.songlibrary;
 
 import fuji.fuji;
 import fuji.material;
@@ -17,32 +19,10 @@ import std.conv : to;
 import std.range: back, empty;
 import std.algorithm;
 import std.string;
+import std.xml;
 
 
 enum GHVersion { Unknown, GH, GH2, GH3, GHWT, GHA, GHM, GH5, GHWoR, BH, RB, RB2, RB3 }
-
-// music files (many of these may or may not be available for different songs)
-enum MusicFiles
-{
-	Preview,		// the backing track (often includes vocals)
-	Song,			// backing track with crowd sing-along (sing-along, for star-power mode/etc.)
-	SongWithCrowd,	// discreet vocal track
-	Vocals,			// crowd-sing-along, for star-power/etc.
-	Crowd,
-	Guitar,
-	Rhythm,
-	Bass,
-	Keys,
-	Drums,			// drums mixed to a single track
-
-	// paths to music for split drums (guitar hero world tour songs split the drums into separate tracks)
-	Kick,
-	Snare,
-	Cymbals,		// all cymbals
-	Toms,			// all toms
-
-	Count
-}
 
 enum DrumsType
 {
@@ -74,40 +54,138 @@ class Song
 {
 	this()
 	{
+		foreach(i, ref p; parts)
+			p.part = cast(Part)i;
+	}
+
+	this(string filename)
+	{
+		foreach(i, ref p; parts)
+			p.part = cast(Part)i;
 	}
 
 	~this()
 	{
 		// release the resources
-		Release();
+		release();
 	}
 
-	void SaveChart()
+	void saveChart(string path)
 	{
+		string writeSequence(Event[] events, int depth)
+		{
+			string prefix = "                    "[0..depth*1];
+			string sequence = "\n";
+			int lastTick = 0;
+			foreach(e; events)
+			{
+				sequence ~= e.toString(lastTick, prefix, "\n");
+				lastTick = e.tick;
+			}
+			return sequence ~ prefix[0..$-1];
+		}
+
+		id = archiveName(artist, name, variant);
+
 		// TODO: develop a format for the note chart files...
+		auto doc = new Document(new Tag("chart"));
+		doc.tag.attr["version"] = "2.0";
+
+								doc ~= new Element("id", id);
+								doc ~= new Element("name", name);
+		if(subtitle)			doc ~= new Element("subtitle", subtitle);
+								doc ~= new Element("artist", artist);
+		if(album)				doc ~= new Element("album", album);
+		if(year)				doc ~= new Element("year", year);
+		if(packageName)			doc ~= new Element("packageName", packageName);
+		if(charterName)			doc ~= new Element("charterName", charterName);
+
+		if(tags)				doc ~= new Element("tags", tags);
+		if(genre)				doc ~= new Element("genre", genre);
+		if(mediaType)			doc ~= new Element("mediaType", mediaType);
+
+		auto kvps = new Element("params");
+		foreach(k, v; params)
+		{
+			auto kvp = new Element("param", v);
+			kvp.tag.attr["key"] = k;
+			kvps ~= kvp;
+		}
+		doc ~= kvps;
+
+		doc ~= new Element("resolution", to!string(resolution));
+		doc ~= new Element("startOffset", to!string(startOffset));
+
+		auto syncElement = new Element("sync", writeSequence(sync, 2));
+		doc ~= syncElement;
+
+		auto globalEvents = new Element("events", writeSequence(events, 2));
+		doc ~= globalEvents;
+
+		auto partsElement = new Element("parts");
+		foreach(ref part; parts)
+		{
+			if(!part.variations)
+				continue;
+
+			auto partElement = new Element("part");
+			partElement.tag.attr["name"] = getEnumFromValue(part.part);
+
+			auto partEvents = new Element("events", writeSequence(part.events, 4));
+			partElement ~= partEvents;
+
+			foreach(v; part.variations)
+			{
+				auto variationElement = new Element("variation");
+				variationElement.tag.attr["name"] = v.name;
+
+				if(v.bHasCoopMarkers)	variationElement ~= new Element("hasCoopMarkers", "true");
+
+				foreach(d; v.difficulties)
+				{
+					auto difficultyElement = new Element("difficulty");
+					difficultyElement.tag.attr["name"] = d.difficulty;
+					difficultyElement.tag.attr["meter"] = to!string(d.difficultyMeter);
+
+					difficultyElement ~= new Element("sequence", writeSequence(d.notes, 6));
+
+					variationElement ~= difficultyElement;
+				}
+
+				partElement ~= variationElement;
+			}
+
+			partsElement ~= partElement;
+		}
+		doc ~= partsElement;
+
+		string xml = join(doc.pretty(1),"\n");
+		MFFileSystem_Save(path ~ id ~ ".chart", cast(immutable(ubyte)[])xml);
 	}
 
-	void Prepare()
+	void Prepare(Track* track)
 	{
 		// load song data
+/*
 		if(cover)
 			pCover = MFMaterial_Create((songPath ~ cover).toStringz);
 		if(background)
 			pBackground = MFMaterial_Create((songPath ~ background).toStringz);
 		if(fretboard)
 			pFretboard = MFMaterial_Create((songPath ~ fretboard).toStringz);
+*/
+
+		// todo choose a source
+		Track.Source* source = &track.sources[0];
 
 		// prepare the music streams
-		foreach(i, m; musicFiles)
+		foreach(s; source.streams)
 		{
-			if(m && i != MusicFiles.Preview)
-			{
-				pMusic[i] = MFSound_CreateStream((songPath ~ m).toStringz, MFAudioStreamFlags.QueryLength | MFAudioStreamFlags.AllowSeeking);
-				MFSound_PlayStream(pMusic[i], MFPlayFlags.BeginPaused);
+			streams[s.type] = MFSound_CreateStream((track.contentPath ~ s.stream).toStringz, MFAudioStreamFlags.QueryLength | MFAudioStreamFlags.AllowSeeking);
+			MFSound_PlayStream(streams[s.type], MFPlayFlags.BeginPaused);
 
-				pVoices[i] = MFSound_GetStreamVoice(pMusic[i]);
-//				MFSound_SetPlaybackRate(pVoices[i], 1.0f); // TODO: we can use this to speed/slow the song...
-			}
+			voices[s.type] = MFSound_GetStreamVoice(streams[s.type]);
+//			MFSound_SetPlaybackRate(voices[i], 1.0f); // TODO: we can use this to speed/slow the song...
 		}
 
 		// calculate the note times for all tracks
@@ -123,9 +201,9 @@ class Song
 		}
 	}
 
-	void Release()
+	void release()
 	{
-		foreach(ref s; pMusic)
+		foreach(ref s; streams)
 		{
 			if(s)
 			{
@@ -217,9 +295,9 @@ class Song
 			{
 				foreach(ref v; pPart.variations)
 				{
-					if(endsWith(v.name, pref))
+					if(v.name.endsWith(pref))
 					{
-						if(!variation || (variation && startsWith(v.name, variation)))
+						if(!variation || (variation && v.name.startsWith(variation)))
 						{
 							var = &v;
 							bFound = true;
@@ -266,14 +344,14 @@ class Song
 
 	void Pause(bool bPause)
 	{
-		foreach(s; pMusic)
+		foreach(s; streams)
 			if(s)
 				MFSound_PauseStream(s, bPause);
 	}
 
 	void Seek(float offsetInSeconds)
 	{
-		foreach(s; pMusic)
+		foreach(s; streams)
 			if(s)
 				MFSound_SeekStream(s, offsetInSeconds);
 	}
@@ -308,7 +386,7 @@ class Song
 		return lastTick;
 	}
 
-	int GetStartUsPB()
+	@property int startUsPB() const pure nothrow
 	{
 		foreach(e; sync)
 		{
@@ -318,13 +396,13 @@ class Song
 				return e.bpm.usPerBeat;
 		}
 
-		return 60000000/120; // microseconds per beat
+		return 60_000_000/120; // microseconds per beat
 	}
 
 	void CalculateNoteTimes(E)(E[] stream, int startTick)
 	{
 		int offset = 0;
-		uint microsecondsPerBeat = GetStartUsPB();
+		uint microsecondsPerBeat = startUsPB;
 		long playTime = startOffset;
 		long tempoTime = 0;
 
@@ -401,7 +479,7 @@ class Song
 		{
 			time = startOffset;
 			offset = 0;
-			currentUsPB = GetStartUsPB();
+			currentUsPB = startUsPB;
 		}
 
 		if(offset < tick)
@@ -440,7 +518,7 @@ class Song
 		{
 			lastEventTime = startOffset;
 			lastEventOffset = 0;
-			currentUsPerBeat = GetStartUsPB();
+			currentUsPerBeat = startUsPB;
 		}
 
 		if(pUsPerBeat)
@@ -450,33 +528,23 @@ class Song
 	}
 
 	// data...
-	string songPath;
+//	string songPath;
 
 	string id;
 	string name;
+	string variant;					// used for things like radio edits, live performances, etc
 	string subtitle;
 	string artist;
 	string album;
 	string year;
-	string sourcePackageName;		// where did the song come from? (eg, "Rock Band II", "Guitar Hero Metallica", "Rush DLC", etc)
+	string packageName;				// where did the song come from? (eg, "Rock Band II", "Guitar Hero Metallica", "Rush DLC", etc)
 	string charterName;
-
-	string cover;					// cover image
-	string background;				// background image
-	string fretboard;				// custom fretboard graphic
 
 	string tags;					// string tags for sorting/filtering
 	string genre;
 	string mediaType;				// media type for pfx theme purposes (cd/casette/vinyl/etc)
 
 	string[string] params;			// optional key-value pairs (much data taken from the original .ini files, might be useful in future)
-
-	string[MusicFiles.Count] musicFiles;
-	string video;
-
-	// multitrack support? (Rock Band uses .mogg files; multitrack ogg files)
-//	string multitrackFilename;		// multitrack filename (TODO: this will take some work...)
-//	Instrument[] trackAssignment;	// assignment of each track to parts
 
 	// song data
 	int resolution;
@@ -491,8 +559,8 @@ class Song
 	MFMaterial* pBackground;
 	MFMaterial* pFretboard;
 
-	MFAudioStream*[MusicFiles.Count] pMusic;
-	MFVoice*[MusicFiles.Count] pVoices;
+	MFAudioStream*[Streams.Count] streams;
+	MFVoice*[Streams.Count] voices;
 }
 
 

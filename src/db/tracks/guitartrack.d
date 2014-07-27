@@ -9,6 +9,7 @@ import db.instrument;
 import db.performance;
 import db.renderer;
 import db.song;
+import db.songlibrary;
 import db.sequence;
 
 import core.stdc.math;
@@ -20,10 +21,11 @@ class GHGuitar : NoteTrack
 	{
 		super(performer);
 
-		Song song = performer.performance.song;
+		Track* t = performer.performance.track;
+		Song song = t.song;
 		this.song = song;
 
-		string fb = song.fretboard ? song.fretboard : "fretboard2";
+		string fb = t.fretboard ? t.fretboard : "fretboard2";
 		fretboard = Material(fb);
 		auto params = fretboard.parameters;
 		params.zread = false;

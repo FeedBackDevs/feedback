@@ -37,7 +37,7 @@ struct WidgetStyle
 				xml.onEndTag["Property"] = (in Element e)
 				{
 					const(string)* pPropertyName = "id" in e.tag.attr;
-//					MFDebug_Assert(pPropertyName, "Expected 'id=...'. Property name is not defined!");
+					assert(pPropertyName, "Expected 'id=...'. Property name is not defined!");
 /*
 					const char *pValue = pProperty->Value();
 

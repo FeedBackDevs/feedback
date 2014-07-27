@@ -82,7 +82,7 @@ class Game
 
 		// TODO: scan for dongs (we should cache this data...)
 		songLibrary = new SongLibrary;
-		songLibrary.Scan();
+		songLibrary.scan();
 
 		// enable buffered input
 		MFInput_EnableBufferedInput(true);
@@ -118,9 +118,10 @@ class Game
 		}
 
 		// HACK: create a performance of the first song in the library
-		if(songLibrary.songs.length != 0)
+		Track* track = "lacuna_coil-our_truth" in songLibrary.songs;
+		if(track)
 		{
-			performance = new Performance(songLibrary.songs[0], players);
+			performance = new Performance(track, players);
 			performance.Begin();
 		}
 

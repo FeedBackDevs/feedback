@@ -2,6 +2,7 @@ module db.sequence;
 
 import db.instrument;
 
+import std.string;
 
 enum Part
 {
@@ -71,6 +72,81 @@ enum SpecialType
 
 struct Event
 {
+	this(string text)
+	{
+		// string...
+	}
+
+	string toString(int lastTick, string prefix = null, string suffix = null)
+	{
+		static string flags(uint f)
+		{
+			if(!f)
+				return null;
+			return format(" f%x", f);
+		}
+		static string dur(int d)
+		{
+			if(!d)
+				return null;
+			return format(" l%d", d);
+		}
+
+		enum f = "%s%4d ";
+		int tick = this.tick - lastTick;
+		switch(event) with(EventType)
+		{
+			case BPM:
+				return format(f~"B %g%s", prefix, tick, bpm.usPerBeat/1000.0, suffix);
+			case Anchor:
+				return format(f~"A %s", prefix, tick, suffix);
+			case Freeze:
+				return format(f~"F %g%s", prefix, tick, freeze.usToFreeze/1000.0, suffix);
+			case TimeSignature:
+				return format(f~"TS %d/%d%s", prefix, tick, ts.numerator, ts.denominator, suffix);
+			case Note:
+				return format(f~"N %d%s%s%s", prefix, tick, note.key, flags(note.flags), dur(duration), suffix);
+			case GuitarNote:
+				return format(f~"G %d:%d%s%s%s", prefix, tick, guitar._string, guitar.fret, flags(note.flags), dur(duration), suffix);
+			case Lyric:
+				return format(f~"L `%s`%s%s", prefix, tick, text, dur(duration), suffix);
+			case Special:
+				return format(f~"S %d%s%s", prefix, tick, special, dur(duration), suffix);
+			case Event:
+				return format(f~"E `%s`%s%s", prefix, tick, text, dur(duration), suffix);
+			case Section:
+				return format(f~"S `%s`%s%s", prefix, tick, text, dur(duration), suffix);
+			case DrumAnimation:
+				return format(f~"DA %d%s%s", prefix, tick, drumAnim, dur(duration), suffix);
+			case Chord:
+				return format(f~"C %s", prefix, tick, suffix);
+			case NeckPosition:
+				return format(f~"NP %d%s", prefix, tick, position, suffix);
+			case KeyboardPosition:
+				return format(f~"KP %d%s", prefix, tick, position, suffix);
+			case Lighting:
+				return format(f~"I %s%s", prefix, tick, text, suffix);
+			case DirectedCut:
+				return format(f~"DC %s%s", prefix, tick, text, suffix);
+			case MIDI:
+				if(midi.type == 0xFF)
+				{
+					// we're missing the data for custom events!
+					assert("todo!");
+//					return format(f~"M %02x %02x ... %s", prefix, tick, midi.type, midi.subType, ..., suffix);
+				}
+				else if((midi.type & 0xF) == 0xF)
+				{
+					// sysex messages should format the data into a hex string
+					assert("todo!");
+				}
+				else
+					return format(f~"M %02x %d %d%s%s", prefix, tick, midi.type|midi.subType, midi.note, midi.velocity, dur(duration), suffix);
+			default:
+				return null;
+		}
+	}
+
 	long time;		// the physical time of the note (in microseconds)
 
 	int tick;		// in ticks

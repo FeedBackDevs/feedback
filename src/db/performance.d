@@ -4,6 +4,7 @@ import fuji.display;
 
 import db.instrument;
 import db.song;
+import db.songlibrary;
 import db.sequence;
 import db.player;
 import db.renderer;
@@ -98,17 +99,17 @@ class Performer
 
 class Performance
 {
-	this(Song song, Player[] players)
+	this(Track* track, Player[] players)
 	{
-		this.song = song;
-		song.Prepare();
+		this.track = track;
+		track.song.Prepare(track);
 
 		// create and arrange the performers for 'currentSong'
 		// Note: Players whose parts are unavailable in the song will not have performers created
 		performers = null;
 		foreach(p; players)
 		{
-			Sequence s = song.GetSequence(p, p.variation, p.difficulty);
+			Sequence s = track.song.GetSequence(p, p.variation, p.difficulty);
 			if(s)
 				performers ~= new Performer(this, p, s);
 		}
@@ -120,7 +121,7 @@ class Performance
 
 	~this()
 	{
-		song.Release();
+		track.song.release();
 	}
 
 	void ArrangePerformers()
@@ -144,7 +145,7 @@ class Performance
 
 	void Begin()
 	{
-		song.Pause(false);
+		track.song.Pause(false);
 		startTime = sync.now;
 
 		foreach(p; performers)
@@ -189,7 +190,7 @@ class Performance
 		MFView_Pop();
 	}
 
-	Song song;
+	Track* track;
 	Performer performers[];
 	SyncSource sync;
 	long startTime;

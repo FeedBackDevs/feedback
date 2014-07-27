@@ -3,6 +3,7 @@ module db.ui.widgets.button;
 import db.ui.widget;
 import db.ui.widgets.label;
 import db.ui.widgetevent;
+import db.tools.enumkvp;
 
 import fuji.font;
 

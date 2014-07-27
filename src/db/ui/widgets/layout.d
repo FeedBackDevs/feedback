@@ -2,6 +2,7 @@ module db.ui.widgets.layout;
 
 import db.ui.widget;
 import db.ui.widgetevent;
+import db.tools.enumkvp;
 
 import fuji.dbg;
 import fuji.vector;
@@ -51,7 +52,7 @@ class Layout : Widget
 			}
 		}
 
-		MFDebug_Assert("Child does not exist!");
+		assert(false, "Child does not exist!");
 	}
 
 	final void removeChild(size_t index)

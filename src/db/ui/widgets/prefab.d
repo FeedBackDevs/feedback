@@ -41,7 +41,7 @@ class Prefab : Frame
 		}
 		else
 		{
-			MFDebug_Assert("Unknown prefab format!");
+			assert(false, "Unknown prefab format!");
 		}
 	}
 

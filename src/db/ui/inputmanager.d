@@ -596,7 +596,7 @@ protected:
 
 	MFVector correctPosition(float x, float y)
 	{
-// FIXME		MFDebug_Assert!(MFDisplay_GetDisplayOrientation() == MFDisplayOrientation.Normal)("Support display rotation!");
+		assert(MFDisplay_GetDisplayOrientation() == MFDisplayOrientation.Normal, "Support display rotation!");
 
 		if(MFDisplay_GetDisplayOrientation() == MFDisplayOrientation.Normal)
 		{

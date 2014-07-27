@@ -2,6 +2,7 @@ module db.ui.widgets.linearlayout;
 
 import db.ui.widget;
 import db.ui.widgets.layout;
+import db.tools.enumkvp;
 
 import fuji.vector;
 

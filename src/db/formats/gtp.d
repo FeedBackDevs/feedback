@@ -10,19 +10,21 @@ import db.instrument;
 import db.formats.parsers.midifile;
 import db.formats.parsers.guitarprofile;
 import db.tools.filetypes;
+import db.songlibrary;
 
 import std.string;
 import std.path;
 
-Song LoadGuitarPro(DirEntry file)
+bool LoadGuitarPro(Track* track, DirEntry file)
 {
 	string path = file.directory ~ "/";
 
 	MFDebug_Log(2, "Loading song: '" ~ file.filepath ~ "'");
 
-	Song song = new Song;
-	song.songPath = path;
-	song.id = file.filename.stripExtension;
+	track.contentPath = path;
+	track.song = new Song;
+//	track.song.songPath = path;
+//	track.song.id = file.filename.stripExtension;
 
 	// search for the music and other stuff...
 	string songName = file.filename.stripExtension.toLower;
@@ -33,33 +35,33 @@ Song LoadGuitarPro(DirEntry file)
 		if(isImageFile(filename))
 		{
 			if(fn[] == songName)
-				song.cover = f.filename;
+				track.cover = f.filename;
 			else if(fn[] == songName ~ "-bg")
-				song.background = f.filename;
+				track.background = f.filename;
 		}
 		else if(isAudioFile(filename))
 		{
 			if(fn[] == songName)
-				song.musicFiles[MusicFiles.Song] = f.filename;
+				track.addSource().addStream(f.filename);
 			if(fn[] == "intro")
-				song.musicFiles[MusicFiles.Preview] = f.filename;
+				track.preview = f.filename;
 		}
 		else if(isVideoFile(filename))
 		{
 			if(fn[] == songName)
-				song.video = f.filename;
+				track.video = f.filename;
 		}
 	}
 
 	GuitarProFile gpx = new GuitarProFile(file);
 //	gpx.WriteText(file.filepath.stripExtension ~ ".txt");
 
-	song.LoadGPx(gpx);
+	track.song.LoadGPx(gpx);
 
 	// search for music files
 	//...
 
-	return song;
+	return true;
 }
 
 bool LoadGPx(Song song, GuitarProFile gpx)

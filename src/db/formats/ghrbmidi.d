@@ -10,12 +10,13 @@ import db.instrument;
 import db.formats.parsers.midifile;
 import db.tools.filetypes;
 import db.tools.range;
+import db.songlibrary;
 
 import std.string;
 import std.encoding;
 import std.path;
 
-Song LoadGHRBMidi(DirEntry file)
+bool LoadGHRBMidi(Track* track, DirEntry file)
 {
 	void[] ini = MFFileSystem_Load(file.filepath);
 	scope(exit) MFHeap_Free(ini);
@@ -27,8 +28,8 @@ Song LoadGHRBMidi(DirEntry file)
 	MIDIFile midi = new MIDIFile(path ~ "notes.mid");
 //	midi.WriteText(path ~ "midi.txt");
 
-	Song song = new Song;
-	song.songPath = path;
+	track.contentPath = path;
+	track.song = new Song;
 
 	// read song.ini
 	string text;
@@ -56,24 +57,43 @@ Song LoadGHRBMidi(DirEntry file)
 
 			switch(key)
 			{
-				case "name":	song.name = value; break;
-				case "artist":	song.artist = value; break;
-				case "album":	song.album = value; break;
-				case "year":	song.year = value; break;
-				case "genre":	song.genre = value; break;
-				case "frets":	song.charterName = value; break;
+				case "name":
+					// HACK: skip track number...
+					if(value.length > 3)
+					{
+						if(isNumeric(value[0..1]))
+						{
+							if(value[1] == '.')
+								value = value[2..$];
+							else if(isNumeric(value[1..2]) && value[2] == '.')
+								value = value[3..$];
+							value = value.strip;
+						}
+					}
+					track.song.name = value;
+					break;
+				case "artist":	track.song.artist = value; break;
+				case "album":	track.song.album = value; break;
+				case "year":	track.song.year = value; break;
+				case "genre":	track.song.genre = value; break;
+				case "frets":	track.song.charterName = value; break;
 				default:
 					// unknown values become arbitrary params
-					song.params[key] = value;
+					track.song.params[key] = value;
 					break;
 			}
 		}
 	}
 
 	// load the midi
-	song.LoadMidi(midi);
+	if(!track.song.LoadMidi(midi))
+	{
+		MFDebug_Warn(2, "Failed to load midi!".ptr);
+		return false;
+	}
 
 	// search for the music and other stuff...
+	Track.Source* src;
 	foreach(f; dirEntries(path ~ "*", SpanMode.shallow))
 	{
 		string filename = f.filename.toLower;
@@ -81,8 +101,8 @@ Song LoadGHRBMidi(DirEntry file)
 		{
 			switch(filename.stripExtension)
 			{
-				case "album":		song.cover = f.filename; break;
-				case "background":	song.background = f.filename; break;
+				case "album":		track.cover = f.filename; break;
+				case "background":	track.background = f.filename; break;
 				default:
 			}
 		}
@@ -91,20 +111,27 @@ Song LoadGHRBMidi(DirEntry file)
 //			static immutable musicFileNames = [ "preview": MusicFiles.Preview ];
 
 			string filepart = filename.stripExtension;
-			if(filepart[] == "rhythm")
+			if(filepart[] == "preview")
+				track.preview = f.filename;
+			else if(filepart[] == "rhythm")
 			{
+				if(!src) src = track.addSource();
+
 				// 'rhythm.ogg' is also be used for bass
-				if(song.parts[Part.RhythmGuitar].variations)
-					song.musicFiles[MusicFiles.Rhythm] = f.filename;
+				if(track.song.parts[Part.RhythmGuitar].variations)
+					src.addStream(f.filename, Streams.Rhythm);
 				else
-					song.musicFiles[MusicFiles.Bass] = f.filename;
+					src.addStream(f.filename, Streams.Bass);
 			}
 			else if(filepart in musicFileNames)
-				song.musicFiles[musicFileNames[filepart]] = f.filename;
+			{
+				if(!src) src = track.addSource();
+				src.addStream(f.filename, musicFileNames[filepart]);
+			}
 		}
 	}
 
-	return song;
+	return true;
 }
 
 private GHVersion DetectVersion(MIDIFile midi)
@@ -163,7 +190,7 @@ bool LoadMidi(Song song, MIDIFile midi, GHVersion ghVer = GHVersion.Unknown)
 			if(i == 0)
 			{
 				MFDebug_Log(3, "Track: SYNC".ptr);
-				id = name.text;
+				params["midi_track_name"] = name.text;
 			}
 			else
 			{
@@ -297,7 +324,7 @@ bool LoadMidi(Song song, MIDIFile midi, GHVersion ghVer = GHVersion.Unknown)
 							}
 
 							// prepend the drums type to the variation name
-							static __gshared immutable string variationNames[] = [ "-4drums", "-5drums", "-7drums" ];
+							static __gshared immutable string variationNames[] = [ "-4drums", "-5drums", "-6drums", "-7drums", "-8drums" ];
 							pVariation.name = pVariation.name ~ variationNames[drumType];
 							foreach(d; pVariation.difficulties)
 								d.variation = pVariation.name;
@@ -909,26 +936,4 @@ bool LoadMidi(Song song, MIDIFile midi, GHVersion ghVer = GHVersion.Unknown)
 
 		return true;
 	}
-}
-
-
-// HACK: workaround since we can't initialise static AA's
-__gshared immutable MusicFiles[string] musicFileNames;
-shared static this()
-{
-	musicFileNames =
-	[
-		"preview":		MusicFiles.Preview,
-		"song":			MusicFiles.Song,
-		"song+crowd":	MusicFiles.Vocals,
-		"vocals":		MusicFiles.Vocals,
-		"crowd":		MusicFiles.Crowd,
-		"guitar":		MusicFiles.Guitar,
-		"rhythm":		MusicFiles.Rhythm,
-		"drums":		MusicFiles.Drums,
-		"drums_1":		MusicFiles.Kick,
-		"drums_2":		MusicFiles.Snare,
-		"drums_3":		MusicFiles.Cymbals,
-		"drums_4":		MusicFiles.Toms
-	];
 }

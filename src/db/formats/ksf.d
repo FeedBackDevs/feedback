@@ -14,8 +14,9 @@ import std.algorithm;
 import std.string;
 import std.path;
 import std.exception;
+import std.array;
 
-Song LoadKSF(DirEntry file, SongLibrary library)
+bool LoadKSF(Track* track, DirEntry file, SongLibrary library)
 {
 	const(char)[] steps = cast(const(char)[])enforce(MFFileSystem_Load(file.filepath), "");
 	scope(exit) MFHeap_Free(cast(void[])steps);
@@ -26,17 +27,25 @@ Song LoadKSF(DirEntry file, SongLibrary library)
 
 	size_t sep = file.directory.lastIndexOf("/");
 	if(sep == -1)
-		return null;
+		return false;
 	string name = file.directory[sep+1..$];
 
-	Song song = library.Find(name);
-	if(!song)
+	string[] n = splitter(name, '-').array;
+	assert(n.length == 2, "Song folder should be in 'Artist - Song' format");
+	string artist = n[0].strip;
+	string song = n[1].strip;
+
+	string id = archiveName(artist, song);
+
+	Track* find = library.find(id);
+	if(!find)
 	{
-		song = new Song;
-		song.songPath = path;
-		song.id = name;
-		// TODO: split Artist - Title
-		song.name = song.id;
+		track.contentPath = path;
+		track.song = new Song;
+
+		track.song.id = id;
+		track.song.name = song;
+		track.song.artist = artist;
 
 		// search for the music and other stuff...
 		foreach(f; dirEntries(path ~ "*", SpanMode.shallow))
@@ -46,31 +55,32 @@ Song LoadKSF(DirEntry file, SongLibrary library)
 			if(isImageFile(filename))
 			{
 				if(fn[] == "disc")
-					song.cover = f.filename;
+					track.cover = f.filename;
 				else if(fn[] == "back" || fn[] == "title" || fn[] == "title-bg")
-					song.background = f.filename;
+					track.background = f.filename;
 			}
 			else if(isAudioFile(filename))
 			{
 				if(fn[] == "song")
-					song.musicFiles[MusicFiles.Song] = f.filename;
+					track.addSource().addStream(f.filename);
 				if(fn[] == "intro")
-					song.musicFiles[MusicFiles.Preview] = f.filename;
+					track.preview = f.filename;
 			}
 			else if(isVideoFile(filename))
 			{
 				if(fn[] == "song")
-					song.video = f.filename;
+					track.video = f.filename;
 			}
 		}
 
-		song.LoadKSF(steps, file.filename);
-		return song;
+		track.song.LoadKSF(steps, file.filename);
+		return true;
 	}
 	else
 	{
-		song.LoadKSF(steps, file.filename);
-		return null;
+		find.song.LoadKSF(steps, file.filename);
+		find.song.saveChart(path);
+		return false;
 	}
 }
 

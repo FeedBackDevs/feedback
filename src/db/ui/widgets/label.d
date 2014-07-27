@@ -1,6 +1,7 @@
 module db.ui.widgets.label;
 
 import db.ui.widget;
+import db.tools.enumkvp;
 
 import fuji.vector;
 import fuji.matrix;
