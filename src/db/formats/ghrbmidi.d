@@ -739,16 +739,16 @@ bool LoadMidi(Song song, MIDIFile midi, GHVersion ghVer = GHVersion.Unknown)
 												// bend?
 												break;
 											case 3:
-												ev.guitar.flags |= 1 << GuitarNoteFlags.Mute;
+												ev.flags |= 1 << GuitarNoteFlags.Mute;
 												break;
 											case 4:
 												// unknown
 												break;
 											case 5:
-												ev.guitar.flags |= 1 << GuitarNoteFlags.Harm;
+												ev.flags |= 1 << GuitarNoteFlags.Harm;
 												break;
 											case 6:
-												ev.guitar.flags |= 1 << GuitarNoteFlags.ArtificialHarm;
+												ev.flags |= 1 << GuitarNoteFlags.ArtificialHarm;
 												break;
 											default:
 												MFDebug_Warn(2, "[" ~ name.text ~ "] Unknown channel: " ~ to!string(channel));

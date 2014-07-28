@@ -5,6 +5,7 @@ import std.file;
 import std.conv;
 import std.range;
 
+import fuji.dbg;
 
 struct Settings
 {
@@ -44,8 +45,9 @@ struct Settings
 			};
 			xml.parse();
 		}
-		catch
+		catch(Exception e)
 		{
+			MFDebug_Warn(2, "Couldn't load settings: " ~ e.msg);
 		}
 	}
 

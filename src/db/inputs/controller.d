@@ -45,7 +45,7 @@ class Controller : InputDevice
 //			if(rbDrums)
 //				features |= MFBit!(DrumFeatures.Has3Cymbals);
 
-//			features = MFBit!(DrumFeatures.Has3Cymbals) | MFBit!(DrumFeatures.Has4Drums) | MFBit!(DrumFeatures.HasHiHat);
+			features = MFBit!(DrumFeatures.Has3Cymbals) | MFBit!(DrumFeatures.Has4Drums) | MFBit!(DrumFeatures.HasHiHat);
 
 			if(features & (MFBit!(DrumFeatures.Has2Cymbals) | MFBit!(DrumFeatures.Has3Cymbals)))
 				features |= MFBit!(DrumFeatures.HasAnyCymbals);

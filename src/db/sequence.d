@@ -1,8 +1,11 @@
 module db.sequence;
 
 import db.instrument;
+import db.tools.tokeniser;
 
+import std.range;
 import std.string;
+import std.conv;
 
 enum Part
 {
@@ -72,22 +75,127 @@ enum SpecialType
 
 struct Event
 {
-	this(string text)
+	this(string line, ref int lastTick)
 	{
-		// string...
+		auto t = Tokeniser!(" \t", "``")(line);
+
+		string delta = t.getFront();
+		tick = lastTick + to!int(delta);
+		lastTick = tick;
+
+		string e = t.getFront();
+		switch(e)
+		{
+			case "B":
+				event = EventType.BPM;
+				bpm.usPerBeat = cast(int)(to!double(t.getFront)*1000.0);
+				break;
+			case "A":
+				event = EventType.Anchor;
+				break;
+			case "F":
+				event = EventType.Freeze;
+				freeze.usToFreeze = cast(int)(to!double(t.getFront)*1000.0);
+				break;
+			case "TS":
+				event = EventType.TimeSignature;
+				auto nd = splitter(t.getFront, '/');
+				ts.numerator = to!int(nd.front); nd.popFront;
+				ts.denominator = to!int(nd.front);
+				break;
+			case "N":
+				event = EventType.Note;
+				note.key = to!int(t.getFront);
+				break;
+			case "G":
+				event = EventType.GuitarNote;
+				auto n = splitter(t.getFront, ':');
+				guitar._string = to!int(n.front); n.popFront;
+				guitar.fret = to!int(n.front);
+				break;
+			case "L":
+				event = EventType.Lyric;
+				text = t.getFront[1..$-1];
+				break;
+			case "S":
+				event = EventType.Special;
+				special = cast(SpecialType)to!int(t.getFront);
+				break;
+			case "E":
+				event = EventType.Event;
+				text = t.getFront[1..$-1];
+				break;
+			case "SN":
+				event = EventType.Section;
+				text = t.getFront[1..$-1];
+				break;
+			case "DA":
+				event = EventType.DrumAnimation;
+				drumAnim = cast(DrumAnimation)(to!int(t.getFront));
+				break;
+			case "C":
+				event = EventType.Chord;
+				break;
+			case "NP":
+				event = EventType.NeckPosition;
+				position = to!int(t.getFront);
+				break;
+			case "KP":
+				event = EventType.KeyboardPosition;
+				position = to!int(t.getFront);
+				break;
+			case "I":
+				event = EventType.Lighting;
+				text = t.getFront[1..$-1];
+				break;
+			case "DC":
+				event = EventType.DirectedCut;
+				text = t.getFront[1..$-1];
+				break;
+			case "M":
+				event = EventType.MIDI;
+				ubyte status = to!ubyte(t.getFront);
+				if(status == 0xFF)
+				{
+					assert("todo!");
+				}
+				else if((status & 0xF) == 0xF)
+				{
+					assert("todo!");
+				}
+				else
+				{
+					midi.type = status & 0xF0;
+					midi.subType = status & 0xF;
+					midi.channel = midi.subType;
+					midi.note = to!int(t.getFront);
+					midi.velocity = to!int(t.getFront);
+				}
+				break;
+			default:
+		}
+
+		// optional flags and duration
+		foreach(p; t)
+		{
+			if(p[0] == 'f')
+				flags = to!uint(p[1..$]);
+			else if(p[0] == 'l')
+				duration = to!int(p[1..$]);
+		}
 	}
 
 	string toString(int lastTick, string prefix = null, string suffix = null)
 	{
-		static string flags(uint f)
+		static string fl(uint f)
 		{
-			if(!f)
+			if(f == 0)
 				return null;
 			return format(" f%x", f);
 		}
 		static string dur(int d)
 		{
-			if(!d)
+			if(d == 0)
 				return null;
 			return format(" l%d", d);
 		}
@@ -105,9 +213,9 @@ struct Event
 			case TimeSignature:
 				return format(f~"TS %d/%d%s", prefix, tick, ts.numerator, ts.denominator, suffix);
 			case Note:
-				return format(f~"N %d%s%s%s", prefix, tick, note.key, flags(note.flags), dur(duration), suffix);
+				return format(f~"N %d%s%s%s", prefix, tick, note.key, fl(flags), dur(duration), suffix);
 			case GuitarNote:
-				return format(f~"G %d:%d%s%s%s", prefix, tick, guitar._string, guitar.fret, flags(note.flags), dur(duration), suffix);
+				return format(f~"G %d:%d%s%s%s", prefix, tick, guitar._string, guitar.fret, fl(flags), dur(duration), suffix);
 			case Lyric:
 				return format(f~"L `%s`%s%s", prefix, tick, text, dur(duration), suffix);
 			case Special:
@@ -115,7 +223,7 @@ struct Event
 			case Event:
 				return format(f~"E `%s`%s%s", prefix, tick, text, dur(duration), suffix);
 			case Section:
-				return format(f~"S `%s`%s%s", prefix, tick, text, dur(duration), suffix);
+				return format(f~"SN `%s`%s%s", prefix, tick, text, dur(duration), suffix);
 			case DrumAnimation:
 				return format(f~"DA %d%s%s", prefix, tick, drumAnim, dur(duration), suffix);
 			case Chord:
@@ -153,6 +261,7 @@ struct Event
 	int duration;	// note duration
 
 	EventType event;
+	uint flags;
 
 	void* pScoreKeeperData;
 	void* pPresentationData;
@@ -173,12 +282,10 @@ struct Event
 	struct Note
 	{
 		int key;
-		uint flags;
 	}
 	struct GuitarNote
 	{
 		int _string;
-		uint flags;
 		int fret;
 	}
 	struct MIDI

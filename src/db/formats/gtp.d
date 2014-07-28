@@ -262,7 +262,7 @@ bool LoadGPx(Song song, GuitarProFile gpx)
 											ev.duration = 0;//n.duration;
 
 											ev.note.key = drumMap[dn].note;
-											ev.note.flags = drumMap[dn].flags;
+											ev.flags = drumMap[dn].flags;
 
 											seq.notes ~= ev;
 											lastNotes[v][s] = seq.notes.length-1;

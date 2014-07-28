@@ -14,6 +14,7 @@ import fuji.fuji;
 import fuji.material;
 import fuji.sound;
 import fuji.filesystem;
+import fuji.heap;
 
 import std.conv : to;
 import std.range: back, empty;
@@ -60,8 +61,97 @@ class Song
 
 	this(string filename)
 	{
+		static void readSequence(string text, ref Event[] events)
+		{
+			int lastTick = 0;
+			foreach(l; text.splitLines.map!(l=>l.strip).filter!(l=>!l.empty))
+				events ~= Event(l, lastTick);
+		}
+
 		foreach(i, ref p; parts)
 			p.part = cast(Part)i;
+
+		try
+		{
+			ubyte[] file = MFFileSystem_Load(filename);
+			string s = cast(string)file.idup;
+			MFHeap_Free(file);
+
+			// parse xml
+			auto xml = new DocumentParser(s);
+
+			xml.onEndTag["id"]				= (in Element e) { id			= e.text(); };
+			xml.onEndTag["name"]			= (in Element e) { name			= e.text(); };
+			xml.onEndTag["subtitle"]		= (in Element e) { subtitle		= e.text(); };
+			xml.onEndTag["artist"]			= (in Element e) { artist		= e.text(); };
+			xml.onEndTag["album"]			= (in Element e) { album		= e.text(); };
+			xml.onEndTag["year"]			= (in Element e) { year			= e.text(); };
+			xml.onEndTag["packageName"]		= (in Element e) { packageName	= e.text(); };
+			xml.onEndTag["charterName"]		= (in Element e) { charterName	= e.text(); };
+			xml.onEndTag["tags"]			= (in Element e) { tags			= e.text(); };
+			xml.onEndTag["genre"]			= (in Element e) { genre		= e.text(); };
+			xml.onEndTag["mediaType"]		= (in Element e) { mediaType	= e.text(); };
+
+			xml.onStartTag["params"] = (ElementParser xml)
+			{
+				xml.onEndTag["param"] = (in Element e)
+				{
+					string k = e.tag.attr["key"];
+					string v = e.text();
+					params[k] = v;
+				};
+				xml.parse();
+			};
+
+			xml.onEndTag["resolution"]	= (in Element e) { resolution	= to!int(e.text()); };
+			xml.onEndTag["startOffset"]	= (in Element e) { startOffset	= to!long(e.text()); };
+
+			xml.onEndTag["sync"]		= (in Element e) { readSequence(e.text(), sync); };
+			xml.onEndTag["events"]		= (in Element e) { readSequence(e.text(), events); };
+
+			xml.onStartTag["parts"] = (ElementParser xml)
+			{
+				xml.onStartTag["part"] = (ElementParser xml)
+				{
+					string part = xml.tag.attr["name"];
+					Part p = getEnumValue!Part(part);
+
+					xml.onEndTag["events"] = (in Element e) { readSequence(e.text(), parts[p].events); };
+
+					xml.onStartTag["variation"] = (ElementParser xml)
+					{
+						Variation v;
+						v.name = xml.tag.attr["name"];
+
+						xml.onEndTag["hasCoopMarkers"]	= (in Element e) { v.bHasCoopMarkers = !icmp(e.text(), "true"); };
+
+						xml.onStartTag["difficulty"] = (ElementParser xml)
+						{
+							Sequence s = new Sequence;
+							s.part = p;
+							s.variation = v.name;
+							s.difficulty = xml.tag.attr["name"];
+							s.difficultyMeter = to!int(xml.tag.attr["meter"]);
+
+							xml.onEndTag["sequence"] = (in Element e) { readSequence(e.text(), s.notes); };
+							xml.parse();
+
+							v.difficulties ~= s;
+						};
+						xml.parse();
+
+						parts[p].variations ~= v;
+					};
+					xml.parse();
+				};
+				xml.parse();
+			};
+			xml.parse();
+		}
+		catch(Exception e)
+		{
+			MFDebug_Warn(2, "Couldn't load settings: " ~ e.msg);
+		}
 	}
 
 	~this()

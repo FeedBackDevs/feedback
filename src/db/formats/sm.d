@@ -288,24 +288,24 @@ bool LoadSM(Track* track, const(char)[] sm)
 										holds[n] = seq.notes.length;
 
 									if(note == '4')
-										ev.note.flags |= MFBit!(DanceFlags.Roll);
+										ev.flags |= MFBit!(DanceFlags.Roll);
 									else if(note == 'M')
-										ev.note.flags |= MFBit!(DanceFlags.Mine);
+										ev.flags |= MFBit!(DanceFlags.Mine);
 									else if(note == 'L')
-										ev.note.flags |= MFBit!(DanceFlags.Lift);
+										ev.flags |= MFBit!(DanceFlags.Lift);
 									else if(note == 'F')
-										ev.note.flags |= MFBit!(DanceFlags.Fake);
+										ev.flags |= MFBit!(DanceFlags.Fake);
 									else if(note == 'S')
-										ev.note.flags |= MFBit!(DanceFlags.Shock);
+										ev.flags |= MFBit!(DanceFlags.Shock);
 									else if(note >= 'a' && note <= 'z')
 									{
-										ev.note.flags |= MFBit!(DanceFlags.Sound);
-										ev.note.flags |= (note - 'a') << 24;
+										ev.flags |= MFBit!(DanceFlags.Sound);
+										ev.flags |= (note - 'a') << 24;
 									}
 									else if(note >= 'A' && note <= 'Z')
 									{
-										ev.note.flags |= MFBit!(DanceFlags.Sound);
-										ev.note.flags |= (note - 'A' + 26) << 24;
+										ev.flags |= MFBit!(DanceFlags.Sound);
+										ev.flags |= (note - 'A' + 26) << 24;
 									}
 								}
 

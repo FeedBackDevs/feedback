@@ -21,7 +21,7 @@ struct DrumNote
 	@property EventType event() const pure nothrow	{ return pEv.event; }
 
 	@property int key() const pure nothrow			{ return pEv.note.key; }
-	@property uint flags() const pure nothrow		{ return pEv.note.flags; }
+	@property uint flags() const pure nothrow		{ return pEv.flags; }
 
 	Event* pEv;
 

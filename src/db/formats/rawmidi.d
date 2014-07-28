@@ -282,7 +282,7 @@ bool LoadRawMidi(Song song, MIDIFile midi)
 						{
 							ev.event = EventType.Note;
 							ev.note.key = drumMap[n].note;
-							ev.note.flags = drumMap[n].flags;
+							ev.flags = drumMap[n].flags;
 
 							pVariation.difficulties[0].notes ~= ev;
 							currentEvents[channel][note] = &pVariation.difficulties[0].notes.back;

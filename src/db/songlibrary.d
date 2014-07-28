@@ -13,6 +13,7 @@ import db.formats.sm;
 import db.formats.dwi;
 import db.formats.ksf;
 import db.formats.bms;
+import db.tools.filetypes;
 
 import std.string;
 import std.encoding;
@@ -132,6 +133,9 @@ class SongLibrary
 	void scan(string path = "songs:")
 	{
 		string searchPattern = path ~ "*";
+
+		// first we'll do a pass recursing into directories, and trying to load .chart files
+		// this is because other format songs that were converted will have had a .chart file saved which we prefer to load
 		foreach(e; dirEntries(searchPattern, SpanMode.shallow))
 		{
 			if(e.attributes & (MFFileAttributes.Directory | MFFileAttributes.SymLink))
@@ -140,10 +144,41 @@ class SongLibrary
 			}
 			else if(e.filename.extension.icmp(".chart") == 0)
 			{
-				// load chart file...
+				Track track;
+				track.song = new Song(e.filepath);
+
+				// search for the music and other stuff...
+				string songName = e.filename.stripExtension.toLower;
+				foreach(f; dirEntries(e.directory ~ "/*", SpanMode.shallow))
+				{
+					string filename = f.filename.toLower;
+					string fn = filename.stripExtension;
+					if(isImageFile(filename))
+					{
+						if(fn[] == songName)
+							track.cover = f.filename;
+						else if(fn[] == songName ~ "-bg")
+							track.background = f.filename;
+					}
+					else if(isAudioFile(filename))
+					{
+						if(fn[] == songName)
+							track.addSource().addStream(f.filename);
+						if(fn[] == songName ~ "-intro")
+							track.preview = f.filename;
+					}
+					else if(isVideoFile(filename))
+					{
+						if(fn[] == songName)
+							track.video = f.filename;
+					}
+				}
+
+				songs[track.song.id] = track;
 			}
 		}
 
+		// search for other formats and try and load + convert them
 		foreach(file; dirEntries(searchPattern, SpanMode.shallow).filter!(e => !(e.attributes & (MFFileAttributes.Directory | MFFileAttributes.SymLink))))
 		{
 			try
@@ -218,6 +253,7 @@ class SongLibrary
 
 				if(addTrack)
 				{
+					// write our a .chart for the converted song
 					track.song.saveChart(track.contentPath);
 					if(track.song.id !in songs)
 						songs[track.song.id] = track;
