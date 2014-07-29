@@ -25,7 +25,6 @@ bool LoadSM(Track* track, DirEntry file)
 
 	MFDebug_Log(2, "Loading song: '" ~ file.filepath ~ "'");
 
-	track.contentPath = path;
 	track.song = new Song;
 
 	string name = file.filename.stripExtension;
@@ -41,21 +40,21 @@ bool LoadSM(Track* track, DirEntry file)
 		if(isImageFile(filename))
 		{
 			if(fn[] == songName || fn[] == "disc")
-				track.cover = f.filename;
+				track.cover = f.filepath;
 			else if(fn[] == songName ~ "-bg" || fn[] == "back" || fn[] == "title" || fn[] == "title-bg")
-				track.background = f.filename;
+				track.background = f.filepath;
 		}
 		else if(isAudioFile(filename))
 		{
 			if(fn[] == songName || fn[] == "song")
-				track.addSource().addStream(f.filename);
+				track.addSource().addStream(f.filepath);
 			if(fn[] == "intro")
-				track.preview = f.filename;
+				track.preview = f.filepath;
 		}
 		else if(isVideoFile(filename))
 		{
 			if(fn[] == songName || fn[] == "song")
-				track.video = f.filename;
+				track.video = f.filepath;
 		}
 		else if(filename[] == songName ~ ".lrc")
 		{
@@ -65,14 +64,15 @@ bool LoadSM(Track* track, DirEntry file)
 	}
 
 	// load the steps
-	track.LoadSM(steps);
+	track.LoadSM(steps, path);
 
 	return true;
 }
 
-bool LoadSM(Track* track, const(char)[] sm)
+bool LoadSM(Track* track, const(char)[] sm, string path)
 {
 	Song song = track.song;
+	song.params["source_format"] = ".sm";
 
 	// Format description:
 	// http://www.stepmania.com/wiki/The_.SM_file_format
@@ -107,12 +107,15 @@ bool LoadSM(Track* track, const(char)[] sm)
 		{
 			case "TITLE":
 				song.name = content.idup;
+				song.params[tag.idup] = song.name;
 				break;
 			case "SUBTITLE":
 				song.subtitle = content.idup;
+				song.params[tag.idup] = song.subtitle;
 				break;
 			case "ARTIST":
 				song.artist = content.idup;
+				song.params[tag.idup] = song.artist;
 				break;
 			case "TITLETRANSLIT":
 				song.params[tag.idup] = content.idup;
@@ -123,14 +126,22 @@ bool LoadSM(Track* track, const(char)[] sm)
 			case "ARTISTTRANSLIT":
 				song.params[tag.idup] = content.idup;
 				break;
+			case "GENRE":
+				song.genre = content.idup;
+				song.packageName = song.genre;
+				song.params[tag.idup] = song.genre;
+				break;
 			case "CREDIT":
+				song.params[tag.idup] = content.idup;
 				song.charterName = content.idup;
 				break;
 			case "BANNER":
-				track.cover = content.idup;
+				song.params[tag.idup] = content.idup;
+				track.cover = (path ~ content).idup;
 				break;
 			case "BACKGROUND":
-				track.background = content.idup;
+				song.params[tag.idup] = content.idup;
+				track.background = (path ~ content).idup;
 				break;
 			case "LYRICSPATH":
 				song.params[tag.idup] = content.idup;
@@ -139,9 +150,11 @@ bool LoadSM(Track* track, const(char)[] sm)
 				song.params[tag.idup] = content.idup;
 				break;
 			case "MUSIC":
-				track.addSource().addStream(content.idup);
+				song.params[tag.idup] = content.idup;
+				track.addSource().addStream((path ~ content).idup);
 				break;
 			case "OFFSET":
+				song.params[tag.idup] = content.idup;
 				song.startOffset = cast(long)(to!double(content)*1_000_000);
 				break;
 			case "SAMPLESTART":
@@ -154,6 +167,8 @@ bool LoadSM(Track* track, const(char)[] sm)
 				song.params[tag.idup] = content.idup;
 				break;
 			case "BPMS":
+				song.params[tag.idup] = content.idup;
+
 				Event ev;
 				ev.tick = 0;
 
@@ -183,6 +198,8 @@ bool LoadSM(Track* track, const(char)[] sm)
 				song.params[tag.idup] = content.idup;
 				break;
 			case "STOPS":
+				song.params[tag.idup] = content.idup;
+
 				auto freezes = content.splitter(',');
 				foreach(f; freezes)
 				{
@@ -198,6 +215,12 @@ bool LoadSM(Track* track, const(char)[] sm)
 				}
 				break;
 			case "BGCHANGE":
+				song.params[tag.idup] = content.idup;
+				break;
+			case "FGCHANGE":
+				song.params[tag.idup] = content.idup;
+				break;
+			case "MENUCOLOR":
 				song.params[tag.idup] = content.idup;
 				break;
 			case "NOTES":

@@ -102,7 +102,7 @@ class Performance
 	this(Track* track, Player[] players)
 	{
 		this.track = track;
-		track.song.Prepare(track);
+		track.prepare();
 
 		// create and arrange the performers for 'currentSong'
 		// Note: Players whose parts are unavailable in the song will not have performers created
@@ -121,7 +121,7 @@ class Performance
 
 	~this()
 	{
-		track.song.release();
+		track.release();
 	}
 
 	void ArrangePerformers()
@@ -145,7 +145,7 @@ class Performance
 
 	void Begin()
 	{
-		track.song.Pause(false);
+		track.pause(false);
 		startTime = sync.now;
 
 		foreach(p; performers)

@@ -28,8 +28,8 @@ bool LoadGHRBMidi(Track* track, DirEntry file)
 	MIDIFile midi = new MIDIFile(path ~ "notes.mid");
 //	midi.WriteText(path ~ "midi.txt");
 
-	track.contentPath = path;
 	track.song = new Song;
+	track.song.params["source_format"] = "ghrb.mid";
 
 	// read song.ini
 	string text;
@@ -101,8 +101,8 @@ bool LoadGHRBMidi(Track* track, DirEntry file)
 		{
 			switch(filename.stripExtension)
 			{
-				case "album":		track.cover = f.filename; break;
-				case "background":	track.background = f.filename; break;
+				case "album":		track.cover = f.filepath; break;
+				case "background":	track.background = f.filepath; break;
 				default:
 			}
 		}
@@ -112,21 +112,21 @@ bool LoadGHRBMidi(Track* track, DirEntry file)
 
 			string filepart = filename.stripExtension;
 			if(filepart[] == "preview")
-				track.preview = f.filename;
+				track.preview = f.filepath;
 			else if(filepart[] == "rhythm")
 			{
 				if(!src) src = track.addSource();
 
 				// 'rhythm.ogg' is also be used for bass
 				if(track.song.parts[Part.RhythmGuitar].variations)
-					src.addStream(f.filename, Streams.Rhythm);
+					src.addStream(f.filepath, Streams.Rhythm);
 				else
-					src.addStream(f.filename, Streams.Bass);
+					src.addStream(f.filepath, Streams.Bass);
 			}
 			else if(filepart in musicFileNames)
 			{
 				if(!src) src = track.addSource();
-				src.addStream(f.filename, musicFileNames[filepart]);
+				src.addStream(f.filepath, musicFileNames[filepart]);
 			}
 		}
 	}

@@ -80,8 +80,12 @@ class Game
 
 		// TODO: the following stuff should all be asynchronous with a loading screen:
 
-		// TODO: scan for dongs (we should cache this data...)
-		songLibrary = new SongLibrary;
+		// create song library
+
+		songLibrary = new SongLibrary();
+		songLibrary.save();
+
+		// scan for new songs
 		songLibrary.scan();
 
 		// enable buffered input
@@ -118,7 +122,7 @@ class Game
 		}
 
 		// HACK: create a performance of the first song in the library
-		Track* track = "lacuna_coil-our_truth" in songLibrary.songs;
+		Track* track = songLibrary.find("judy_crystal-nori_nori_nori");
 		if(track)
 		{
 			performance = new Performance(track, players);

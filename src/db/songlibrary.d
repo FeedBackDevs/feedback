@@ -1,8 +1,11 @@
 module db.songlibrary;
 
-import fuji.filesystem;
-import fuji.heap;
 import fuji.dbg;
+import fuji.heap;
+import fuji.filesystem;
+import fuji.system;
+import fuji.sound;
+import fuji.material;
 
 public import db.song;
 import db.sequence;
@@ -14,6 +17,7 @@ import db.formats.dwi;
 import db.formats.ksf;
 import db.formats.bms;
 import db.tools.filetypes;
+import db.tools.enumkvp;
 
 import std.string;
 import std.encoding;
@@ -23,6 +27,7 @@ import std.exception;
 import std.uni;
 import std.conv;
 import std.algorithm;
+import std.xml;
 
 
 // music files (many of these may or may not be available for different songs)
@@ -52,28 +57,21 @@ struct Track
 {
 	struct Source
 	{
-		void addStream(string filename, Streams type = Streams.Song)
-		{
-			streams ~= File(type, filename);
-		}
-
 		struct File
 		{
 			Streams type;
 			string stream;
 		}
+
 		File[] streams;
+
+		void addStream(string filename, Streams type = Streams.Song) { streams ~= File(type, filename); }
 	}
 
-	bool bLocal;	// if the track is local, or from the archive
-	// todo: probably want a link to the archive entry if if one exists...
+	// TODO: link to archive entry if the chart comes from the archive...
+//	ArchiveEntry archiveEntry;		// reference to the archive entry, if the song is present in the archive...
 
-	string contentPath;
-
-	Song song;
-
-	// audio sources
-	Source[] sources;
+	string localChart;				// path to local chart file
 
 	// associated data
 	string preview;					// short preview clip
@@ -83,54 +81,234 @@ struct Track
 	string background;				// background image
 	string fretboard;				// custom fretboard graphic
 
+	// audio sources
+	Source[] sources;
+
+	// runtime data
+	Song song;
+
+	MFAudioStream*[Streams.Count] streams;
+	MFVoice*[Streams.Count] voices;
+
+	Material _cover;
+	Material _background;
+	Material _fretboard;
+
+	// methods...
+	~this()
+	{
+		release();
+	}
+
 	Source* addSource()
 	{
 		sources ~= Source();
 		return &sources[$-1];
 	}
-}
 
-
-string archiveName(string artist, string song, string suffix = null)
-{
-	static string simplify(string s)
+	void prepare()
 	{
-		int depth;
-		dchar prev;
-		bool filter(dchar c)
+		if(!song)
+			song = new Song(localChart);
+
+		song.prepare();
+
+		// load audio streams...
+
+		// load song data...
+
+		// TODO: choose a source
+		Source* source = &sources[0];
+
+		// prepare the music streams
+		foreach(s; source.streams)
 		{
-			if(c == '(' || c == '[')
-				++depth;
-			if(c == ')' || c == ']')
-			{
-				--depth;
-				return false;
-			}
-			bool rep = c == ' ' && prev == ' ';
-			prev = c;
-			return depth == 0 && !rep;
+			streams[s.type] = MFSound_CreateStream(s.stream.toStringz, MFAudioStreamFlags.QueryLength | MFAudioStreamFlags.AllowSeeking);
+			MFSound_PlayStream(streams[s.type], MFPlayFlags.BeginPaused);
+
+			voices[s.type] = MFSound_GetStreamVoice(streams[s.type]);
+//			MFSound_SetPlaybackRate(voices[i], 1.0f); // TODO: we can use this to speed/slow the song...
 		}
 
-		auto marks = unicode("Nonspacing_Mark");
-		string[dchar] transTable = ['&' : " and "];
-
-		return s.translate(transTable)										// translate & -> and
-			.normalize!NFKD													// separate accents from base characters
-			.map!(c => "\t_.-!?".canFind(c) ? cast(dchar)' ' : c.toLower)	// convert unwanted chars to spaces, and letters to lowercase
-			.filter!(c => !marks[c] && !"'\"".canFind(c) && filter(c))		// strip accents, select noise cahracters, and bracketed content
-			.text.strip														// strip leading and trailing whitespace
-			.map!(c => c == ' ' ? cast(dchar)'_' : c)									// convert spaces to underscores
-			.text;
+		// load data...
+		if(cover)
+			_cover = Material(cover);
+		if(background)
+			_background = Material(background);
+		if(fretboard)
+			_fretboard = Material(fretboard);
 	}
 
-	// return in the format "band_name-song_name[-suffix]"
-	return simplify(artist) ~ "-" ~ simplify(song) ~ (suffix ? "-" ~ simplify(suffix) : null);
-}
+	void release()
+	{
+		foreach(ref s; streams)
+		{
+			if(s)
+			{
+				MFSound_DestroyStream(s);
+				s = null;
+			}
+		}
 
+		_cover = null;
+		_background = null;
+		_fretboard = null;
+	}
+
+	void pause(bool bPause)
+	{
+		foreach(s; streams)
+			if(s)
+				MFSound_PauseStream(s, bPause);
+	}
+
+	void seek(float offsetInSeconds)
+	{
+		foreach(s; streams)
+			if(s)
+				MFSound_SeekStream(s, offsetInSeconds);
+	}
+
+	void setVolume(Part part, float volume)
+	{
+		// TODO: figure how parts map to playing streams
+	}
+
+	void setPan(Part part, float pan)
+	{
+		// TODO: figure how parts map to playing streams
+	}
+}
 
 class SongLibrary
 {
-	void scan(string path = "songs:")
+	this()
+	{
+		load();
+	}
+
+	void load()
+	{
+		try
+		{
+			ubyte[] file = MFFileSystem_Load("system:cache/library.xml"[]);
+			if(!file)
+				return;
+
+			string s = cast(string)file.idup;
+			MFHeap_Free(file);
+
+			// parse xml
+			auto xml = new DocumentParser(s);
+
+			xml.onEndTag["lastScan"] = (in Element e) { lastScan.ticks		= to!ulong(e.text()); };
+
+			xml.onStartTag["tracks"] = (ElementParser xml)
+			{
+				xml.onStartTag["track"] = (ElementParser xml)
+				{
+					Track track;
+					string id = xml.tag.attr["id"];
+
+					xml.onEndTag["localChart"]	= (in Element e) { track.localChart		= e.text(); };
+					xml.onEndTag["preview"]		= (in Element e) { track.preview		= e.text(); };
+					xml.onEndTag["video"]		= (in Element e) { track.video			= e.text(); };
+					xml.onEndTag["cover"]		= (in Element e) { track.cover			= e.text(); };
+					xml.onEndTag["background"]	= (in Element e) { track.background		= e.text(); };
+					xml.onEndTag["fretboard"]	= (in Element e) { track.fretboard		= e.text(); };
+
+					xml.onStartTag["sources"] = (ElementParser xml)
+					{
+						xml.onStartTag["source"] = (ElementParser xml)
+						{
+							Track.Source* src = track.addSource();
+							xml.onEndTag["stream"]	= (in Element e)
+							{
+								src.addStream(e.text(), getEnumValue!Streams(e.tag.attr["type"]));
+							};
+							xml.parse();
+						};
+						xml.parse();
+					};
+					xml.parse();
+
+					library[id] = track;
+				};
+				xml.parse();
+			};
+			xml.parse();
+		}
+		catch(Exception e)
+		{
+			MFDebug_Warn(2, "Couldn't load settings: " ~ e.msg);
+		}
+	}
+
+	void save()
+	{
+		auto doc = new Document(new Tag("library"));
+
+		doc ~= new Element("lastScan", to!string(lastScan.ticks));
+
+		auto tracks = new Element("tracks");
+		foreach(id, ref track; library)
+		{
+			auto t = new Element("track");
+			t.tag.attr["id"] = id;
+
+			if(track.localChart)	t ~= new Element("localChart", track.localChart);
+
+			if(track.preview)		t ~= new Element("preview", track.preview);
+			if(track.video)			t ~= new Element("video", track.video);
+
+			if(track.cover)			t ~= new Element("cover", track.cover);
+			if(track.background)	t ~= new Element("background", track.background);
+			if(track.fretboard)		t ~= new Element("fretboard", track.fretboard);
+
+			auto srcs = new Element("sources");
+			foreach(s; track.sources)
+			{
+				auto src = new Element("source");
+				foreach(stream; s.streams)
+				{
+					auto str = new Element("stream", stream.stream);
+					str.tag.attr["type"] = getEnumFromValue(stream.type);
+					src ~= str;
+				}
+				srcs ~= src;
+			}
+			t ~= srcs;
+			tracks ~= t;
+		}
+		doc ~= tracks;
+
+		string xml = join(doc.pretty(2),"\n");
+		MFFileSystem_Save("system:cache/library.xml", cast(immutable(ubyte)[])xml);
+	}
+
+	void scan()
+	{
+		scanPath("songs:");
+
+		MFSystemTime systime;
+		MFSystem_SystemTime(&systime);
+		MFSystem_SystemTimeToFileTime(&systime, &lastScan);
+
+		save();
+	}
+
+	Track* find(const(char)[] name)
+	{
+		return name in library;
+	}
+
+	// local database
+	Track[string] library;
+
+	MFFileTime lastScan;
+
+private:
+	void scanPath(string path)
 	{
 		string searchPattern = path ~ "*";
 
@@ -140,9 +318,9 @@ class SongLibrary
 		{
 			if(e.attributes & (MFFileAttributes.Directory | MFFileAttributes.SymLink))
 			{
-				scan(e.filepath ~ "/");
+				scanPath(e.filepath ~ "/");
 			}
-			else if(e.filename.extension.icmp(".chart") == 0)
+			else if(e.filename.extension.icmp(".chart") == 0 && e.writeTime > lastScan)
 			{
 				Track track;
 				track.song = new Song(e.filepath);
@@ -174,17 +352,20 @@ class SongLibrary
 					}
 				}
 
-				songs[track.song.id] = track;
+				library[track.song.id] = track;
 			}
 		}
 
 		// search for other formats and try and load + convert them
-		foreach(file; dirEntries(searchPattern, SpanMode.shallow).filter!(e => !(e.attributes & (MFFileAttributes.Directory | MFFileAttributes.SymLink))))
+		foreach(file; dirEntries(searchPattern, SpanMode.shallow).filter!(e => !(e.attributes & (MFFileAttributes.Directory | MFFileAttributes.SymLink)) && e.writeTime > lastScan))
 		{
 			try
 			{
+				string dir = file.directory ~ "/";
+
 				Track track;
 				bool addTrack;
+
 				if(file.filename.icmp("song.ini") == 0)
 				{
 					if(LoadGHRBMidi(&track, file))
@@ -253,10 +434,12 @@ class SongLibrary
 
 				if(addTrack)
 				{
-					// write our a .chart for the converted song
-					track.song.saveChart(track.contentPath);
-					if(track.song.id !in songs)
-						songs[track.song.id] = track;
+					// write out a .chart for the converted song
+					track.song.saveChart(dir);
+					track.localChart = track.song.songPath;
+
+					if(track.song.id !in library)
+						library[track.song.id] = track;
 				}
 			}
 			catch(Exception e)
@@ -265,23 +448,44 @@ class SongLibrary
 			}
 		}
 	}
-
-	Track* find(const(char)[] name)
-	{
-		return name in songs;
-	}
-
-	// TODO: database...
-	Track[string] songs;
-
-	// recognised files...
-	struct File
-	{
-		uint lastTouched;
-		Track* track;
-	}
-	File[string] fileAssociations;
 }
+
+string archiveName(string artist, string song, string suffix = null)
+{
+	static string simplify(string s)
+	{
+		int depth;
+		dchar prev;
+		bool filter(dchar c)
+		{
+			if(c == '(' || c == '[')
+				++depth;
+			if(c == ')' || c == ']')
+			{
+				--depth;
+				return false;
+			}
+			bool rep = c == ' ' && prev == ' ';
+			prev = c;
+			return depth == 0 && !rep;
+		}
+
+		auto marks = unicode("Nonspacing_Mark");
+		string[dchar] transTable = ['&' : " and "];
+
+		return s.translate(transTable)										// translate & -> and
+			.normalize!NFKD													// separate accents from base characters
+			.map!(c => "\t_.-!?".canFind(c) ? cast(dchar)' ' : c.toLower)	// convert unwanted chars to spaces, and letters to lowercase
+			.filter!(c => !marks[c] && !"'\"".canFind(c) && filter(c))		// strip accents, select noise cahracters, and bracketed content
+			.text.strip														// strip leading and trailing whitespace
+			.map!(c => c == ' ' ? cast(dchar)'_' : c)									// convert spaces to underscores
+			.text;
+	}
+
+	// return in the format "band_name-song_name[-suffix]"
+	return simplify(artist) ~ "-" ~ simplify(song) ~ (suffix ? "-" ~ simplify(suffix) : null);
+}
+
 
 // HACK: workaround since we can't initialise static AA's
 __gshared immutable Streams[string] musicFileNames;

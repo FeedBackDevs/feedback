@@ -40,8 +40,8 @@ bool LoadKSF(Track* track, DirEntry file, SongLibrary library)
 	Track* find = library.find(id);
 	if(!find)
 	{
-		track.contentPath = path;
 		track.song = new Song;
+		track.song.params["source_format"] = ".ksf";
 
 		track.song.id = id;
 		track.song.name = song;
@@ -55,21 +55,21 @@ bool LoadKSF(Track* track, DirEntry file, SongLibrary library)
 			if(isImageFile(filename))
 			{
 				if(fn[] == "disc")
-					track.cover = f.filename;
+					track.cover = f.filepath;
 				else if(fn[] == "back" || fn[] == "title" || fn[] == "title-bg")
-					track.background = f.filename;
+					track.background = f.filepath;
 			}
 			else if(isAudioFile(filename))
 			{
 				if(fn[] == "song")
-					track.addSource().addStream(f.filename);
+					track.addSource().addStream(f.filepath);
 				if(fn[] == "intro")
-					track.preview = f.filename;
+					track.preview = f.filepath;
 			}
 			else if(isVideoFile(filename))
 			{
 				if(fn[] == "song")
-					track.video = f.filename;
+					track.video = f.filepath;
 			}
 		}
 

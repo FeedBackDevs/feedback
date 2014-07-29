@@ -59,8 +59,8 @@ class Button : Label
 				state = getBoolFromString(value); break;
 			case "button_flags":
 				buttonFlags = getBitfieldValue!ButtonFlags(value); break;
-			case "onClicked":
-				bindWidgetEvent(OnClicked, value); break;
+			case "onClick":
+				bindWidgetEvent(OnClick, value); break;
 			default:
 				super.setProperty(property, value);
 		}
@@ -74,7 +74,7 @@ class Button : Label
 	}
 
 	// state change events
-	WidgetEvent OnClicked;
+	WidgetEvent OnClick;
 
 protected:
 	string _stylePressed;
@@ -129,7 +129,7 @@ protected:
 				setButtonState(!bState);
 
 			WidgetInputEvent clickEvent = WidgetInputEvent(this, down.pSource);
-			OnClicked(this, &clickEvent.base);
+			OnClick(this, &clickEvent.base);
 		}
 		else
 		{
@@ -159,7 +159,7 @@ protected:
 				setButtonState(!bState);
 
 			WidgetInputEvent clickEvent = WidgetInputEvent(this, up.pSource);
-			OnClicked(this, &clickEvent.base);
+			OnClick(this, &clickEvent.base);
 		}
 	}
 

@@ -11,8 +11,6 @@ import db.scorekeepers.drums;
 import db.songlibrary;
 
 import fuji.fuji;
-import fuji.material;
-import fuji.sound;
 import fuji.filesystem;
 import fuji.heap;
 
@@ -147,17 +145,13 @@ class Song
 				xml.parse();
 			};
 			xml.parse();
+
+			songPath = filename;
 		}
 		catch(Exception e)
 		{
 			MFDebug_Warn(2, "Couldn't load settings: " ~ e.msg);
 		}
-	}
-
-	~this()
-	{
-		// release the resources
-		release();
 	}
 
 	void saveChart(string path)
@@ -250,34 +244,12 @@ class Song
 		doc ~= partsElement;
 
 		string xml = join(doc.pretty(1),"\n");
-		MFFileSystem_Save(path ~ id ~ ".chart", cast(immutable(ubyte)[])xml);
+		songPath = path ~ id ~ ".chart";
+		MFFileSystem_Save(songPath, cast(immutable(ubyte)[])xml);
 	}
 
-	void Prepare(Track* track)
+	void prepare()
 	{
-		// load song data
-/*
-		if(cover)
-			pCover = MFMaterial_Create((songPath ~ cover).toStringz);
-		if(background)
-			pBackground = MFMaterial_Create((songPath ~ background).toStringz);
-		if(fretboard)
-			pFretboard = MFMaterial_Create((songPath ~ fretboard).toStringz);
-*/
-
-		// todo choose a source
-		Track.Source* source = &track.sources[0];
-
-		// prepare the music streams
-		foreach(s; source.streams)
-		{
-			streams[s.type] = MFSound_CreateStream((track.contentPath ~ s.stream).toStringz, MFAudioStreamFlags.QueryLength | MFAudioStreamFlags.AllowSeeking);
-			MFSound_PlayStream(streams[s.type], MFPlayFlags.BeginPaused);
-
-			voices[s.type] = MFSound_GetStreamVoice(streams[s.type]);
-//			MFSound_SetPlaybackRate(voices[i], 1.0f); // TODO: we can use this to speed/slow the song...
-		}
-
 		// calculate the note times for all tracks
 		CalculateNoteTimes(events, 0);
 		foreach(ref p; parts)
@@ -288,34 +260,6 @@ class Song
 				foreach(d; v.difficulties)
 					CalculateNoteTimes(d.notes, 0);
 			}
-		}
-	}
-
-	void release()
-	{
-		foreach(ref s; streams)
-		{
-			if(s)
-			{
-				MFSound_DestroyStream(s);
-				s = null;
-			}
-		}
-
-		if(pCover)
-		{
-			MFMaterial_Release(pCover);
-			pCover = null;
-		}
-		if(pBackground)
-		{
-			MFMaterial_Release(pBackground);
-			pBackground = null;
-		}
-		if(pFretboard)
-		{
-			MFMaterial_Release(pFretboard);
-			pFretboard = null;
 		}
 	}
 
@@ -430,30 +374,6 @@ class Song
 		}
 
 		return s;
-	}
-
-	void Pause(bool bPause)
-	{
-		foreach(s; streams)
-			if(s)
-				MFSound_PauseStream(s, bPause);
-	}
-
-	void Seek(float offsetInSeconds)
-	{
-		foreach(s; streams)
-			if(s)
-				MFSound_SeekStream(s, offsetInSeconds);
-	}
-
-	void SetVolume(Part part, float volume)
-	{
-		// TODO: figure how parts map to playing streams
-	}
-
-	void SetPan(Part part, float pan)
-	{
-		// TODO: figure how parts map to playing streams
 	}
 
 	bool IsPartPresent(Part part)
@@ -618,7 +538,7 @@ class Song
 	}
 
 	// data...
-//	string songPath;
+	string songPath;
 
 	string id;
 	string name;
@@ -644,13 +564,6 @@ class Song
 	Event[] sync;					// song sync stuff
 	Event[] events;					// general song/venue events (sections, effects, lighting, etc?)
 	SongPart[Part.Count] parts;
-
-	MFMaterial* pCover;
-	MFMaterial* pBackground;
-	MFMaterial* pFretboard;
-
-	MFAudioStream*[Streams.Count] streams;
-	MFVoice*[Streams.Count] voices;
 }
 
 

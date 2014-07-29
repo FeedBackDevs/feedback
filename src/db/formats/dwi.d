@@ -27,15 +27,15 @@ bool LoadDWI(Track* track, DirEntry file)
 
 	MFDebug_Log(2, "Loading song: '" ~ file.filepath ~ "'");
 
-	track.contentPath = path;
 	track.song = new Song;
+	track.song.params["source_format"] = ".dwi";
 
 	string name = file.filename.stripExtension;
 	track.song.params["original_name"] = name;
 	track.song.name = name;
 
 	// search for the music and other stuff...
-	string songName = file.filename.stripExtension.toLower;
+	string songName = name.toLower;
 	foreach(f; dirEntries(path ~ "*", SpanMode.shallow))
 	{
 		string filename = f.filename.toLower;
@@ -43,21 +43,21 @@ bool LoadDWI(Track* track, DirEntry file)
 		if(isImageFile(filename))
 		{
 			if(fn[] == songName || fn[] == "disc")
-				track.cover = f.filename;
+				track.cover = f.filepath;
 			else if(fn[] == songName ~ "-bg" || fn[] == "back" || fn[] == "title" || fn[] == "title-bg")
-				track.background = f.filename;
+				track.background = f.filepath;
 		}
 		else if(isAudioFile(filename))
 		{
 			if(fn[] == songName || fn[] == "song")
-				track.addSource().addStream(f.filename);
+				track.addSource().addStream(f.filepath);
 			if(fn[] == "intro")
-				track.preview = f.filename;
+				track.preview = f.filepath;
 		}
 		else if(isVideoFile(filename))
 		{
 			if(fn[] == songName || fn[] == "song")
-				track.video = f.filename;
+				track.video = f.filepath;
 		}
 		else if(filename[] == songName ~ ".lrc")
 		{
@@ -67,7 +67,7 @@ bool LoadDWI(Track* track, DirEntry file)
 	}
 
 	// load the steps
-	track.LoadDWI(steps);
+	track.LoadDWI(steps, path);
 
 	// split subtitle into variation
 	if(track.song.name[$-1] == ')')
@@ -88,7 +88,7 @@ bool LoadDWI(Track* track, DirEntry file)
 	return true;
 }
 
-bool LoadDWI(Track* track, const(char)[] dwi)
+bool LoadDWI(Track* track, const(char)[] dwi, string path)
 {
 	Song song = track.song;
 
@@ -123,25 +123,30 @@ bool LoadDWI(Track* track, const(char)[] dwi)
 		{
 			case "TITLE":			// #TITLE:...;  	 title of the song.
 				song.name = content.idup;
+				song.params[tag.idup] = song.name;
 				break;
 			case "ARTIST":			// #ARTIST:...;  	 artist of the song.
 				song.artist = content.idup;
+				song.params[tag.idup] = song.artist;
 				break;
 
 				// Special Characters are denoted by giving filenames in curly-brackets.
 				//   eg. #DISPLAYTITLE:The {kanji.png} Song;
 				// The extra character files should be 50 pixels high and be black-and-white. The baseline for the font should be 34 pixels from the top.
 			case "DISPLAYTITLE":	// #DISPLAYTITLE:...;  	 provides an alternate version of the song name that can also include special characters.
-				// TODO...
+				song.params[tag.idup] = content.idup;
 				break;
 			case "DISPLAYARTIST":	// #DISPLAYARTIST:...; 	 provides an alternate version of the artist name that can also include special characters.
-				// TODO...
+				song.params[tag.idup] = content.idup;
 				break;
 
 			case "GAP":				// #GAP:...;  	 number of milliseconds that pass before the program starts counting beats. Used to sync the steps to the music.
+				song.params[tag.idup] = content.idup;
 				song.startOffset = to!long(content)*1_000;
 				break;
 			case "BPM":				// #BPM:...;  	 BPM of the music
+				song.params[tag.idup] = content.idup;
+
 				Event ev;
 				ev.tick = 0;
 
@@ -160,15 +165,19 @@ bool LoadDWI(Track* track, const(char)[] dwi)
 				// *    - BPM cycles randomly
 				// a    - BPM stays set at 'a' value (no cycling)
 				// a..b - BPM cycles between 'a' and 'b' values
-				// TODO...
+				song.params[tag.idup] = content.idup;
 				break;
 			case "FILE":			// #FILE:...;  	 path to the music file to play (eg. /music/mysongs/abc.mp3 )
 				// TODO: check if it exists?
-				track.addSource().addStream(content.idup);
+				track.addSource().addStream((path ~ content).idup);
+				song.params[tag.idup] = content.idup;
 				break;
 			case "MD5":				// #MD5:...;  	 an MD5 string for the music file. Helps ensure that same music file is used on all systems.
+				song.params[tag.idup] = content.idup;
 				break;
 			case "FREEZE":			// #FREEZE:...;  	 a value of the format "BBB=sss". Indicates that at 'beat' "BBB", the motion of the arrows should stop for "sss" milliseconds. Turn on beat-display in the System menu to help determine what values to use. Multiple freezes can be given by separating them with commas.
+				song.params[tag.idup] = content.idup;
+
 				auto freezes = content.splitter(',');
 				foreach(f; freezes)
 				{
@@ -184,6 +193,8 @@ bool LoadDWI(Track* track, const(char)[] dwi)
 				}
 				break;
 			case "CHANGEBPM":		// #CHANGEBPM:...;  	 a value of the format "BBB=nnn". Indicates that at 'beat' "BBB", the speed of the arrows will change to reflect a new BPM of "nnn". Multiple BPM changes can be given by separating them with commas.
+				song.params[tag.idup] = content.idup;
+
 				auto bpms = content.splitter(',');
 				foreach(b; bpms)
 				{
@@ -199,25 +210,36 @@ bool LoadDWI(Track* track, const(char)[] dwi)
 				}
 				break;
 			case "STATUS":			// #STATUS:...;  	 can be "NEW" or "NORMAL". Changes the display of songs on the song-select screen.
+				song.params[tag.idup] = content.idup;
 				break;
 			case "GENRE":			// #GENRE:...;  	 a genre to assign to the song if "sort by Genre" is selected in the System Options. Multiple Genres can be given by separating them with commas.
-				song.packageName = content.idup;
+				song.genre = content.idup;
+				song.packageName = song.genre;
+				song.params[tag.idup] = song.genre;
 				break;
 			case "CDTITLE":			// #CDTITLE:...;  	 points to a small graphic file (64x40) that will display in the song selection screen in the bottom right of the background, showing which CD the song is from. The colour of the pixel in the upper-left will be made transparent.
+				song.params[tag.idup] = content.idup;
 				break;
 			case "SAMPLESTART":		// #SAMPLESTART:...;  	 the time in the music file that the preview music should start at the song-select screen. Can be given in Milliseconds (eg. 5230), Seconds (eg. 5.23), or minutes (eg. 0:05.23). Prefix the number with a "+" to factor in the GAP value.
+				song.params[tag.idup] = content.idup;
 				break;
 			case "SAMPLELENGTH":	// #SAMPLELENGTH:...;  	 how long to play the preview music for at the song-select screen. Can be in milliseconds, seconds, or minutes.
+				song.params[tag.idup] = content.idup;
 				break;
 			case "RANDSEED":		// #RANDSEED:x;  	 provide a number that will influence what AVIs DWI picks and their order. Will be the same animation each time if AVI filenames and count doesn't change (default is random each time).
+				song.params[tag.idup] = content.idup;
 				break;
 			case "RANDSTART":		// #RANDSTART:x;  	 tells DWI what beat to start the animations on. Default is 32.
+				song.params[tag.idup] = content.idup;
 				break;
 			case "RANDFOLDER":		// #RANDFOLDER:...;  	 tells DWI to look in another folder when choosing AVIs, allowing 'themed' folders.
+				song.params[tag.idup] = content.idup;
 				break;
 			case "RANDLIST":		// #RANDLIST:...;  	 a list of comma-separated filenames to use in the folder.
+				song.params[tag.idup] = content.idup;
 				break;
 			case "BACKGROUND":		// #BACKGROUND:     ........     #END;
+				song.params[tag.idup] = content.idup;
 				break;
 
 			case "SINGLE", "DOUBLE", "COUPLE", "SOLO":

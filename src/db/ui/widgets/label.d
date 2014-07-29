@@ -127,7 +127,7 @@ protected:
 
 				// resize the widget accordingly
 				float height;
-				float width = MFFont_GetStringWidth(_font, t, _textHeight, bAutoWidth ? 0 : _size.x, -1, &height);
+				float width = MFFont_GetStringWidth(_font.handle, t, _textHeight, bAutoWidth ? 0 : _size.x, -1, &height);
 
 				if(bAutoWidth)
 					newSize.x = width;
