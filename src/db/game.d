@@ -83,7 +83,6 @@ class Game
 		// create song library
 
 		songLibrary = new SongLibrary();
-		songLibrary.save();
 
 		// scan for new songs
 		songLibrary.scan();

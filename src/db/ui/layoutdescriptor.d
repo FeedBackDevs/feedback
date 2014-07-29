@@ -54,7 +54,9 @@ public:
 
 	Widget spawn()
 	{
-		return spawn(root);
+		if(root)
+			return spawn(root);
+		return null;
 	}
 
 protected:

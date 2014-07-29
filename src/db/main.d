@@ -50,7 +50,7 @@ else
 
 	    try
 	    {
-			Game game = Game.Instance;
+			Game game = Game.instance;
 
 			const(char)*[] argv;
 			foreach(arg; args)
