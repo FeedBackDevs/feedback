@@ -1,5 +1,6 @@
 module db.ui.layoutdescriptor;
 
+import db.game;
 import db.ui.ui;
 import db.ui.widget;
 import db.ui.widgets.layout;
@@ -12,6 +13,8 @@ import std.xml;
 import std.algorithm;
 import std.ascii;
 import std.range;
+
+import luad.state;
 
 class LayoutDescriptor
 {
@@ -146,7 +149,17 @@ protected:
 
 	static void parseLuaScript(string text)
 	{
-		// load script
-		// todo...
+		// NOTE: should we run when spawn, or when we load?
+		// if we run when spawn, then global state may be clobbered each spawn...
+
+		// run the script...
+		try
+		{
+			Game.instance.lua.doString(text);
+		}
+		catch(Exception e)
+		{
+			MFDebug_Warn(2, "Script error: " ~ e.msg);
+		}
 	}
 }

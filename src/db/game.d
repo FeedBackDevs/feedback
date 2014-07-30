@@ -24,6 +24,9 @@ import db.ui.ui;
 import db.ui.layoutdescriptor;
 import db.ui.widget;
 
+import db.lua;
+import luad.state;
+
 class Game
 {
 	static void registerCallbacks()
@@ -83,6 +86,9 @@ class Game
 
 		// TODO: auto-detect instruments (controllers, midi/audio devices)
 		InputDevice[] inputs = detectInstruments();
+
+		// init the lua VM
+		lua = initLua();
 
 		// init UI
 		MFRect rect;
@@ -212,7 +218,6 @@ class Game
 	//-------------------------------------------------------------------------------------------------------
 	// data
 	MFInitParams initParams;
-
 	Settings settings;
 
 	Renderer renderer;
@@ -224,10 +229,9 @@ class Game
 	Performance performance;
 
 	UserInterface ui;
-	Widget bootup;
-
 	Theme theme;
 
+	LuaState lua;
 
 	// singleton stuff
 	static @property Game instance() { if(_instance is null) _instance = new Game; return _instance; }
