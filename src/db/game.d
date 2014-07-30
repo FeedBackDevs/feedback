@@ -78,20 +78,35 @@ class Game
 	{
 		renderer = new Renderer;
 
-		// TODO: the following stuff should all be asynchronous with a loading screen:
-
-		// create song library
-
-		songLibrary = new SongLibrary();
-
-		// scan for new songs
-		songLibrary.scan();
-
 		// enable buffered input
 		MFInput_EnableBufferedInput(true);
 
 		// TODO: auto-detect instruments (controllers, midi/audio devices)
-		InputDevice[] inputs = DetectInstruments();
+		InputDevice[] inputs = detectInstruments();
+
+		// init UI
+		MFRect rect;
+		MFDisplay_GetDisplayRect(&rect);
+
+		ui = new UserInterface(rect);
+		UserInterface.setActive(ui);
+
+		// load the bootup UI
+		LayoutDescriptor desc = new LayoutDescriptor("boot.xml");
+		if(desc)
+		{
+			Widget boot = desc.spawn();
+			if(boot)
+				ui.addTopLevelWidget(boot);
+		}
+
+		// TODO: the following stuff should all be asynchronous with a loading screen:
+
+		// create song library
+		songLibrary = new SongLibrary();
+
+		// scan for new songs
+		songLibrary.scan();
 
 		// save the settings (detected inputs and stuff)
 		saveSettings();
@@ -121,28 +136,23 @@ class Game
 		}
 
 		// HACK: create a performance of the first song in the library
-		Track* track = songLibrary.find("judy_crystal-nori_nori_nori");
+		Track* track = songLibrary.find("silvertear-so_deep-perfect_sphere_remix");
 		if(track)
 		{
 			performance = new Performance(track, players);
 			performance.Begin();
 		}
 
-		// init UI
-		MFRect rect;
-		MFDisplay_GetDisplayRect(&rect);
-
-		ui = new UserInterface(rect);
-		UserInterface.setActive(ui);
-
-		// load the bootup UI
-		LayoutDescriptor desc = new LayoutDescriptor("boot.xml");
-		assert(desc, "Couldn't load boot.xml");
-		Widget boot = desc.spawn();
-		assert(boot, "Couldn't spawn boot.xml!");
-		ui.addTopLevelWidget(boot);
-
+		// load the theme
 		theme = Theme.load(settings.theme);
+		if(!theme)
+			theme = Theme.load("Default");
+		if(!theme)
+		{
+			MFDebug_Warn(2, "Couldn't load theme!".ptr);
+			return;
+		}
+
 		ui.addTopLevelWidget(theme.ui);
 	}
 

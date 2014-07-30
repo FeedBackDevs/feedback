@@ -294,6 +294,7 @@ class Widget
 			case "enabled":
 				enabled = getBoolFromString(value); break;
 			case "visible":
+			case "visibility":
 				visibility = getEnumValue!Visibility(value); break;
 			case "zDepth":
 				zDepth = to!int(value); break;
@@ -352,7 +353,7 @@ class Widget
 				if(setRenderProperty(property, value, this))
 					return;
 				else
-					MFDebug_Warn(2, format("Unknown property for '%s' %s='%s'", typeName, property, value));
+					MFDebug_Warn(2, format("Unknown property for '%s' %s=\"%s\"", typeName, property, value));
 			}
 		}
 	}
@@ -765,6 +766,7 @@ protected:
 
 	string getRenderProperty(const(char)[] property)
 	{
+		MFDebug_Warn(2, format("Unknown property for '%s': %s", typeName, property));
 		return null;
 	}
 

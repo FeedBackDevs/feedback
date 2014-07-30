@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Frame id="bootup" align="TopCenter">
+	<Label text="FeedBack!" text_height="100" text_colour="white"/>
+</Frame>
+<Frame id="loading" align="Center" visible="gone">
+	<Label text="Loading..." text_height="100" text_colour="white"/>
+</Frame>

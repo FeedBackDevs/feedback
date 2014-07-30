@@ -350,12 +350,12 @@ __gshared immutable ubyte[128] WhiteKeys =
 ];
 
 
-InputDevice[] DetectInstruments()
+InputDevice[] detectInstruments()
 {
 	InputDevice[] devices;
 
-	Controller[] controllers = DetectControllers();
-	Midi[] midiDevices = DetectMidiDevices();
+	Controller[] controllers = detectControllers();
+	Midi[] midiDevices = detectMidiDevices();
 
 	devices ~= controllers;
 	devices ~= midiDevices;

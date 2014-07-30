@@ -146,7 +146,7 @@ class Controller : InputDevice
 	ulong startTime;
 }
 
-Controller[] DetectControllers()
+Controller[] detectControllers()
 {
 	Controller[] controllers;
 

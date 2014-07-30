@@ -76,7 +76,7 @@ class Midi : InputDevice
 	int deviceId;
 }
 
-Midi[] DetectMidiDevices()
+Midi[] detectMidiDevices()
 {
 	Midi[] devices;
 
