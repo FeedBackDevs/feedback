@@ -30,7 +30,7 @@ class Layout : Widget
 
 	final size_t addChild(Widget child)
 	{
-		size_t id = _children.length;
+		size_t index = _children.length;
 		_children ~= child;
 
 		child.parent = this;
@@ -38,7 +38,7 @@ class Layout : Widget
 
 		arrangeChildren();
 
-		return id;
+		return index;
 	}
 
 	final void removeChild(Widget child)
@@ -77,6 +77,34 @@ class Layout : Widget
 	override @property Widget[] children() pure nothrow
 	{
 		return _children;
+	}
+
+	final int setDepth(Widget child, int depth) pure nothrow
+	{
+		depth = _children.length <= depth ? cast(int)_children.length - 1 : depth;
+		depth = cast(int)_children.length - depth - 1;
+		foreach(i, c; _children)
+		{
+			if(child is c)
+			{
+				if(depth < i)
+					_children = _children[0..depth] ~ child ~ _children[depth..i] ~ _children[i+1..$];
+				else if(depth > i)
+					_children = _children[0..i] ~ _children[i+1..depth] ~ child ~ _children[depth..$];
+				return depth;
+			}
+		}
+		return -1;
+	}
+
+	final int getDepth(const(Widget) child) const pure nothrow
+	{
+		foreach(int i, c; _children)
+		{
+			if(child is c)
+				return cast(int)_children.length - i - 1;
+		}
+		return -1;
 	}
 
 	override void setProperty(const(char)[] property, const(char)[] value)

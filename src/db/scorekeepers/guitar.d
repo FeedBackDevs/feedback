@@ -63,7 +63,7 @@ class GuitarScoreKeeper : ScoreKeeper
 		GuitarNote[] expecting = null;//GetNext();
 		if(expecting)
 		{
-			foreach(e; inputDevice.events)
+			foreach(ref e; inputDevice.events)
 			{
 				if(e.event == InputEventType.On && (e.key >= GuitarInput.Green && e.key <= GuitarInput.Orange))
 					keyDown.emit(e.key);

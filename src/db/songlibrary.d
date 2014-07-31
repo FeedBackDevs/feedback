@@ -121,7 +121,7 @@ struct Track
 		Source* source = &sources[0];
 
 		// prepare the music streams
-		foreach(s; source.streams)
+		foreach(ref s; source.streams)
 		{
 			streams[s.type] = MFSound_CreateStream(s.stream.toStringz, MFAudioStreamFlags.QueryLength | MFAudioStreamFlags.AllowSeeking);
 			MFSound_PlayStream(streams[s.type], MFPlayFlags.BeginPaused);
@@ -266,10 +266,10 @@ class SongLibrary
 			if(track.fretboard)		t ~= new Element("fretboard", track.fretboard);
 
 			auto srcs = new Element("sources");
-			foreach(s; track.sources)
+			foreach(ref s; track.sources)
 			{
 				auto src = new Element("source");
-				foreach(stream; s.streams)
+				foreach(ref stream; s.streams)
 				{
 					auto str = new Element("stream", stream.stream);
 					str.tag.attr["type"] = getEnumFromValue(stream.type);

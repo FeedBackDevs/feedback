@@ -96,7 +96,7 @@ struct WidgetStyle
 		}
 
 		// apply properties
-		foreach(p; properties)
+		foreach(ref p; properties)
 			widget.setProperty(p.property, p.value);
 	}
 

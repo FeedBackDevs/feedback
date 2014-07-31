@@ -6,6 +6,7 @@ import db.ui.ui;
 import db.ui.inputmanager;
 import db.ui.widgetevent;
 import db.ui.widgetstyle;
+import db.ui.widgets.layout;
 
 import fuji.dbg;
 import fuji.types;
@@ -141,6 +142,9 @@ class Widget
 			}
 		}
 	}
+
+	final @property int zdepth() const pure nothrow { return _parent ? _parent.getDepth(this) : -1; }
+	final @property void zdepth(int depth) pure nothrow { if(_parent) _parent.setDepth(this, depth); }
 
 	final @property bool clickable() const pure nothrow { return bClickable; }
 	final @property void clickable(bool clickable) pure nothrow { bClickable = clickable; }
@@ -293,11 +297,16 @@ class Widget
 				styleDisabled = value; break;
 			case "enabled":
 				enabled = getBoolFromString(value); break;
-			case "visible":
 			case "visibility":
 				visibility = getEnumValue!Visibility(value); break;
-			case "zDepth":
-				zDepth = to!int(value); break;
+			case "clickable":
+				clickable = getBoolFromString(value); break;
+			case "dragable":
+				dragable = getBoolFromString(value); break;
+			case "hoverable":
+				hoverable = getBoolFromString(value); break;
+			case "zdepth":
+				zdepth = to!int(value); break;
 			case "weight":
 				layoutWeight = to!float(value); break;
 			case "position":
@@ -333,18 +342,25 @@ class Widget
 			case "onfocuschanged":
 				bindWidgetEvent(OnFocusChanged, value); break;
 			case "ondown":
+				clickable = true;
 				bindWidgetEvent(OnDown, value); break;
 			case "onup":
+				clickable = true;
 				bindWidgetEvent(OnUp, value); break;
 			case "ontap":
+				clickable = true;
 				bindWidgetEvent(OnTap, value); break;
 			case "ondrag":
+				dragable = true;
 				bindWidgetEvent(OnDrag, value); break;
 			case "onhover":
+				hoverable = true;
 				bindWidgetEvent(OnHover, value); break;
 			case "onhoverover":
+				hoverable = true;
 				bindWidgetEvent(OnHoverOver, value); break;
 			case "onhoverout":
+				hoverable = true;
 				bindWidgetEvent(OnHoverOut, value); break;
 			case "oncharacter":
 				bindWidgetEvent(OnCharacter, value); break;
@@ -375,7 +391,7 @@ class Widget
 
 	// support widget hierarchy
 	@property Widget[] children() pure nothrow { return null; }
-	final @property Widget parent() { return _parent; }
+	final @property Layout parent() { return _parent; }
 
 	final Widget findChild(const(char)[] name)
 	{
@@ -429,7 +445,7 @@ class Widget
 	MFMatrix matrix;
 	MFMatrix invMatrix;
 
-	Widget _parent;
+	Layout _parent;
 
 	InputEventDelegate inputEventHook;
 
@@ -448,15 +464,13 @@ class Widget
 	bool bAutoHeight = true;
 	bool bClickable, bDragable, bHoverable;
 
-	int zDepth;
-
 	Justification _layoutJustification = Justification.None;
 	float _layoutWeight = 1;
 
 	bool bMatrixDirty = true;
 	bool bInvMatrixDirty = true;
 
-	final @property void parent(Widget parent) { _parent = parent; }
+	final @property void parent(Layout parent) { _parent = parent; }
 
 	void update()
 	{

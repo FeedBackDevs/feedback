@@ -13,6 +13,7 @@ import fuji.system;
 import fuji.vector;
 import fuji.matrix;
 import fuji.input;
+import fuji.font;
 import fuji.dbg;
 
 import std.string;
@@ -74,6 +75,7 @@ class UserInterface
 	this(MFRect displayRect)
 	{
 		root = createWidget!Frame();
+		root.id = "ui-root";
 
 		this.displayRect = displayRect;
 
@@ -98,6 +100,13 @@ class UserInterface
 	final void draw()
 	{
 		root.draw();
+/+
+		Font font = Font.debugFont;
+		if(hoverList[0])
+			font.draw(hoverList[0].id ? hoverList[0].id : hoverList[0].typeName, 100, 100, 20);
+		else
+			font.draw("none", 100, 100, 20);
++/
 	}
 
 	final void addTopLevelWidget(Widget widget)

@@ -87,7 +87,7 @@ class KeysScoreKeeper : ScoreKeeper
 				break;
 		}
 
-		foreach(e; inputDevice.events)
+		foreach(ref e; inputDevice.events)
 		{
 			// adjust timestamp to compensate for audio latency
 			long timestamp = e.timestamp - audioLatency;

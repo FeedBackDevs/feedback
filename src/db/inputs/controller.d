@@ -75,7 +75,7 @@ class Controller : InputDevice
 		MFInputEvent[] events;
 		while((events = MFInput_GetEvents(MFInputDevice.Gamepad, controllerId, buffer[])) != null)
 		{
-			foreach(e; events)
+			foreach(ref e; events)
 			{
 				// we only care about trigger events...
 				if(e.event == MFInputEventType.Change)

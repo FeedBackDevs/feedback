@@ -52,7 +52,7 @@ class Midi : InputDevice
 		MFMidiEvent[] events;
 		while((events = MFMidi_GetEvents(pMidiInput, buffer[])) != null)
 		{
-			foreach(e; events)
+			foreach(ref e; events)
 			{
 				// we only care about trigger events...
 				if(e.command >= 0x80 || e.command <= 0xA0)

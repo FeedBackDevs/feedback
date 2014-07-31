@@ -87,7 +87,7 @@ class DanceScoreKeeper : ScoreKeeper
 				break;
 		}
 
-		foreach(e; inputDevice.events)
+		foreach(ref e; inputDevice.events)
 		{
 			if(e.event != InputEventType.On)
 				continue;

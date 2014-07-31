@@ -1,12 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Frame>
-	<?lua
-		print("Hello from Lua!")
-	?>
-	<Frame id="bootup" align="TopCenter">
-		<Label text="FeedBack!" text_height="100" text_colour="white" />
+<Frame id="boot" align="Fill">
+	<Frame id="welcome" align="TopCenter">
+		<Label id="2" text="FeedBack!" text_height="100" text_colour="white" />
 	</Frame>
-	<Frame id="loading" align="Center" visible="gone">
-		<Label text="Loading..." text_height="100" text_colour="white" />
+	<Frame id="loading" align="Center" visibility="gone">
+		<Label id="3" text="Loading..." text_height="100" text_colour="white" />
 	</Frame>
 </Frame>

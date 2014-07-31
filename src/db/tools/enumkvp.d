@@ -39,7 +39,7 @@ Enum getEnumValue(Enum)(const(char)[] value) if(is(Enum == enum))
 	if(!value.empty)
 	{
 		auto kvp = getKeyValuePair!Enum();
-		foreach(i; kvp)
+		foreach(ref i; kvp)
 		{
 			if(!icmp(i.key, value))
 				return i.value;
@@ -63,7 +63,7 @@ uint getBitfieldValue(Enum)(const(char)[] flags)
 string getEnumFromValue(Enum)(Enum value)
 {
 	auto kvp = getKeyValuePair!Enum();
-	foreach(i; kvp)
+	foreach(ref i; kvp)
 	{
 		if(value == i.value)
 			return i.key;

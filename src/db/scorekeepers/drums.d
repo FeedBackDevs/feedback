@@ -213,7 +213,7 @@ class DrumsScoreKeeper : ScoreKeeper
 				break;
 		}
 
-		foreach(e; inputDevice.events)
+		foreach(ref e; inputDevice.events)
 		{
 			if(e.key == DrumInput.HatPedal)
 				hatPos.emit(e.velocity == 0);

@@ -86,7 +86,7 @@ protected:
 			return null;
 
 		// apply properties
-		foreach(a; node.attributes)
+		foreach(ref a; node.attributes)
 			widget.setProperty(a.property, a.value);
 
 		// spawn children

@@ -516,6 +516,9 @@ protected:
 			this.buttonID = buttonID;
 			this.x = downX = x;
 			this.y = downY = y;
+			downTime = 0;
+			bDrag = false;
+			bState = false;
 		}
 
 		InputSource *pSource;

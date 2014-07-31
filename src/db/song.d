@@ -161,7 +161,7 @@ class Song
 			string prefix = "                    "[0..depth*1];
 			string sequence = "\n";
 			int lastTick = 0;
-			foreach(e; events)
+			foreach(ref e; events)
 			{
 				sequence ~= e.toString(lastTick, prefix, "\n");
 				lastTick = e.tick;
@@ -218,7 +218,7 @@ class Song
 			auto partEvents = new Element("events", writeSequence(part.events, 4));
 			partElement ~= partEvents;
 
-			foreach(v; part.variations)
+			foreach(ref v; part.variations)
 			{
 				auto variationElement = new Element("variation");
 				variationElement.tag.attr["name"] = v.name;
@@ -398,7 +398,7 @@ class Song
 
 	@property int startUsPB() const pure nothrow
 	{
-		foreach(e; sync)
+		foreach(ref e; sync)
 		{
 			if(e.tick != 0)
 				break;

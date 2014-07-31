@@ -67,7 +67,7 @@ struct Settings
 		doc ~= new Element("micLatency", to!string(micLatency));
 
 		auto devs = new Element("devices");
-		foreach(device; devices)
+		foreach(ref device; devices)
 		{
 			auto dev = new Element("Device");
 
