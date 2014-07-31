@@ -59,7 +59,7 @@ class Button : Label
 				state = getBoolFromString(value); break;
 			case "button_flags":
 				buttonFlags = getBitfieldValue!ButtonFlags(value); break;
-			case "onClick":
+			case "onclick":
 				bindWidgetEvent(OnClick, value); break;
 			default:
 				super.setProperty(property, value);

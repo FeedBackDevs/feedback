@@ -320,33 +320,33 @@ class Widget
 				id = value; break;
 			case "align":
 				layoutJustification = getEnumValue!Justification(value); break;
-			case "onEnabledChanged":
+			case "onenabledchanged":
 				bindWidgetEvent(OnEnabledChanged, value); break;
-			case "onVisibleChanged":
+			case "onvisiblechanged":
 				bindWidgetEvent(OnVisibleChanged, value); break;
-			case "onLayoutChanged":
+			case "onlayoutchanged":
 				bindWidgetEvent(OnLayoutChanged, value); break;
-			case "onMove":
+			case "onmove":
 				bindWidgetEvent(OnMove, value); break;
-			case "onResize":
+			case "onresize":
 				bindWidgetEvent(OnResize, value); break;
-			case "onFocusChanged":
+			case "onfocuschanged":
 				bindWidgetEvent(OnFocusChanged, value); break;
-			case "onDown":
+			case "ondown":
 				bindWidgetEvent(OnDown, value); break;
-			case "onUp":
+			case "onup":
 				bindWidgetEvent(OnUp, value); break;
-			case "onTap":
+			case "ontap":
 				bindWidgetEvent(OnTap, value); break;
-			case "onDrag":
+			case "ondrag":
 				bindWidgetEvent(OnDrag, value); break;
-			case "onHover":
+			case "onhover":
 				bindWidgetEvent(OnHover, value); break;
-			case "onHoverOver":
+			case "onhoverover":
 				bindWidgetEvent(OnHoverOver, value); break;
-			case "onHoverOut":
+			case "onhoverout":
 				bindWidgetEvent(OnHoverOut, value); break;
-			case "onCharacter":
+			case "oncharacter":
 				bindWidgetEvent(OnCharacter, value); break;
 			default:
 			{
@@ -886,9 +886,26 @@ MFVector getColourFromString(const(char)[] value)
 	return getVectorFromString(value, MFVector.identity);
 }
 
+import luad.lfunction;
+import db.game;
+struct LuaDelegate
+{
+	string func;
+
+	final void luaCall(Widget widget, const(WidgetEventInfo)* ev)
+	{
+		LuaFunction lfunc = Game.instance.lua.get!LuaFunction(func);
+		lfunc.call();
+	}
+}
+
 void bindWidgetEvent(ref WidgetEvent event, const(char)[] eventName)
 {
 	WidgetEvent.Handler d = UserInterface.getEventHandler(eventName);
-	if(d)
-		event ~= d;
+	if(!d)
+	{
+		LuaDelegate* ld = new LuaDelegate(eventName.idup);
+		d = &ld.luaCall;
+	}
+	event ~= d;
 }

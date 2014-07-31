@@ -17,7 +17,8 @@ LuaState initLua()
 	return lua;
 }
 
-static void luaPrint(LuaObject[] params...)
+private:
+extern(C) void luaPrint(LuaObject[] params...)
 {
 	string msg;
 	if(params.length > 0)
@@ -29,7 +30,7 @@ static void luaPrint(LuaObject[] params...)
 	MFDebug_Message(msg);
 }
 
-static void luaError(LuaObject[] params...)
+extern(C) void luaError(LuaObject[] params...)
 {
 	string msg;
 	if(params.length > 0)
@@ -41,7 +42,7 @@ static void luaError(LuaObject[] params...)
 	MFDebug_Error(msg);
 }
 
-static void luaWarn(int level, LuaObject[] params...)
+extern(C) void luaWarn(int level, LuaObject[] params...)
 {
 	string msg;
 	if(params.length > 0)
@@ -53,7 +54,7 @@ static void luaWarn(int level, LuaObject[] params...)
 	MFDebug_Warn(level, msg);
 }
 
-static void luaLog(int level, LuaObject[] params...)
+extern(C) void luaLog(int level, LuaObject[] params...)
 {
 	string msg;
 	if(params.length > 0)
