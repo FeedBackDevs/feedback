@@ -70,3 +70,7 @@ solution "FeedBack"
 			links { "Gdi32.lib", "Ole32.lib", "oleaut32.lib" }
 			links { "FujiMiddleware.lib" }
 			links { "lua.lib" }
+
+		configuration { "linux" }
+			links { "lua5.1.a" }
+
