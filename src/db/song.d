@@ -71,12 +71,10 @@ class Song
 
 		try
 		{
-			ubyte[] file = MFFileSystem_Load(filename);
-			string s = cast(string)file.idup;
-			MFHeap_Free(file);
+			string file = MFFileSystem_LoadText(filename).assumeUnique;
 
 			// parse xml
-			auto xml = new DocumentParser(s);
+			auto xml = new DocumentParser(file);
 
 			xml.onEndTag["id"]				= (in Element e) { id			= e.text(); };
 			xml.onEndTag["name"]			= (in Element e) { name			= e.text(); };

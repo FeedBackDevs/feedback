@@ -191,15 +191,12 @@ class SongLibrary
 	{
 		try
 		{
-			ubyte[] file = MFFileSystem_Load("system:cache/library.xml"[]);
+			string file = MFFileSystem_LoadText("system:cache/library.xml").assumeUnique;
 			if(!file)
 				return;
 
-			string s = cast(string)file.idup;
-			MFHeap_Free(file);
-
 			// parse xml
-			auto xml = new DocumentParser(s);
+			auto xml = new DocumentParser(file);
 
 			xml.onEndTag["lastScan"] = (in Element e) { lastScan.ticks		= to!ulong(e.text()); };
 
@@ -283,7 +280,7 @@ class SongLibrary
 		doc ~= tracks;
 
 		string xml = join(doc.pretty(2),"\n");
-		MFFileSystem_Save("system:cache/library.xml", cast(immutable(ubyte)[])xml);
+		MFFileSystem_SaveText("system:cache/library.xml", xml);
 	}
 
 	void scan()

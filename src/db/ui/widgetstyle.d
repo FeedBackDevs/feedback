@@ -13,14 +13,14 @@ struct WidgetStyle
 {
 	static bool loadStylesFromXML(const(char)[] filename)
 	{
-		char[] file = cast(char[])MFFileSystem_Load(filename);
+		string file = MFFileSystem_LoadText(filename).assumeUnique;
 		if(!file)
 			return false;
 
 		try
 		{
 			// parse xml
-			auto xml = new DocumentParser(file.idup);
+			auto xml = new DocumentParser(file);
 
 			assert(xml.tag.name == "Resources", "Root element should be <Resources>");
 
@@ -74,7 +74,6 @@ struct WidgetStyle
 			return false;
 		}
 
-		MFHeap_Free(file);
 		return true;
 	}
 

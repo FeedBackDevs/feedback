@@ -72,7 +72,7 @@ class Widget
 	}
 
 	// properties
-	final @property string typeName() const { return typeof(this).stringof; }
+	final @property string typeName() const pure nothrow { return typeof(this).stringof; }
 
 	final @property string id() const pure nothrow { return _id; }
 	final @property void id(const(char)[] id) pure nothrow { _id = id.idup; }
@@ -410,6 +410,33 @@ class Widget
 		return null;
 	}
 
+	final int raise()
+	{
+		if(_parent)
+			return _parent.raise(this);
+		return -1;
+	}
+
+	final int lower()
+	{
+		if(_parent)
+			return _parent.lower(this);
+		return -1;
+	}
+
+	final int stackUnder(Widget under)
+	{
+		if(_parent)
+			return _parent.stackUnder(this, under);
+		return -1;
+	}
+
+	final int stackAbove(Widget above)
+	{
+		if(_parent)
+			return _parent.stackAbove(this, above);
+		return -1;
+	}
 
 	// state change events
 	WidgetEvent OnEnabledChanged;
@@ -433,7 +460,7 @@ class Widget
 
 	WidgetEvent OnCharacter;	// if the input was able to generate a unicode character
 
-//FIXME: package:
+//package:
 	MFVector _position;					// relative to parent
 	MFVector _size;						// size of widget volume
 	MFVector _colour = MFVector.white;	// colour modulation
@@ -900,26 +927,21 @@ MFVector getColourFromString(const(char)[] value)
 	return getVectorFromString(value, MFVector.identity);
 }
 
-import luad.lfunction;
-import db.game;
-struct LuaDelegate
-{
-	string func;
+import db.lua;
 
-	final void luaCall(Widget widget, const(WidgetEventInfo)* ev)
-	{
-		LuaFunction lfunc = Game.instance.lua.get!LuaFunction(func);
-		lfunc.call();
-	}
-}
-
-void bindWidgetEvent(ref WidgetEvent event, const(char)[] eventName)
+void bindWidgetEvent(ref WidgetEvent event, const(char)[] handler)
 {
-	WidgetEvent.Handler d = UserInterface.getEventHandler(eventName);
+	WidgetEvent.Handler d = UserInterface.getEventHandler(handler);
 	if(!d)
 	{
-		LuaDelegate* ld = new LuaDelegate(eventName.idup);
-		d = &ld.luaCall;
+		try
+		{
+			LuaDelegate* ld = new LuaDelegate(handler);
+			d = ld.getDelegate;
+		}
+		catch(Exception e)
+			MFDebug_Warn(2, "Couldn't create Lua delegate: " ~ e.msg);
 	}
-	event ~= d;
+	if(d)
+		event ~= d;
 }

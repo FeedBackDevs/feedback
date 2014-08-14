@@ -15,6 +15,11 @@ import db.songlibrary;
 import std.string;
 import std.path;
 
+// Pieced together from multiple sources:
+// http://dguitar.sourceforge.net/GP4format.html
+// http://sourceforge.net/p/kguitar/code/HEAD/tree/trunk/kguitar/kguitar/convertgtp.cpp
+// http://sourceforge.net/p/tuxguitar/code/HEAD/tree/trunk/TuxGuitar-gtp/src/org/herac/tuxguitar/io/gtp/GP4InputStream.java#l201
+
 bool LoadGuitarPro(Track* track, DirEntry file)
 {
 	string path = file.directory ~ "/";

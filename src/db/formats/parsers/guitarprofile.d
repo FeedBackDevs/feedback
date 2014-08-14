@@ -26,7 +26,6 @@ class GuitarProFile
 	this(const(char)[] filename)
 	{
 		ubyte[] file = enforce(MFFileSystem_Load(filename), "Couldn't load file!");
-		scope(exit) MFHeap_Free(file); // this should happen whether or not the base constructor throws
 		this(file);
 	}
 

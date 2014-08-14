@@ -3,16 +3,19 @@ module db.ui.layoutdescriptor;
 import db.game;
 import db.ui.ui;
 import db.ui.widget;
+import db.ui.widgetstyle;
 import db.ui.widgets.layout;
 
 import fuji.dbg;
 import fuji.heap;
 import fuji.filesystem;
+import fuji.string;
 
 import std.xml;
 import std.algorithm;
 import std.ascii;
 import std.range;
+import std.string;
 
 import luad.state;
 
@@ -34,14 +37,19 @@ public:
 	{
 		// destroy any existing descriptor
 		destroyNode(root);
+		this.filename = null;
 
-		char[] file = cast(char[])MFFileSystem_Load(filename);
+		string file = MFFileSystem_LoadText(filename).assumeUnique;
 		if(!file)
 			return false;
 
+		string fn = filename.idup;
+		this.filename = fileName(fn);
+		this.filepath = filePath(fn);
+
 		try
 		{
-			auto xml = new DocumentParser(file.idup);
+			auto xml = new DocumentParser(file);
 			root = parseElement(xml);
 		}
 		catch(Exception e)
@@ -49,8 +57,6 @@ public:
 			MFDebug_Error(e.msg);
 			return false;
 		}
-
-		MFHeap_Free(file);
 		return true;
 	}
 
@@ -74,7 +80,12 @@ protected:
 		string type;
 		Attribute[] attributes;
 		Node*[] children;
+
+		string script;
 	}
+
+	string filename;
+	string filepath;
 
 	Node* root;
 
@@ -88,6 +99,15 @@ protected:
 		// apply properties
 		foreach(ref a; node.attributes)
 			widget.setProperty(a.property, a.value);
+
+		// execute script
+		if(node.script)
+		{
+			try
+				Game.instance.lua.doString(node.script);
+			catch(Exception e)
+				MFDebug_Warn(2, "Script error: " ~ e.msg);
+		}
 
 		// spawn children
 		foreach(c; node.children)
@@ -111,12 +131,9 @@ protected:
 		// destroy the child nodes
 		foreach(c; node.children)
 			destroyNode(c);
-
-		// and free this node
-//		MFHeap_Free(node);
 	}
 
-	static Node* parseElement(ElementParser xml)
+	Node* parseElement(ElementParser xml)
 	{
 		Node* node = new Node;
 
@@ -127,9 +144,37 @@ protected:
 
 		xml.onStartTag[null] = (ElementParser xml)
 		{
-			Node* child = parseElement(xml);
-			if(child)
-				node.children ~= child;
+			if(!icmp(xml.tag.name, "script"))
+			{
+				// load external script...
+				string file = xml.tag.attr["src"];
+				if(file)
+				{
+					string fn = makePath(filepath, file);
+					string source = MFFileSystem_LoadText(fn).assumeUnique;
+					if(source)
+						node.script ~= source;
+				}
+				else
+					MFDebug_Warn(2, "<script> element has no 'src' attribute. Can't load script.".ptr);
+			}
+			else if(!icmp(xml.tag.name, "style"))
+			{
+				// load external script...
+				string file = xml.tag.attr["src"];
+				if(file)
+				{
+//					WidgetStyle style = WidgetStyle.loadStylesFromXML(file);
+				}
+				else
+					MFDebug_Warn(2, "<style> element has no 'src' attribute. Can't load styles.".ptr);
+			}
+			else
+			{
+				Node* child = parseElement(xml);
+				if(child)
+					node.children ~= child;
+			}
 		};
 
 		xml.onPI((string text) {
@@ -137,7 +182,7 @@ protected:
 				return;
 			string tag = text.splitter.front;
 			if(tag == "lua")
-				parseLuaScript(text.drop(tag.length));
+				node.script ~= "\n" ~ text.drop(tag.length + 1);
 			else
 				MFDebug_Warn(2, "Unsupported script language: " ~ tag);
 		});
@@ -145,21 +190,5 @@ protected:
 		xml.parse();
 
 		return node;
-	}
-
-	static void parseLuaScript(string text)
-	{
-		// NOTE: should we run when spawn, or when we load?
-		// if we run when spawn, then global state may be clobbered each spawn...
-
-		// run the script...
-		try
-		{
-			Game.instance.lua.doString(text);
-		}
-		catch(Exception e)
-		{
-			MFDebug_Warn(2, "Script error: " ~ e.msg);
-		}
 	}
 }

@@ -18,8 +18,7 @@ import std.array;
 
 bool LoadKSF(Track* track, DirEntry file, SongLibrary library)
 {
-	const(char)[] steps = cast(const(char)[])enforce(MFFileSystem_Load(file.filepath), "");
-	scope(exit) MFHeap_Free(cast(void[])steps);
+	string steps = enforce(MFFileSystem_LoadText(file.filepath).assumeUnique, "");
 
 	string path = file.directory ~ "/";
 

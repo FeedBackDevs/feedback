@@ -18,8 +18,7 @@ import std.path;
 
 bool LoadGHRBMidi(Track* track, DirEntry file)
 {
-	void[] ini = MFFileSystem_Load(file.filepath);
-	scope(exit) MFHeap_Free(ini);
+	Windows1252String ini = cast(Windows1252String)MFFileSystem_Load(file.filepath).assumeUnique;
 
 	string path = file.directory ~ "/";
 
@@ -33,7 +32,7 @@ bool LoadGHRBMidi(Track* track, DirEntry file)
 
 	// read song.ini
 	string text;
-	transcode(cast(Windows1252String)ini, text);
+	transcode(ini, text);
 
 	foreach(l; text.splitLines)
 	{

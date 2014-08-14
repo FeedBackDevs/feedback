@@ -101,10 +101,57 @@ class Layout : Widget
 	{
 		foreach(int i, c; _children)
 		{
-			if(child is c)
+			if(c is child)
 				return cast(int)_children.length - i - 1;
 		}
 		return -1;
+	}
+
+	final int raise(Widget child)
+	{
+		return setDepth(child, 0);
+	}
+
+	final int lower(Widget child)
+	{
+		return setDepth(child, cast(int)_children.length - 1);
+	}
+
+	final int stackUnder(Widget child, Widget under)
+	{
+		if(child is under)
+			return getDepth(child);
+
+		int other = -1;
+		foreach(int i, c; _children)
+		{
+			if(c is child)
+			{
+				if(other == -1)
+					other = i;
+				else
+				{
+					_children = _children[0..other+1] ~ child ~ _children[other+1..i] ~ _children[i+1..$];
+					return other + 1;
+				}
+			}
+			else if(c is under)
+			{
+				if(other == -1)
+					other = i;
+				else
+				{
+					_children = _children[0..other] ~ _children[other+1..i+1] ~ child ~ _children[i+1..$];
+					return i;
+				}
+			}
+		}
+		return -1;
+	}
+
+	final int stackAbove(Widget child, Widget above)
+	{
+		return stackUnder(above, child);
 	}
 
 	override void setProperty(const(char)[] property, const(char)[] value)
