@@ -21,6 +21,19 @@ import std.algorithm;
 import std.range;
 import std.conv;
 
+import db.lua;
+
+alias bindWidgetEvent = bindEvent!WidgetEvent;
+
+
+// TODO: move this back down into the classes protected section.
+//       DMD bug causes compilation to fail is @noscript: is above imports
+import fuji.texture;
+import fuji.material;
+import fuji.materials.standard;
+import fuji.primitive;
+import fuji.render;
+
 class Widget
 {
 	alias InputEventDelegate = bool delegate(InputManager, const(InputManager.EventInfo)*);
@@ -72,12 +85,12 @@ class Widget
 	}
 
 	// properties
-	final @property string typeName() const pure nothrow { return typeof(this).stringof; }
+	@property string typeName() const pure nothrow @nogc { return Unqual!(typeof(this)).stringof; }
 
-	final @property string id() const pure nothrow { return _id; }
+	final @property string id() const pure nothrow @nogc { return _id; }
 	final @property void id(const(char)[] id) pure nothrow { _id = id.idup; }
 
-	final @property string style() const pure nothrow { return _style; }
+	final @property string style() const pure nothrow @nogc { return _style; }
 	final @property void style(const(char)[] style)
 	{
 		if(_style == style)
@@ -89,7 +102,7 @@ class Widget
 			applyStyle(style);
 	}
 
-	final @property string styleDisabled() const pure nothrow { return _styleDisabled; }
+	final @property string styleDisabled() const pure nothrow @nogc { return _styleDisabled; }
 	final @property void styleDisabled(const(char)[] style)
 	{
 		if(_styleDisabled == style)
@@ -101,10 +114,10 @@ class Widget
 			applyStyle(style);
 	}
 
-	final @property inout(void)* userData() inout pure nothrow { return pUserData; }
-	final @property void userData(void* pUserData) pure nothrow { this.pUserData = pUserData; }
+	@noscript final @property inout(void)* userData() inout pure nothrow @nogc { return pUserData; }
+	@noscript final @property void userData(void* pUserData) pure nothrow @nogc { this.pUserData = pUserData; }
 
-	final @property bool enabled() const pure nothrow { return bEnabled && bParentEnabled; }
+	final @property bool enabled() const pure nothrow @nogc { return bEnabled && bParentEnabled; }
 	final @property void enabled(bool enabled)
 	{
 		if(bEnabled == enabled)
@@ -121,7 +134,7 @@ class Widget
 		}
 	}
 
-	final @property Visibility visibility() const pure nothrow { return visible; }
+	final @property Visibility visibility() const pure nothrow @nogc { return visible; }
 	final @property void visibility(Visibility visibility)
 	{
 		Visibility old = visible;
@@ -143,17 +156,17 @@ class Widget
 		}
 	}
 
-	final @property int zdepth() const pure nothrow { return _parent ? _parent.getDepth(this) : -1; }
+	final @property int zdepth() const pure nothrow @nogc { return _parent ? _parent.getDepth(this) : -1; }
 	final @property void zdepth(int depth) pure nothrow { if(_parent) _parent.setDepth(this, depth); }
 
-	final @property bool clickable() const pure nothrow { return bClickable; }
-	final @property void clickable(bool clickable) pure nothrow { bClickable = clickable; }
-	final @property bool dragable() const pure nothrow { return bDragable; }
-	final @property void dragable(bool dragable) pure nothrow { bDragable = dragable; }
-	final @property bool hoverable() const pure nothrow { return bHoverable; }
-	final @property void hoverable(bool hoverable) pure nothrow { bHoverable = hoverable; }
+	final @property bool clickable() const pure nothrow @nogc { return bClickable; }
+	final @property void clickable(bool clickable) pure nothrow @nogc { bClickable = clickable; }
+	final @property bool dragable() const pure nothrow @nogc { return bDragable; }
+	final @property void dragable(bool dragable) pure nothrow @nogc { bDragable = dragable; }
+	final @property bool hoverable() const pure nothrow @nogc { return bHoverable; }
+	final @property void hoverable(bool hoverable) pure nothrow @nogc { bHoverable = hoverable; }
 
-	final @property ref const(MFVector) position() const pure nothrow { return _position; }
+	final @property ref const(MFVector) position() const pure nothrow @nogc { return _position; }
 	final @property void position(const(MFVector) position)
 	{
 		if(_position != position)
@@ -173,20 +186,20 @@ class Widget
 		}
 	}
 
-	final @property ref const(MFVector) size() const pure nothrow { return _size; }
-	final @property MFVector sizeWithMargin() const pure nothrow { return MFVector(_size.x + _layoutMargin.x + _layoutMargin.z, _size.y + _layoutMargin.y + _layoutMargin.w, _size.z, _size.w); }
+	final @property ref const(MFVector) size() const pure nothrow @nogc { return _size; }
+	final @property MFVector sizeWithMargin() const pure nothrow @nogc { return MFVector(_size.x + _layoutMargin.x + _layoutMargin.z, _size.y + _layoutMargin.y + _layoutMargin.w, _size.z, _size.w); }
 	final @property void size(const(MFVector) size) { bAutoWidth = bAutoHeight = false; resize(size); }
 
-	final @property float width() const pure nothrow { return size.x; }
+	final @property float width() const pure nothrow @nogc { return size.x; }
 	final @property void width(float width) { bAutoWidth = false; updateWidth(width); }
-	final @property float height() const pure nothrow { return  size.y; }
+	final @property float height() const pure nothrow @nogc { return  size.y; }
 	final @property void height(float height) { bAutoHeight = false; updateHeight(height); }
 
-	final @property ref const(MFVector) colour() const pure nothrow { return _colour; }
-	final @property void colour(const(MFVector) colour) pure nothrow { _colour = colour; }
+	final @property ref const(MFVector) colour() const pure nothrow @nogc { return _colour; }
+	final @property void colour(const(MFVector) colour) pure nothrow @nogc { _colour = colour; }
 
-	final @property ref const(MFVector) scale() const pure nothrow { return _scale; }
-	final @property void scale(const(MFVector) scale) pure nothrow
+	final @property ref const(MFVector) scale() const pure nothrow @nogc { return _scale; }
+	final @property void scale(const(MFVector) scale) pure nothrow @nogc
 	{
 		if(_scale != scale)
 		{
@@ -195,8 +208,8 @@ class Widget
 		}
 	}
 
-	final @property ref const(MFVector) rotation() const pure nothrow { return _rotation; }
-	final @property void rotation(const(MFVector) rotation) pure nothrow
+	final @property ref const(MFVector) rotation() const pure nothrow @nogc { return _rotation; }
+	final @property void rotation(const(MFVector) rotation) pure nothrow @nogc
 	{
 		if(_rotation != rotation)
 		{
@@ -205,7 +218,7 @@ class Widget
 		}
 	}
 
-	final @property ref const(MFVector) layoutMargin() const pure nothrow { return _layoutMargin; }
+	final @property ref const(MFVector) layoutMargin() const pure nothrow @nogc { return _layoutMargin; }
 	final @property void layoutMargin(const(MFVector) margin)
 	{
 		if(_layoutMargin != margin)
@@ -217,7 +230,7 @@ class Widget
 		}
 	}
 
-	final @property float layoutWeight() const pure nothrow { return _layoutWeight; }
+	final @property float layoutWeight() const pure nothrow @nogc { return _layoutWeight; }
 	final @property void layoutWeight(float weight)
 	{
 		if(_layoutWeight != weight)
@@ -229,7 +242,7 @@ class Widget
 		}
 	}
 
-	final @property Justification layoutJustification() const pure nothrow { return _layoutJustification; }
+	final @property Justification layoutJustification() const pure nothrow @nogc { return _layoutJustification; }
 	final @property void layoutJustification(Justification justification)
 	{
 		if(_layoutJustification != justification)
@@ -241,27 +254,27 @@ class Widget
 		}
 	}
 
-	final @property Align hAlign() const pure nothrow { return _layoutJustification == Justification.None ? Align.None : cast(Align)(_layoutJustification & 3); }
+	final @property Align hAlign() const pure nothrow @nogc { return _layoutJustification == Justification.None ? Align.None : cast(Align)(_layoutJustification & 3); }
 	final @property void hAlign(Align hAlign)
 	{
 		assert(hAlign != Align.None);
 		layoutJustification = cast(Justification)((_layoutJustification & ~0x3) | hAlign);
 	}
-	final @property VAlign vAlign() const pure nothrow { return _layoutJustification == Justification.None ? VAlign.None : cast(VAlign)((_layoutJustification >> 2) & 3); }
+	final @property VAlign vAlign() const pure nothrow @nogc { return _layoutJustification == Justification.None ? VAlign.None : cast(VAlign)((_layoutJustification >> 2) & 3); }
 	final @property void vAlign(VAlign vAlign)
 	{
 		assert(vAlign != VAlign.None);
 		layoutJustification = cast(Justification)((_layoutJustification & ~0xC) | (vAlign << 2));
 	}
 
-	final @property ref const(MFMatrix) transform() pure nothrow
+	final @property ref const(MFMatrix) transform() pure nothrow @nogc
 	{
 		if(bMatrixDirty)
 			buildTransform();
 		return matrix;
 	}
 
-	final @property ref const(MFMatrix) invTransform() pure nothrow
+	final @property ref const(MFMatrix) invTransform() pure nothrow @nogc
 	{
 		if(bInvMatrixDirty)
 		{
@@ -273,7 +286,7 @@ class Widget
 
 
 	// methods
-	final UserInterface getUI() const { return UserInterface.getActive(); }
+	@noscript final UserInterface getUI() const nothrow @nogc { return UserInterface.getActive(); }
 
 	final bool isType(const(char)[] type) const
 	{
@@ -285,7 +298,7 @@ class Widget
 		return false;
 	}
 
-	final InputEventDelegate registerInputEventHook(InputEventDelegate eventHook) pure nothrow { InputEventDelegate old = inputEventHook; inputEventHook = eventHook; return old; }
+	@noscript final InputEventDelegate registerInputEventHook(InputEventDelegate eventHook) pure nothrow @nogc { InputEventDelegate old = inputEventHook; inputEventHook = eventHook; return old; }
 
 	void setProperty(const(char)[] property, const(char)[] value)
 	{
@@ -330,40 +343,40 @@ class Widget
 			case "align":
 				layoutJustification = getEnumValue!Justification(value); break;
 			case "onenabledchanged":
-				bindWidgetEvent(OnEnabledChanged, value); break;
+				bindEvent!WidgetEvent(OnEnabledChanged, value); break;
 			case "onvisiblechanged":
-				bindWidgetEvent(OnVisibleChanged, value); break;
+				bindEvent!WidgetEvent(OnVisibleChanged, value); break;
 			case "onlayoutchanged":
-				bindWidgetEvent(OnLayoutChanged, value); break;
+				bindEvent!WidgetEvent(OnLayoutChanged, value); break;
 			case "onmove":
-				bindWidgetEvent(OnMove, value); break;
+				bindEvent!WidgetEvent(OnMove, value); break;
 			case "onresize":
-				bindWidgetEvent(OnResize, value); break;
+				bindEvent!WidgetEvent(OnResize, value); break;
 			case "onfocuschanged":
-				bindWidgetEvent(OnFocusChanged, value); break;
+				bindEvent!WidgetEvent(OnFocusChanged, value); break;
 			case "ondown":
 				clickable = true;
-				bindWidgetEvent(OnDown, value); break;
+				bindEvent!WidgetEvent(OnDown, value); break;
 			case "onup":
 				clickable = true;
-				bindWidgetEvent(OnUp, value); break;
+				bindEvent!WidgetEvent(OnUp, value); break;
 			case "ontap":
 				clickable = true;
-				bindWidgetEvent(OnTap, value); break;
+				bindEvent!WidgetEvent(OnTap, value); break;
 			case "ondrag":
 				dragable = true;
-				bindWidgetEvent(OnDrag, value); break;
+				bindEvent!WidgetEvent(OnDrag, value); break;
 			case "onhover":
 				hoverable = true;
-				bindWidgetEvent(OnHover, value); break;
+				bindEvent!WidgetEvent(OnHover, value); break;
 			case "onhoverover":
 				hoverable = true;
-				bindWidgetEvent(OnHoverOver, value); break;
+				bindEvent!WidgetEvent(OnHoverOver, value); break;
 			case "onhoverout":
 				hoverable = true;
-				bindWidgetEvent(OnHoverOut, value); break;
+				bindEvent!WidgetEvent(OnHoverOut, value); break;
 			case "oncharacter":
-				bindWidgetEvent(OnCharacter, value); break;
+				bindEvent!WidgetEvent(OnCharacter, value); break;
 			default:
 			{
 				if(setRenderProperty(property, value, this))
@@ -381,7 +394,7 @@ class Widget
 			case "id":
 				return id;
 			case "align":
-				return getEnumFromValue!Justification(layoutJustification);
+				return getEnumFromValue(layoutJustification);
 			default:
 				return getRenderProperty(property);
 		}
@@ -390,12 +403,12 @@ class Widget
 
 
 	// support widget hierarchy
-	@property Widget[] children() pure nothrow { return null; }
-	final @property Layout parent() { return _parent; }
+	@property inout(Widget)[] children() inout pure nothrow @nogc { return null; }
+	final @property inout(Layout) parent() inout pure nothrow @nogc { return _parent; }
 
-	final Widget findChild(const(char)[] name)
+	final inout(Widget) findChild(const(char)[] name) inout pure //nothrow //@nogc <- icmp is not @nogc or nothrow!
 	{
-		Widget[] _children = children;
+		auto _children = children;
 		foreach(child; _children)
 		{
 			if(!child._id.icmp(name))
@@ -403,11 +416,21 @@ class Widget
 		}
 		foreach(child; _children)
 		{
-			Widget found = child.findChild(name);
+			auto found = child.findChild(name);
 			if(found)
 				return found;
 		}
 		return null;
+	}
+
+	final ptrdiff_t getChildIndex(Widget child) const pure nothrow @nogc
+	{
+		foreach(i, c; children)
+		{
+			if(c is child)
+				return i;
+		}
+		return -1;
 	}
 
 	final int raise()
@@ -460,7 +483,9 @@ class Widget
 
 	WidgetEvent OnCharacter;	// if the input was able to generate a unicode character
 
-//package:
+@noscript: // TODO: remove this when 'package' fix makes it to DMD.
+//package(db.ui):
+	// renderer stuff...
 	MFVector _position;					// relative to parent
 	MFVector _size;						// size of widget volume
 	MFVector _colour = MFVector.white;	// colour modulation
@@ -497,7 +522,7 @@ class Widget
 	bool bMatrixDirty = true;
 	bool bInvMatrixDirty = true;
 
-	final @property void parent(Layout parent) { _parent = parent; }
+	final @property void parent(Layout parent) pure nothrow @nogc { _parent = parent; }
 
 	void update()
 	{
@@ -536,7 +561,7 @@ class Widget
 			applyStyle(_style);
 	}
 
-	final void dirtyMatrices() pure nothrow
+	final void dirtyMatrices() pure nothrow @nogc
 	{
 		bMatrixDirty = bInvMatrixDirty = true;
 		foreach(child; children)
@@ -566,7 +591,7 @@ class Widget
 		OnLayoutChanged(this, &ev.base);
 	}
 
-	final void buildTransform() pure nothrow
+	final void buildTransform() pure nothrow @nogc
 	{
 		if(_rotation == MFVector.zero)
 		{
@@ -739,13 +764,6 @@ class Widget
 
 
 protected:
-	// renderer stuff...
-	import fuji.texture;
-	import fuji.material;
-	import fuji.materials.standard;
-	import fuji.primitive;
-	import fuji.render;
-
 	MFVector bgPadding;
 	MFVector bgColour;
 	MFVector border;		// width: left, top, right, bottom
@@ -892,7 +910,7 @@ MFVector getColourFromString(const(char)[] value)
 	if(!value.length)
 		return MFVector.white;
 
-	if(value.startsWith("$", "0x"))
+	if(value.startsWith("#"))
 	{
 		assert(false, "Hex colours not supported... pester manu!");
 		return MFVector.white;
@@ -925,23 +943,4 @@ MFVector getColourFromString(const(char)[] value)
 	}
 
 	return getVectorFromString(value, MFVector.identity);
-}
-
-import db.lua;
-
-void bindWidgetEvent(ref WidgetEvent event, const(char)[] handler)
-{
-	WidgetEvent.Handler d = UserInterface.getEventHandler(handler);
-	if(!d)
-	{
-		try
-		{
-			LuaDelegate* ld = new LuaDelegate(handler);
-			d = ld.getDelegate;
-		}
-		catch(Exception e)
-			MFDebug_Warn(2, "Couldn't create Lua delegate: " ~ e.msg);
-	}
-	if(d)
-		event ~= d;
 }

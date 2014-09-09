@@ -6,8 +6,10 @@ import db.ui.widgetevent;
 import db.tools.enumkvp;
 
 import fuji.font;
+import fuji.types;
 
 import std.string;
+import std.traits : Unqual;
 
 class Button : Label
 {
@@ -35,6 +37,8 @@ class Button : Label
 		OnUp.unsubscribe(&onButtonUp);
 		OnHover.unsubscribe(&onHover);
 	}
+
+	override @property string typeName() const pure nothrow { return Unqual!(typeof(this)).stringof; }
 
 	final @property bool pressed() const pure nothrow { return bPressed; }
 
@@ -116,7 +120,7 @@ protected:
 			applyStyle(_style);
 	}
 
-	final void onButtonDown(Widget widget, const(WidgetEventInfo)* ev)
+	final void onButtonDown(Widget widget, WidgetEventInfo* ev)
 	{
 		if(!bEnabled)
 			return;
@@ -140,7 +144,7 @@ protected:
 		}
 	}
 
-	final void onButtonUp(Widget widget, const(WidgetEventInfo)* ev)
+	final void onButtonUp(Widget widget, WidgetEventInfo* ev)
 	{
 		if(!bEnabled)
 			return;
@@ -163,7 +167,7 @@ protected:
 		}
 	}
 
-	final void onHover(Widget widget, const(WidgetEventInfo)* ev)
+	final void onHover(Widget widget, WidgetEventInfo* ev)
 	{
 		if(!bEnabled)
 			return;

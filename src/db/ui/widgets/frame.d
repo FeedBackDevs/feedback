@@ -8,9 +8,12 @@ import fuji.fuji;
 import fuji.vector;
 
 import std.range;
+import std.traits : Unqual;
 
 class Frame : Layout
 {
+	override @property string typeName() const pure nothrow { return Unqual!(typeof(this)).stringof; }
+
 protected:
 	override void arrangeChildren()
 	{

@@ -7,6 +7,8 @@ import std.string;
 
 class Prefab : Frame
 {
+	override @property string typeName() const pure nothrow { return Unqual!(typeof(this)).stringof; }
+
 	final @property string prefab() const pure nothrow { return _prefab; }
 	final @property void prefab(string prefab)
 	{

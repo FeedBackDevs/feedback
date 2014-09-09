@@ -1,6 +1,14 @@
 module db.tools.event;
 
+import db.lua;
+
+import fuji.dbg;
+
+import luad.all;
+
 import std.traits;
+import std.string;
+import std.algorithm;
 
 struct EventInfo
 {
@@ -10,13 +18,13 @@ struct EventInfo
 
 struct Event(Args...)
 {
+	alias EventArgs = Args;
 	alias Handler = void delegate(Args);
 
-	Handler[] subscribers;
+	final @property bool empty() const pure nothrow @nogc { return _subscribers.length == 0; }
+	final @property inout(Handler)[] subscribers() inout pure nothrow @nogc { return _subscribers; }
 
-	@property empty() const pure nothrow { return subscribers.length == 0; }
-
-	void opCall(Args args)
+	void opCall(Args args) const
 	{
 		signal(args);
 	}
@@ -26,9 +34,9 @@ struct Event(Args...)
 		subscribe(handler);
 	}
 
-	void signal(Args args)
+	void signal(Args args) const
 	{
-		foreach(s; subscribers)
+		foreach(s; _subscribers)
 			s(args);
 	}
 
@@ -37,24 +45,63 @@ struct Event(Args...)
 		if(!handler)
 			return;
 
-		foreach(h; subscribers)
+		foreach(h; _subscribers)
 		{
 			if(h == handler)
 				return;
 		}
 
-		subscribers ~= handler;
+		_subscribers ~= handler;
 	}
 
-	void unsubscribe(Handler handler) pure nothrow
+	void unsubscribe(Handler handler) pure nothrow @nogc
 	{
-		foreach(i; 0..subscribers.length)
+		foreach(i; 0.._subscribers.length)
 		{
-			if(subscribers[i] == handler)
+			if(_subscribers[i] == handler)
 			{
-				subscribers = subscribers[0..i] ~ subscribers[i+1 .. subscribers.length];
+				_subscribers[i .. $-1] = _subscribers[i+1 .. $];
+				_subscribers = _subscribers[0 .. $-1];
 				return;
 			}
 		}
 	}
+
+private:
+	Handler[] _subscribers;
+}
+
+void bindEvent(EventType)(ref EventType event, const(char)[] handler)
+{
+	EventType.Handler d;
+
+	LuaObject obj = getLuaObject(handler);
+	if(obj.type == LuaType.Function)
+	{
+		LuaFunction f = obj.to!LuaFunction;
+		auto ld = new LuaDelegate!(EventType.EventArgs)(f);
+		d = ld.getDelegate;
+	}
+	if(!d)
+	{
+		// HACK: this should be split into multiple functions
+		import db.ui.ui;
+
+		// search for registered D handler
+		d = UserInterface.getEventHandler(handler.strip);
+	}
+	if(!d)
+	{
+		// treat the text as lua code
+		try
+		{
+			auto ld = new LuaDelegate!(EventType.EventArgs)(handler);
+			d = ld.getDelegate;
+		}
+		catch(Exception e)
+			MFDebug_Warn(2, "Couldn't create Lua delegate: " ~ e.msg);
+	}
+
+	if(d)
+		event ~= d;
 }

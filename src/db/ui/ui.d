@@ -8,6 +8,9 @@ import db.ui.widgets.frame;
 import db.ui.widgets.linearlayout;
 import db.ui.widgets.label;
 import db.ui.widgets.button;
+import db.ui.widgets.prefab;
+import db.ui.widgets.textbox;
+import db.ui.widgets.listbox;
 
 import fuji.system;
 import fuji.vector;
@@ -68,7 +71,7 @@ class UserInterface
 	static WidgetEvent.Handler getEventHandler(const(char)[] name) { return name in eventHandlerRegistry ? eventHandlerRegistry[name] : null; }
 
 	static void setActive(UserInterface ui) nothrow { active = ui; }
-	static UserInterface getActive() nothrow { return active; }
+	static UserInterface getActive() nothrow @nogc { return active; }
 
 
 	// methods
@@ -119,14 +122,14 @@ class UserInterface
 		root.removeChild(widget);
 	}
 
-	final Widget setFocus(const(InputSource)* pSource, Widget focusWidget) pure nothrow
+	final Widget setFocus(const(InputSource)* pSource, Widget focusWidget) pure nothrow @nogc
 	{
 		Widget old = focusList[pSource.sourceID];
 		focusList[pSource.sourceID] = focusWidget;
 		return old;
 	}
 
-	final inout(Widget) getFocus(const(InputSource)* pSource) inout pure nothrow
+	final inout(Widget) getFocus(const(InputSource)* pSource) inout pure nothrow @nogc
 	{
 		return focusList[pSource.sourceID];
 	}
@@ -142,7 +145,7 @@ protected:
 	Widget[InputManager.MaxSources] hoverList;
 	Widget[InputManager.MaxSources] downOver;
 
-	static void localiseInput(InputManager.EventInfo* ev, Widget widget, ref const(MFVector) localPos) pure
+	static void localiseInput(InputManager.EventInfo* ev, Widget widget, ref const(MFVector) localPos) pure nothrow @nogc
 	{
 		ev.hover.x = localPos.x;
 		ev.hover.y = localPos.y;
@@ -247,5 +250,8 @@ protected:
 		UserInterface.registerWidget!LinearLayout();
 		UserInterface.registerWidget!Label();
 		UserInterface.registerWidget!Button();
+		UserInterface.registerWidget!Textbox();
+		UserInterface.registerWidget!Listbox();
+		UserInterface.registerWidget!Prefab();
 	}
 }

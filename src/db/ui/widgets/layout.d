@@ -8,6 +8,9 @@ import fuji.dbg;
 import fuji.vector;
 
 import std.string;
+import std.traits : Unqual;
+
+import db.lua;
 
 class Layout : Widget
 {
@@ -28,6 +31,39 @@ class Layout : Widget
 		OnResize.unsubscribe(&onLayoutDirty);
 	}
 
+	override @property string typeName() const pure nothrow @nogc { return Unqual!(typeof(this)).stringof; }
+
+	final @property ref const(MFVector) padding() const pure nothrow @nogc { return _padding; }
+	final @property void padding(const(MFVector) padding)
+	{
+		if(_padding != padding)
+		{
+			_padding = padding;
+
+			// potentially
+			MFVector newSize = max(_size, MFVector(padding.x + padding.z, padding.y + padding.w));
+			if(newSize != _size)
+				resize(newSize);
+			else
+				arrangeChildren();
+		}
+	}
+
+	final @property uint fitFlags() const pure nothrow @nogc { return _fitFlags; }
+	final @property void fitFlags(uint fitFlags)
+	{
+		if(_fitFlags != fitFlags)
+		{
+			_fitFlags = fitFlags;
+			arrangeChildren();
+		}
+	}
+
+	override @property inout(Widget)[] children() inout pure nothrow @nogc
+	{
+		return _children;
+	}
+
 	final size_t addChild(Widget child)
 	{
 		size_t index = _children.length;
@@ -45,7 +81,7 @@ class Layout : Widget
 	{
 		foreach(i, c; _children)
 		{
-			if(child == c)
+			if(child is c)
 			{
 				removeChild(i);
 				return;
@@ -59,7 +95,8 @@ class Layout : Widget
 	{
 		_children[index].OnLayoutChanged.unsubscribe(&onLayoutDirty);
 
-		_children = _children[0..index] ~ _children[index+1..$];
+		_children[index .. $-1] = _children[index+1 .. $];
+		_children = _children[0..$-1];
 
 		arrangeChildren();
 	}
@@ -72,11 +109,6 @@ class Layout : Widget
 		_children = null;
 
 		arrangeChildren();
-	}
-
-	override @property Widget[] children() pure nothrow
-	{
-		return _children;
 	}
 
 	final int setDepth(Widget child, int depth) pure nothrow
@@ -97,7 +129,7 @@ class Layout : Widget
 		return -1;
 	}
 
-	final int getDepth(const(Widget) child) const pure nothrow
+	final int getDepth(const(Widget) child) const pure nothrow @nogc
 	{
 		foreach(int i, c; _children)
 		{
@@ -174,32 +206,6 @@ class Layout : Widget
 		return super.getProperty(property);
 	}
 
-	final @property ref const(MFVector) padding() const pure nothrow { return _padding; }
-	final @property void padding(const(MFVector) padding)
-	{
-		if(_padding != padding)
-		{
-			_padding = padding;
-
-			// potentially
-			MFVector newSize = max(_size, MFVector(padding.x + padding.z, padding.y + padding.w));
-			if(newSize != _size)
-				resize(newSize);
-			else
-				arrangeChildren();
-		}
-	}
-
-	final @property uint fitFlags() const pure nothrow { return _fitFlags; }
-	final @property void fitFlags(uint fitFlags)
-	{
-		if(_fitFlags != fitFlags)
-		{
-			_fitFlags = fitFlags;
-			arrangeChildren();
-		}
-	}
-
 protected:
 	MFVector _padding;
 	uint _fitFlags;
@@ -208,7 +214,7 @@ protected:
 
 	abstract void arrangeChildren();
 
-	final void onLayoutDirty(Widget child, const(WidgetEventInfo)* ev)
+	final void onLayoutDirty(Widget child, WidgetEventInfo* ev)
 	{
 		// we may need to rearrange the children
 		arrangeChildren();

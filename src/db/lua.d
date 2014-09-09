@@ -1,25 +1,85 @@
 module db.lua;
 
-import db.ui.widget;
 import db.ui.widgetevent;
+import db.ui.widget;
+import db.ui.widgets.label;
+import db.ui.widgets.button;
+import db.ui.widgets.prefab;
+import db.ui.widgets.layout;
+import db.ui.widgets.frame;
+import db.ui.widgets.linearlayout;
+import db.ui.widgets.textbox;
+import db.ui.widgets.listbox;
+import db.ui.listadapter;
 
 import fuji.dbg;
 import fuji.vector;
+import fuji.matrix;
+import fuji.quaternion;
+import fuji.string;
 
+public import luad.base;
 import luad.all;
+import luad.c.lua;
 
-struct LuaDelegate
+import std.string;
+import std.range;
+
+
+struct LuaDelegate(Args...)
 {
 	this(LuaFunction func) { d = func; }
 	this(const(char)[] func) { d = lua.loadString(func); }
 
-	void opCall(Widget widget, const(WidgetEventInfo)* ev) { d.call(); }
+	void opCall(Args args)
+	{
+		d.call(args);
+
+		// TODO: check return value, if we returned a function, then call it with (widget, ev)
+	}
 	@property auto getDelegate() pure nothrow { return &opCall; }
 
 private:
 	LuaFunction d;
 }
 
+class LuaArrayAdaptor : ListAdapter
+{
+	this(LuaTable array, LuaFunction getItem, LuaFunction updateItem)
+	{
+		this.array = array;
+		this.getItem = getItem;
+		this.updateItem = updateItem;
+
+		// TODO: we can theoretically implement __index and __newindex in a metatable to forward to the given array, and capture add/remove/change event signals
+	}
+
+	override size_t length() const
+	{
+		// BRUTAL HACK: LuaD doesn't handle 'const'
+		auto _this = cast(Unqual!(typeof(this)))this;
+		return _this.array.length;
+	}
+
+protected:
+	LuaTable array;
+	LuaFunction getItem;
+	LuaFunction updateItem;
+
+	override Widget getItemView(int item)
+	{
+		// Lua arrays are 1-based
+		item += 1;
+		return getItem.call!Widget(array[item]);
+	}
+
+	override void updateItemView(int item, Widget layout)
+	{
+		// Lua arrays are 1-based
+		item += 1;
+		updateItem.call(array[item], layout);
+	}
+}
 
 LuaState initLua()
 {
@@ -31,28 +91,87 @@ LuaState initLua()
 	lua["warn"] = &luaWarn;
 	lua["log"] = &luaLog;
 
-//	registerStruct!(MFVector, "Vector")();
+	// Fuji types
+	lua.set(MFVector.stringof, lua.registerType!MFVector());
+	lua.set(MFQuaternion.stringof, lua.registerType!MFQuaternion());
+	lua.set(MFMatrix.stringof, lua.registerType!MFMatrix());
 
-//	lua.registerType!MFVector();
-//	lua.registerType!Widget();
-//	lua.registerType!WidgetEventInfo();
+	// UI
+//	lua.set(WidgetEventInfo.stringof, lua.registerType!WidgetEventInfo());
+	lua.set("ArrayAdapter", lua.registerType!LuaArrayAdaptor());
+
+	// Widgets
+	lua.set(Widget.stringof, lua.registerType!Widget());
+	lua.set(Label.stringof, lua.registerType!Label());
+	lua.set(Button.stringof, lua.registerType!Button());
+	lua.set(Prefab.stringof, lua.registerType!Prefab());
+	lua.set(Frame.stringof, lua.registerType!Frame());
+	lua.set(LinearLayout.stringof, lua.registerType!LinearLayout());
+	lua.set(Textbox.stringof, lua.registerType!Textbox());
+	lua.set(Listbox.stringof, lua.registerType!Listbox());
+//	lua.set(Selectbox.stringof, lua.registerType!Selectbox());
 
 	return lua;
 }
 
-void registerStruct(S, string name = S.stringof)()
+bool isValidIdentifier(const(char)[] handler)
 {
-	
+	import std.ascii;
+
+	if(handler.length == 0)
+		return false;
+
+	if(!handler[0].isAlpha && !(handler[0] == '_'))
+		return false;
+
+	foreach(i, c; handler[1..$])
+	{
+		if(c == '.')
+			return handler[i+1..$].isValidIdentifier;
+		else if(!c.isAlphaNum && c != '_')
+			return false;
+	}
+	return true;
 }
 
-void registerClass(S, string name = S.stringof)()
+LuaObject getLuaObject(const(char)[] identifier)
 {
+	auto ident = identifier.strip;
 
+	LuaObject obj;
+
+	// if the string is an identifier
+	if(ident.isValidIdentifier)
+	{
+		// search for lua global
+		LuaTable t = lua.globals;
+		foreach(token; ident.splitter('.'))
+		{
+			if(!t.isNil)
+			{
+				obj = t[token];
+				if(obj.type == LuaType.Table)
+					t = obj.to!LuaTable;
+				else
+					t.release();
+			}
+			else
+			{
+				obj.release();
+				break;
+			}
+		}
+	}
+	return obj;
 }
 
-private:
+
+package:
 
 LuaState lua;
+
+
+private:
 
 extern(C) void luaPrint(LuaObject[] params...)
 {

@@ -3,4 +3,4 @@
 	url = https://github.com/TurkeyMan/fuji.git
 [submodule "LuaD"]
 	path = LuaD
-	url = https://github.com/JakobOvrum/LuaD.git
+	url = https://github.com/FeedBackDevs/LuaD.git

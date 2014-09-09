@@ -1,6 +1,7 @@
 module db.ui.widgetevent;
 
-import db.tools.event;
+public import db.tools.event;
+
 import db.ui.inputmanager;
 import db.ui.widget;
 
@@ -18,7 +19,7 @@ struct WidgetEventInfo
 	void *pUserData;
 }
 
-alias WidgetEvent = Event!(Widget, const(WidgetEventInfo)*);
+alias WidgetEvent = Event!(Widget, WidgetEventInfo*);
 
 
 // events...
@@ -141,7 +142,7 @@ struct WidgetInputCharacterEvent
 	alias base this;
 	WidgetEventInfo base;
 
-	this(Widget sender, const(InputSource)* pSource, int unicode) pure nothrow
+	this(Widget sender, const(InputSource)* pSource, dchar unicode) pure nothrow
 	{
 		base = WidgetEventInfo(sender);
 		this.pSource = pSource;
@@ -149,7 +150,7 @@ struct WidgetInputCharacterEvent
 	}
 
 	const(InputSource)* pSource;
-	int unicode;
+	dchar unicode;
 }
 
 struct WidgetTextEvent
@@ -157,14 +158,14 @@ struct WidgetTextEvent
 	alias base this;
 	WidgetEventInfo base;
 
-	this(Widget sender, string text) pure nothrow
+	this(Widget sender, const(char)[] text) pure nothrow
 	{
 		base = WidgetEventInfo(sender);
 		this.text = text;
 	}
 
 	const(InputSource)* pSource;
-	string text;
+	const(char)[] text;
 }
 
 struct WidgetSelectEvent

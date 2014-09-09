@@ -4,9 +4,11 @@ import db.ui.widget;
 import db.ui.widgets.layout;
 import db.tools.enumkvp;
 
+import fuji.fuji;
 import fuji.vector;
 
 import std.string;
+import std.traits : Unqual;
 
 class LinearLayout : Layout
 {
@@ -15,6 +17,8 @@ class LinearLayout : Layout
 		Horizontal,
 		Vertical
 	}
+
+	override @property string typeName() const pure nothrow { return Unqual!(typeof(this)).stringof; }
 
 	final Orientation orientation() const pure nothrow { return _orientation; }
 	final void orientation(Orientation orientation)

@@ -6,9 +6,13 @@ import db.tools.enumkvp;
 import fuji.vector;
 import fuji.matrix;
 import fuji.font;
+import fuji.string;
 
 import std.string;
 import std.conv;
+import std.traits : Unqual;
+
+import db.lua;
 
 class Label : Widget
 {
@@ -21,28 +25,31 @@ class Label : Widget
 			updateHeight(_textHeight);
 	}
 
-	final @property string text() const pure nothrow { return _text; }
+	override @property string typeName() const pure nothrow @nogc { return Unqual!(typeof(this)).stringof; }
+
+	final @property string text() const pure nothrow @nogc { return _text; }
 	final @property void text(const(char)[] text)
 	{
 		_text = text.idup;
 		adjustSize();
 	}
 
-	final @property string fontName() const pure nothrow { return _fontName; }
+	final @property string fontName() const pure nothrow @nogc { return _fontName; }
 
-	final @property inout(Font) font() inout pure nothrow { return _font; }
-	final @property void font(Font font)
+	// TODO: fix inout in LuaD
+	@noscript final @property inout(Font) font() inout pure nothrow @nogc { return _font; }
+	final @property void font(Font font) @nogc
 	{
 		_font = font;
 	}
 
-	final @property ref const(MFVector) textColour() const pure nothrow { return _textColour; }
-	final @property void textColour(const(MFVector) colour) pure nothrow { _textColour = colour; }
+	final @property ref const(MFVector) textColour() const pure nothrow @nogc { return _textColour; }
+	final @property void textColour(const(MFVector) colour) pure nothrow @nogc { _textColour = colour; }
 
-	final @property MFFontJustify textJustification() const pure nothrow { return _textJustification; }
-	final @property void textJustification(MFFontJustify justification) pure nothrow { _textJustification = justification; }
+	final @property MFFontJustify textJustification() const pure nothrow @nogc { return _textJustification; }
+	final @property void textJustification(MFFontJustify justification) pure nothrow @nogc { _textJustification = justification; }
 
-	final @property float textHeight() const pure nothrow { return _textHeight; }
+	final @property float textHeight() const pure nothrow @nogc { return _textHeight; }
 	final @property void textHeight(float height)
 	{
 		_textHeight = height;
@@ -50,10 +57,10 @@ class Label : Widget
 		adjustSize();
 	}
 
-	final @property float shadowDepth() const pure nothrow { return _shadowDepth; }
-	final @property void shadowDepth(float depth) pure nothrow { _shadowDepth = depth; }
+	final @property float shadowDepth() const pure nothrow @nogc { return _shadowDepth; }
+	final @property void shadowDepth(float depth) pure nothrow @nogc { _shadowDepth = depth; }
 
-	final void loadFont(const(char)[] font)
+	final void loadFont(const(char)[] font) nothrow @nogc
 	{
 		_font = Font(font);
 	}
@@ -70,7 +77,7 @@ class Label : Widget
 				textHeight = to!float(value); break;
 			case "text_shadowDepth":
 				shadowDepth = to!float(value); break;
-			case "text_font":
+			case "font":
 				_font = Font(value);
 				if(bAutoTextHeight)
 					textHeight = _font.height;
@@ -89,10 +96,10 @@ class Label : Widget
 		{
 			case "text":
 				return text;
-			case "text_font":
+			case "font":
 				if(_fontName)
 					return _fontName;
-//				return MFFont_GetFontName(_font);
+//				return _font.name.idup;
 				return null;
 			case "text_align":
 				return getEnumFromValue(textJustification);
