@@ -81,11 +81,20 @@ class Game
 	{
 		renderer = new Renderer;
 
-		// enable buffered input
-		MFInput_EnableBufferedInput(true);
+		// enable buffered input (200hz == 5ms precision)
+		MFInput_EnableBufferedInput(true, 200);
 
 		// TODO: auto-detect instruments (controllers, midi/audio devices)
 		InputDevice[] inputs = detectInstruments();
+
+		// create song library
+		songLibrary = new SongLibrary();
+
+		// scan for new songs
+		songLibrary.scan();
+
+		// save the settings (detected inputs and stuff)
+		saveSettings();
 
 		// init the lua VM
 		lua = initLua();
@@ -107,15 +116,6 @@ class Game
 		}
 
 		// TODO: the following stuff should all be asynchronous with a loading screen:
-
-		// create song library
-		songLibrary = new SongLibrary();
-
-		// scan for new songs
-		songLibrary.scan();
-
-		// save the settings (detected inputs and stuff)
-		saveSettings();
 
 		// HACK: configure a player for each detected input
 		int i = 0;
