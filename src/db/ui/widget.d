@@ -406,17 +406,17 @@ class Widget
 	@property inout(Widget)[] children() inout pure nothrow @nogc { return null; }
 	final @property inout(Layout) parent() inout pure nothrow @nogc { return _parent; }
 
-	final inout(Widget) findChild(const(char)[] name) inout pure //nothrow //@nogc <- icmp is not @nogc or nothrow!
+	final inout(Widget) findChild(const(char)[] id) inout pure nothrow @nogc
 	{
 		auto _children = children;
 		foreach(child; _children)
 		{
-			if(!child._id.icmp(name))
+			if(child._id == id)
 				return child;
 		}
 		foreach(child; _children)
 		{
-			auto found = child.findChild(name);
+			auto found = child.findChild(id);
 			if(found)
 				return found;
 		}

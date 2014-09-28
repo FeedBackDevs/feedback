@@ -11,9 +11,11 @@ import db.ui.widgets.linearlayout;
 import db.ui.widgets.textbox;
 import db.ui.widgets.listbox;
 import db.ui.listadapter;
+import db.ui.ui;
 import db.game;
 
 import fuji.dbg;
+import fuji.types;
 import fuji.vector;
 import fuji.matrix;
 import fuji.quaternion;
@@ -111,11 +113,13 @@ LuaState initLua()
 	lua.doString(luaCode);
 
 	lua["library"] = Game.instance.songLibrary;
+	lua["ui"] = Game.instance.ui;
 
 	// Fuji types
-	lua.set(MFVector.stringof, lua.registerType!MFVector());
-	lua.set(MFQuaternion.stringof, lua.registerType!MFQuaternion());
-	lua.set(MFMatrix.stringof, lua.registerType!MFMatrix());
+	lua.set("Rect", lua.registerType!MFRect());
+	lua.set("Vector", lua.registerType!MFVector());
+	lua.set("Quaternion", lua.registerType!MFQuaternion());
+	lua.set("Matrix", lua.registerType!MFMatrix());
 
 	// UI
 //	lua.set(WidgetEventInfo.stringof, lua.registerType!WidgetEventInfo());

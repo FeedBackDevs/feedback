@@ -96,15 +96,15 @@ class Game
 		// save the settings (detected inputs and stuff)
 		saveSettings();
 
-		// init the lua VM
-		lua = initLua();
-
 		// init UI
 		MFRect rect;
 		MFDisplay_GetDisplayRect(&rect);
 
 		ui = new UserInterface(rect);
 		UserInterface.setActive(ui);
+
+		// init the lua VM
+		lua = initLua();
 
 		// load the bootup UI
 		LayoutDescriptor desc = new LayoutDescriptor("boot.xml");
@@ -142,7 +142,7 @@ class Game
 		}
 
 		// HACK: create a performance of the first song in the library
-		Track* track = songLibrary.find("silvertear-so_deep-perfect_sphere_remix");
+		Track* track = songLibrary.find("dream_theater-pull_me_under");
 		if(track)
 		{
 			performance = new Performance(track, players);

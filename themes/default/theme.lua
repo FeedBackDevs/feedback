@@ -8,7 +8,7 @@ print "Loaded 'Default' theme..."
 
 local function get(item, userdata)
 	local l = Label()
-	l.textColour = MFVector.white
+	l.textColour = Vector.white
 	l.text = item
 	return l
 end

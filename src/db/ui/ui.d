@@ -19,6 +19,8 @@ import fuji.input;
 import fuji.font;
 import fuji.dbg;
 
+import luad.base;
+
 import std.string;
 
 
@@ -26,17 +28,6 @@ alias WidgetFactory = Factory!Widget;
 
 class UserInterface
 {
-	// static stuff
-	static bool registerWidget(T)(const(char)[] name = T.stringof) if(is(T : Widget))
-	{
-		return factory.registerType!T(name.toLower);
-	}
-
-	static bool registerWidgetRenderer(R, W)(const(char)[] name = W.stringof) if(is(R : WidgetRenderer) && is(W : Widget))
-	{
-		return renderFactory.registerType!R(name.toLower);
-	}
-
 	static Widget createWidget(const(char)[] widgetType)
 	{
 		widgetType = widgetType.toLower;
@@ -51,6 +42,58 @@ class UserInterface
 		try widget = factory.create(widgetType);
 		catch {}
 		return widget;
+	}
+
+	final @property MFRect displayRect() const pure nothrow { return _displayRect; }
+	final @property void displayRect(MFRect displayRect)
+	{
+		_displayRect = displayRect;
+		root.position = MFVector(displayRect.x, displayRect.y);
+		root.size = MFVector(displayRect.width, displayRect.height);
+	}
+
+	final void addTopLevelWidget(Widget widget)
+	{
+		root.addChild(widget);
+	}
+
+	final void removeTopLevelWidget(Widget widget)
+	{
+		root.removeChild(widget);
+	}
+
+	final Widget setFocus(const(InputSource)* pSource, Widget focusWidget) pure nothrow @nogc
+	{
+		Widget old = focusList[pSource.sourceID];
+		focusList[pSource.sourceID] = focusWidget;
+		return old;
+	}
+
+	final inout(Widget) getFocus(const(InputSource)* pSource) inout pure nothrow @nogc
+	{
+		return focusList[pSource.sourceID];
+	}
+
+	final inout(Widget) find(const(char)[] id) inout pure nothrow @nogc
+	{
+		return root.findChild(id);
+	}
+
+	final inout(Widget) opDispatch(string id)() inout
+	{
+		return root.findChild(id);
+	}
+
+@noscript:
+	// static stuff
+	static bool registerWidget(T)(const(char)[] name = T.stringof) if(is(T : Widget))
+	{
+		return factory.registerType!T(name.toLower);
+	}
+
+	static bool registerWidgetRenderer(R, W)(const(char)[] name = W.stringof) if(is(R : WidgetRenderer) && is(W : Widget))
+	{
+		return renderFactory.registerType!R(name.toLower);
 	}
 
 	static T createWidget(T)() if(is(T : Widget))
@@ -86,14 +129,6 @@ class UserInterface
 		inputManager.OnInputEvent ~= &onInputEvent;
 	}
 
-	final @property MFRect displayRect() const pure nothrow { return _displayRect; }
-	final @property void displayRect(MFRect displayRect)
-	{
-		_displayRect = displayRect;
-		root.position = MFVector(displayRect.x, displayRect.y);
-		root.size = MFVector(displayRect.width, displayRect.height);
-	}
-
 	final void update()
 	{
 		inputManager.update();
@@ -110,28 +145,6 @@ class UserInterface
 		else
 			font.draw("none", 100, 100, 20);
 +/
-	}
-
-	final void addTopLevelWidget(Widget widget)
-	{
-		root.addChild(widget);
-	}
-
-	final void removeTopLevelWidget(Widget widget)
-	{
-		root.removeChild(widget);
-	}
-
-	final Widget setFocus(const(InputSource)* pSource, Widget focusWidget) pure nothrow @nogc
-	{
-		Widget old = focusList[pSource.sourceID];
-		focusList[pSource.sourceID] = focusWidget;
-		return old;
-	}
-
-	final inout(Widget) getFocus(const(InputSource)* pSource) inout pure nothrow @nogc
-	{
-		return focusList[pSource.sourceID];
 	}
 
 protected:
