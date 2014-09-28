@@ -2,6 +2,11 @@
 
 print "Loaded 'Default' theme..."
 
+function begin()
+	ui:find("theme").visibility = "Visible"
+	ui:find("mainmenu").visibility = "Visible"
+	-- set input device focus to default widgets...
+end
 
 
 -- song selector
@@ -19,9 +24,25 @@ end
 
 songs = ArrayAdapter(library.songs, get, update)
 
-function select(w, ev)
-	print("select!")
+function selectSong(w, ev)
+	print("select Song!")
 end
-function begin(w, ev)
-	print("begin!")
+
+function playSong(w, ev)
+	print("Play Song")
+end
+
+function selectPlaySong(w, ev)
+	print("select play song!")
+	ui:find("mainmenu").visibility = "Invisible"
+	ui:find("songselect").visibility = "Visible"
+end
+
+function selectSettings(w, ev)
+	print("select settings!")
+end
+
+function selectExit(w, ev)
+	print("select exit")
+	quit()
 end

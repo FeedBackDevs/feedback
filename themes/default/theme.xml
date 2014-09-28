@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Frame id="theme" align="Fill">
+<Frame id="theme" align="Fill" visibility="invisible">
 	<Script src="theme.lua" />
 	<Prefab id="mainmenu" prefab="mainmenu.xml" align="Fill" visibility="invisible" />
-	<Prefab id="optoins" prefab="options.xml" align="Fill" visibility="invisible" />
-	<Prefab id="songselect" prefab="songselect.xml" align="Fill" />
+	<Prefab id="options" prefab="options.xml" align="Fill" visibility="invisible" />
+	<Prefab id="songselect" prefab="songselect.xml" align="Fill" visibility="invisible" />
 </Frame>

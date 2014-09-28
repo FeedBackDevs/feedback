@@ -145,6 +145,8 @@ class Listbox : Layout
 			flags = (flags & ~Flags.HoverSelect) | (getBoolFromString(value) ? Flags.HoverSelect : 0);
 		else if(!icmp(property, "onSelChanged"))
 			bindEvent!WidgetEvent(OnSelChanged, value);
+		else if(!icmp(property, "onClick"))
+			bindEvent!WidgetEvent(OnClick, value);
 		else
 			super.setProperty(property, value);
 	}
@@ -158,7 +160,7 @@ class Listbox : Layout
 
 
 	WidgetEvent OnSelChanged;
-	WidgetEvent OnClicked;
+	WidgetEvent OnClick;
 
 protected:
 	Orientation _orientation = Orientation.Vertical;
@@ -246,7 +248,7 @@ protected:
 				if(!MFTypes_PointInRect(ev.down.x, ev.down.y, rect))
 				{
 					auto sel = WidgetSelectEvent(this, -1);
-					OnClicked(this, &sel.base);
+					OnClick(this, &sel.base);
 				}
 				break;
 			}
@@ -358,7 +360,7 @@ protected:
 	final void onItemClick(Widget widget, WidgetEventInfo* ev)
 	{
 		auto sel = WidgetSelectEvent(widget, cast(int)getChildIndex(widget));
-		OnClicked(this, &sel.base);
+		OnClick(this, &sel.base);
 	}
 
 	final void onItemOver(Widget widget, WidgetEventInfo* ev)

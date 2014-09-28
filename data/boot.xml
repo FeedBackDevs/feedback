@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Frame id="boot" align="Fill">
 	<Script src="boot.lua" />
-	<Frame id="welcome" align="TopCenter">
-		<Label text="FeedBack!" text_height="100" text_colour="white" />
+	<Frame id="welcome" align="Center">
+		<Label text="FeedBack!" text_height="100" text_colour="white" onDown="bootScreenClick" />
 	</Frame>
 	<Frame id="loading" align="Center" visibility="gone">
 		<Label text="Loading..." text_height="100" text_colour="white" />

@@ -20,6 +20,7 @@ import fuji.vector;
 import fuji.matrix;
 import fuji.quaternion;
 import fuji.string;
+import fuji.system;
 
 public import luad.base;
 import luad.all;
@@ -111,6 +112,8 @@ LuaState initLua()
 	lua["log"] = &luaLog;
 
 	lua.doString(luaCode);
+
+	lua["quit"] = &MFSystem_Quit;
 
 	lua["library"] = Game.instance.songLibrary;
 	lua["ui"] = Game.instance.ui;
