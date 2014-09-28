@@ -2,11 +2,13 @@ module db.ui.widgets.button;
 
 import db.ui.widget;
 import db.ui.widgets.label;
-import db.ui.widgetevent;
+import db.ui.inputmanager;
 import db.tools.enumkvp;
+import db.tools.event;
 
 import fuji.font;
 import fuji.types;
+import fuji.vector;
 
 import std.string;
 import std.traits : Unqual;
@@ -64,7 +66,7 @@ class Button : Label
 			case "button_flags":
 				buttonFlags = getBitfieldValue!ButtonFlags(value); break;
 			case "onclick":
-				bindWidgetEvent(OnClick, value); break;
+				bindEvent!OnClick(value); break;
 			default:
 				super.setProperty(property, value);
 		}
@@ -78,7 +80,7 @@ class Button : Label
 	}
 
 	// state change events
-	WidgetEvent OnClick;
+	Event!(Widget, const(InputSource)*) OnClick;
 
 protected:
 	string _stylePressed;
@@ -120,40 +122,36 @@ protected:
 			applyStyle(_style);
 	}
 
-	final void onButtonDown(Widget widget, WidgetEventInfo* ev)
+	final void onButtonDown(Widget widget, const(InputSource)* pSource)
 	{
 		if(!bEnabled)
 			return;
-
-		WidgetInputEvent* down = cast(WidgetInputEvent*)ev;
 
 		if(_buttonFlags & ButtonFlags.TriggerOnDown)
 		{
 			if(buttonFlags & ButtonFlags.StateButton)
 				setButtonState(!bState);
 
-			WidgetInputEvent clickEvent = WidgetInputEvent(this, down.pSource);
-			OnClick(this, &clickEvent.base);
+			if(OnClick)
+				OnClick(this, pSource);
 		}
 		else
 		{
 			bDown = true;
 			setPressed(true);
 
-			getUI().setFocus(down.pSource, this);
+			ui.setFocus(pSource, this);
 		}
 	}
 
-	final void onButtonUp(Widget widget, WidgetEventInfo* ev)
+	final void onButtonUp(Widget widget, const(InputSource)* pSource)
 	{
 		if(!bEnabled)
 			return;
 
-		WidgetInputEvent* up = cast(WidgetInputEvent*)ev;
-
 		bDown = false;
 
-		getUI().setFocus(up.pSource, null);
+		ui.setFocus(pSource, null);
 
 		if(bPressed)
 		{
@@ -162,22 +160,20 @@ protected:
 			if(_buttonFlags & ButtonFlags.StateButton)
 				setButtonState(!bState);
 
-			WidgetInputEvent clickEvent = WidgetInputEvent(this, up.pSource);
-			OnClick(this, &clickEvent.base);
+			if(OnClick)
+				OnClick(this, pSource);
 		}
 	}
 
-	final void onHover(Widget widget, WidgetEventInfo* ev)
+	final void onHover(Widget widget, const(InputSource)* pSource, MFVector pos, MFVector delta)
 	{
 		if(!bEnabled)
 			return;
 
-		WidgetMoveEvent* hover = cast(WidgetMoveEvent*)ev;
-
 		if(bDown)
 		{
 			MFRect rect = MFRect(0, 0, size.x, size.y);
-			if(MFTypes_PointInRect(hover.newPos.x, hover.newPos.y, rect))
+			if(MFTypes_PointInRect(pos.x, pos.y, rect))
 				setPressed(true);
 			else
 				setPressed(false);

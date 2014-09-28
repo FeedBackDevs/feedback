@@ -10,7 +10,7 @@ import fuji.vector;
 
 struct WidgetEventInfo
 {
-	this(Widget sender) pure nothrow
+	this(Widget sender) pure nothrow @nogc
 	{
 		this.sender = sender;
 	}
@@ -28,7 +28,7 @@ struct WidgetGeneralEvent
 	alias base this;
 	WidgetEventInfo base;
 
-	this(Widget sender) pure nothrow
+	this(Widget sender) pure nothrow @nogc
 	{
 		base = WidgetEventInfo(sender);
 	}
@@ -39,7 +39,7 @@ struct WidgetEnabledEvent
 	alias base this;
 	WidgetEventInfo base;
 
-	this(Widget sender, bool bEnabled) pure nothrow
+	this(Widget sender, bool bEnabled) pure nothrow @nogc
 	{
 		base = WidgetEventInfo(sender);
 		this.bEnabled = bEnabled;
@@ -53,7 +53,7 @@ struct WidgetVisibilityEvent
 	alias base this;
 	WidgetEventInfo base;
 
-	this(Widget sender, int visible) pure nothrow
+	this(Widget sender, int visible) pure nothrow @nogc
 	{
 		base = WidgetEventInfo(sender);
 		this.visible = visible;
@@ -67,7 +67,7 @@ struct WidgetFocusEvent
 	alias base this;
 	WidgetEventInfo base;
 
-	this(Widget sender, bool bGainedFocus) pure nothrow
+	this(Widget sender, bool bGainedFocus) pure nothrow @nogc
 	{
 		base = WidgetEventInfo(sender);
 		this.bGainedFocus = bGainedFocus;
@@ -84,7 +84,7 @@ struct WidgetMoveEvent
 	alias base this;
 	WidgetEventInfo base;
 
-	this(Widget sender) pure nothrow
+	this(Widget sender) pure nothrow @nogc
 	{
 		base = WidgetEventInfo(sender);
 	}
@@ -98,7 +98,7 @@ struct WidgetResizeEvent
 	alias base this;
 	WidgetEventInfo base;
 
-	this(Widget sender) pure nothrow
+	this(Widget sender) pure nothrow @nogc
 	{
 		base = WidgetEventInfo(sender);
 	}
@@ -112,7 +112,7 @@ struct WidgetInputEvent
 	alias base this;
 	WidgetEventInfo base;
 
-	this(Widget sender, const(InputSource)* pSource) pure nothrow
+	this(Widget sender, const(InputSource)* pSource) pure nothrow @nogc
 	{
 		base = WidgetEventInfo(sender);
 		this.pSource = pSource;
@@ -126,7 +126,7 @@ struct WidgetInputActionEvent
 	alias base this;
 	WidgetEventInfo base;
 
-	this(Widget sender, const(InputSource)* pSource) pure nothrow
+	this(Widget sender, const(InputSource)* pSource) pure nothrow @nogc
 	{
 		base = WidgetEventInfo(sender);
 		this.pSource = pSource;
@@ -142,7 +142,7 @@ struct WidgetInputCharacterEvent
 	alias base this;
 	WidgetEventInfo base;
 
-	this(Widget sender, const(InputSource)* pSource, dchar unicode) pure nothrow
+	this(Widget sender, const(InputSource)* pSource, dchar unicode) pure nothrow @nogc
 	{
 		base = WidgetEventInfo(sender);
 		this.pSource = pSource;
@@ -158,7 +158,7 @@ struct WidgetTextEvent
 	alias base this;
 	WidgetEventInfo base;
 
-	this(Widget sender, const(char)[] text) pure nothrow
+	this(Widget sender, const(char)[] text) pure nothrow @nogc
 	{
 		base = WidgetEventInfo(sender);
 		this.text = text;
@@ -173,7 +173,7 @@ struct WidgetSelectEvent
 	alias base this;
 	WidgetEventInfo base;
 
-	this(Widget sender, int selection) pure nothrow
+	this(Widget sender, int selection) pure nothrow @nogc
 	{
 		base = WidgetEventInfo(sender);
 		this.selection = selection;

@@ -62,10 +62,18 @@ class UserInterface
 		root.removeChild(widget);
 	}
 
-	final Widget setFocus(const(InputSource)* pSource, Widget focusWidget) pure nothrow @nogc
+	final Widget setFocus(const(InputSource)* pSource, Widget focusWidget)
 	{
 		Widget old = focusList[pSource.sourceID];
+
+		if(old && old.OnFocusChanged)
+			old.OnFocusChanged(old, false, focusWidget, old);
+
 		focusList[pSource.sourceID] = focusWidget;
+
+		if(focusWidget && focusWidget.OnFocusChanged)
+			focusWidget.OnFocusChanged(focusWidget, true, focusWidget, old);
+
 		return old;
 	}
 
@@ -220,17 +228,10 @@ protected:
 			{
 				hoverList[ev.pSource.sourceID] = widget;
 
-				if(hover)
-				{
-					WidgetInputEvent ie = WidgetInputEvent(hover, ev.pSource);
-					hover.OnHoverOut(hover, &ie.base);
-				}
-
-				if(widget)
-				{
-					WidgetInputEvent ie2 = WidgetInputEvent(widget, ev.pSource);
-					widget.OnHoverOver(widget, &ie2.base);
-				}
+				if(hover && hover.OnHoverOut)
+					hover.OnHoverOut(hover, ev.pSource);
+				if(widget && widget.OnHoverOver)
+					widget.OnHoverOver(widget, ev.pSource);
 			}
 
 			if(widget)

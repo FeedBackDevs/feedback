@@ -4,7 +4,6 @@ import db.tools.event;
 import db.tools.enumkvp;
 import db.ui.ui;
 import db.ui.inputmanager;
-import db.ui.widgetevent;
 import db.ui.widgetstyle;
 import db.ui.widgets.layout;
 
@@ -22,8 +21,6 @@ import std.range;
 import std.conv;
 
 import db.lua;
-
-alias bindWidgetEvent = bindEvent!WidgetEvent;
 
 
 // TODO: move this back down into the classes protected section.
@@ -127,11 +124,8 @@ class Widget
 
 		updateStyle();
 
-		if(!OnEnabledChanged.empty)
-		{
-			WidgetEnabledEvent ev = WidgetEnabledEvent(this, enabled);
-			OnEnabledChanged(this, &ev.base);
-		}
+		if(OnEnabledChanged)
+			OnEnabledChanged(this, enabled);
 	}
 
 	final @property Visibility visibility() const pure nothrow @nogc { return visible; }
@@ -142,17 +136,10 @@ class Widget
 		{
 			visible = visibility;
 
-			if(old == Visibility.Gone || visible == Visibility.Gone)
-			{
-				WidgetGeneralEvent ev = WidgetGeneralEvent(this);
-				OnLayoutChanged(this, &ev.base);
-			}
-
-			if(!OnVisibleChanged.empty)
-			{
-				WidgetVisibilityEvent ev = WidgetVisibilityEvent(this, visible);
-				OnVisibleChanged(this, &ev.base);
-			}
+			if((old == Visibility.Gone || visible == Visibility.Gone) && OnLayoutChanged)
+				OnLayoutChanged(this);
+			if(OnVisibilityChanged)
+				OnVisibilityChanged(this, visible);
 		}
 	}
 
@@ -176,13 +163,8 @@ class Widget
 
 			dirtyMatrices();
 
-			if(!OnMove.empty)
-			{
-				WidgetMoveEvent ev = WidgetMoveEvent(this);
-				ev.oldPos = oldPos;
-				ev.newPos = position;
-				OnMove(this, &ev.base);
-			}
+			if(OnMove)
+				OnMove(this, position, oldPos);
 		}
 	}
 
@@ -225,8 +207,8 @@ class Widget
 		{
 			_layoutMargin = margin;
 
-			WidgetGeneralEvent ev = WidgetGeneralEvent(this);
-			OnLayoutChanged(this, &ev.base);
+			if(OnLayoutChanged)
+				OnLayoutChanged(this);
 		}
 	}
 
@@ -237,8 +219,8 @@ class Widget
 		{
 			_layoutWeight = weight;
 
-			WidgetGeneralEvent ev = WidgetGeneralEvent(this);
-			OnLayoutChanged(this, &ev.base);
+			if(OnLayoutChanged)
+				OnLayoutChanged(this);
 		}
 	}
 
@@ -249,8 +231,8 @@ class Widget
 		{
 			_layoutJustification = justification;
 
-			WidgetGeneralEvent ev = WidgetGeneralEvent(this);
-			OnLayoutChanged(this, &ev.base);
+			if(OnLayoutChanged)
+				OnLayoutChanged(this);
 		}
 	}
 
@@ -284,10 +266,9 @@ class Widget
 		return invMatrix;
 	}
 
+	final @property UserInterface ui() const nothrow @nogc { return UserInterface.getActive(); }
 
 	// methods
-	@noscript final UserInterface getUI() const nothrow @nogc { return UserInterface.getActive(); }
-
 	final bool isType(const(char)[] type) const
 	{
 		foreach(T; BaseClassesTuple!(typeof(this)))
@@ -299,6 +280,11 @@ class Widget
 	}
 
 	@noscript final InputEventDelegate registerInputEventHook(InputEventDelegate eventHook) pure nothrow @nogc { InputEventDelegate old = inputEventHook; inputEventHook = eventHook; return old; }
+
+	final Widget setFocus(const(InputSource)* pSource)
+	{
+		return ui.setFocus(pSource, this);
+	}
 
 	void setProperty(const(char)[] property, const(char)[] value)
 	{
@@ -343,40 +329,40 @@ class Widget
 			case "align":
 				layoutJustification = getEnumValue!Justification(value); break;
 			case "onenabledchanged":
-				bindEvent!WidgetEvent(OnEnabledChanged, value); break;
-			case "onvisiblechanged":
-				bindEvent!WidgetEvent(OnVisibleChanged, value); break;
+				bindEvent!OnEnabledChanged(value); break;
+			case "onvisibilitychanged":
+				bindEvent!OnVisibilityChanged(value); break;
 			case "onlayoutchanged":
-				bindEvent!WidgetEvent(OnLayoutChanged, value); break;
+				bindEvent!OnLayoutChanged(value); break;
 			case "onmove":
-				bindEvent!WidgetEvent(OnMove, value); break;
+				bindEvent!OnMove(value); break;
 			case "onresize":
-				bindEvent!WidgetEvent(OnResize, value); break;
+				bindEvent!OnResize(value); break;
 			case "onfocuschanged":
-				bindEvent!WidgetEvent(OnFocusChanged, value); break;
+				bindEvent!OnFocusChanged(value); break;
 			case "ondown":
 				clickable = true;
-				bindEvent!WidgetEvent(OnDown, value); break;
+				bindEvent!OnDown(value); break;
 			case "onup":
 				clickable = true;
-				bindEvent!WidgetEvent(OnUp, value); break;
+				bindEvent!OnUp(value); break;
 			case "ontap":
 				clickable = true;
-				bindEvent!WidgetEvent(OnTap, value); break;
+				bindEvent!OnTap(value); break;
 			case "ondrag":
 				dragable = true;
-				bindEvent!WidgetEvent(OnDrag, value); break;
+				bindEvent!OnDrag(value); break;
 			case "onhover":
 				hoverable = true;
-				bindEvent!WidgetEvent(OnHover, value); break;
+				bindEvent!OnHover(value); break;
 			case "onhoverover":
 				hoverable = true;
-				bindEvent!WidgetEvent(OnHoverOver, value); break;
+				bindEvent!OnHoverOver(value); break;
 			case "onhoverout":
 				hoverable = true;
-				bindEvent!WidgetEvent(OnHoverOut, value); break;
+				bindEvent!OnHoverOut(value); break;
 			case "oncharacter":
-				bindEvent!WidgetEvent(OnCharacter, value); break;
+				bindEvent!OnCharacter(value); break;
 			default:
 			{
 				if(setRenderProperty(property, value, this))
@@ -462,26 +448,26 @@ class Widget
 	}
 
 	// state change events
-	WidgetEvent OnEnabledChanged;
-	WidgetEvent OnVisibleChanged;
+	Event!(Widget, bool) OnEnabledChanged;
+	Event!(Widget, Visibility) OnVisibilityChanged;
 
-	WidgetEvent OnLayoutChanged;
+	Event!(Widget) OnLayoutChanged;
 
 	// interactivity events
-	WidgetEvent OnMove;
-	WidgetEvent OnResize;
-	WidgetEvent OnFocusChanged;
+	Event!(Widget, MFVector, MFVector) OnMove;
+	Event!(Widget, MFVector, MFVector) OnResize;
+	Event!(Widget, bool, Widget, Widget) OnFocusChanged;
 
 	// input events
-	WidgetEvent OnDown;			// an input source lowered a key. applies to mouse, keyboard, touch, gamepad events
-	WidgetEvent OnUp;			// an input source raised a key. applies to mouse, keyboard, touch, gamepad events
-	WidgetEvent OnTap;			// a sequence of down followed by an up, without motion in between. applies to mouse, keyboard, touch, gamepad events
-	WidgetEvent OnDrag;			// an input source was moved between a 'down', and 'up' event. applies to mouse, touch events
-	WidgetEvent OnHover;		// an input source moved above a widget. applies to mouse events
-	WidgetEvent OnHoverOver;	// an input source entered the bounds of a widget. applies to mouse events
-	WidgetEvent OnHoverOut;		// an input source left the bounds of a widget. applies to mouse events
+	Event!(Widget, const(InputSource)*) OnDown;							// an input source lowered a key. applies to mouse, keyboard, touch, gamepad events
+	Event!(Widget, const(InputSource)*) OnUp;							// an input source raised a key. applies to mouse, keyboard, touch, gamepad events
+	Event!(Widget, const(InputSource)*) OnTap;							// a sequence of down followed by an up, without motion in between. applies to mouse, keyboard, touch, gamepad events
+	Event!(Widget, const(InputSource)*, MFVector, MFVector) OnDrag;		// an input source was moved between a 'down', and 'up' event. applies to mouse, touch events
+	Event!(Widget, const(InputSource)*, MFVector, MFVector) OnHover;	// an input source moved above a widget. applies to mouse events
+	Event!(Widget, const(InputSource)*) OnHoverOver;					// an input source entered the bounds of a widget. applies to mouse events
+	Event!(Widget, const(InputSource)*) OnHoverOut;						// an input source left the bounds of a widget. applies to mouse events
 
-	WidgetEvent OnCharacter;	// if the input was able to generate a unicode character
+	Event!(Widget, const(InputSource)*, uint) OnCharacter;				// if the input was able to generate a unicode character
 
 @noscript: // TODO: remove this when 'package' fix makes it to DMD.
 //package(db.ui):
@@ -579,16 +565,11 @@ class Widget
 		MFVector oldSize = _size;
 		_size = size;
 
-		if(!OnResize.empty)
-		{
-			WidgetResizeEvent ev = WidgetResizeEvent(this);
-			ev.oldSize = oldSize;
-			ev.newSize = size;
-			OnResize(this, &ev.base);
-		}
+		if(OnResize)
+			OnResize(this, size, oldSize);
 
-		WidgetGeneralEvent ev = WidgetGeneralEvent(this);
-		OnLayoutChanged(this, &ev.base);
+		if(OnLayoutChanged)
+			OnLayoutChanged(this);
 	}
 
 	final void buildTransform() pure nothrow @nogc
@@ -697,8 +678,8 @@ class Widget
 			{
 				if(bClickable)
 				{
-					WidgetInputEvent ie = WidgetInputEvent(this, ev.pSource);
-					OnDown(this, &ie.base);
+					if(OnDown)
+						OnDown(this, ev.pSource);
 					return true;
 				}
 				break;
@@ -707,8 +688,8 @@ class Widget
 			{
 				if(bClickable)
 				{
-					WidgetInputEvent ie = WidgetInputEvent(this, ev.pSource);
-					OnUp(this, &ie.base);
+					if(OnUp)
+						OnUp(this, ev.pSource);
 					return true;
 				}
 				break;
@@ -717,8 +698,8 @@ class Widget
 			{
 				if(bClickable)
 				{
-					WidgetInputEvent ie = WidgetInputEvent(this, ev.pSource);
-					OnTap(this, &ie.base);
+					if(OnTap)
+						OnTap(this, ev.pSource);
 					return true;
 				}
 				break;
@@ -727,10 +708,8 @@ class Widget
 			{
 				if(bHoverable)
 				{
-					WidgetInputActionEvent ie = WidgetInputActionEvent(this, ev.pSource);
-					ie.pos = MFVector(ev.hover.x, ev.hover.y);
-					ie.delta = MFVector(ev.hover.deltaX, ev.hover.deltaY);
-					OnHover(this, &ie.base);
+					if(OnHover)
+						OnHover(this, ev.pSource, MFVector(ev.hover.x, ev.hover.y), MFVector(ev.hover.deltaX, ev.hover.deltaY));
 					return true;
 				}
 				break;
@@ -739,10 +718,8 @@ class Widget
 			{
 				if(bDragable)
 				{
-					WidgetInputActionEvent ie = WidgetInputActionEvent(this, ev.pSource);
-					ie.pos = MFVector(ev.hover.x, ev.hover.y);
-					ie.delta = MFVector(ev.hover.deltaX, ev.hover.deltaY);
-					OnDrag(this, &ie.base);
+					if(OnDrag)
+						OnDrag(this, ev.pSource, MFVector(ev.hover.x, ev.hover.y), MFVector(ev.hover.deltaX, ev.hover.deltaY));
 					return true;
 				}
 				break;

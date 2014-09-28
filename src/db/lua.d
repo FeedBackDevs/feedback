@@ -1,6 +1,5 @@
 module db.lua;
 
-import db.ui.widgetevent;
 import db.ui.widget;
 import db.ui.widgets.label;
 import db.ui.widgets.button;
@@ -125,7 +124,6 @@ LuaState initLua()
 	lua.set("Matrix", lua.registerType!MFMatrix());
 
 	// UI
-//	lua.set(WidgetEventInfo.stringof, lua.registerType!WidgetEventInfo());
 	lua.set("ArrayAdapter", lua.registerType!LuaArrayAdaptor());
 
 	// Widgets

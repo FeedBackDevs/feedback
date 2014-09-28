@@ -21,6 +21,8 @@ struct Event(Args...)
 	alias EventArgs = Args;
 	alias Handler = void delegate(Args);
 
+	final T opCast(T)() if(is(T == bool)) { return _subscribers.length != 0; }
+
 	final @property bool empty() const pure nothrow @nogc { return _subscribers.length == 0; }
 	final @property inout(Handler)[] subscribers() inout pure nothrow @nogc { return _subscribers; }
 
@@ -71,8 +73,9 @@ private:
 	Handler[] _subscribers;
 }
 
-void bindEvent(EventType)(ref EventType event, const(char)[] handler)
+void bindEvent(alias event)(const(char)[] handler)
 {
+	alias EventType = typeof(event);
 	EventType.Handler d;
 
 	LuaObject obj = getLuaObject(handler);
@@ -88,7 +91,7 @@ void bindEvent(EventType)(ref EventType event, const(char)[] handler)
 		import db.ui.ui;
 
 		// search for registered D handler
-		d = UserInterface.getEventHandler(handler.strip);
+//		d = UserInterface.getEventHandler(handler.strip);
 	}
 	if(!d)
 	{

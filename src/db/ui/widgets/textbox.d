@@ -1,10 +1,10 @@
 module db.ui.widgets.textbox;
 
 import db.ui.widget;
-import db.ui.widgetevent;
 import db.ui.stringentrylogic;
 import db.ui.inputmanager;
 import db.tools.enumkvp;
+import db.tools.event;
 
 import fuji.fuji;
 import fuji.input;
@@ -70,7 +70,7 @@ class Textbox : Widget
 
 	@property final bool hasFocus() const nothrow @nogc
 	{
-		return pFocusKeyboard && getUI().getFocus(pFocusKeyboard) is this;
+		return pFocusKeyboard && ui.getFocus(pFocusKeyboard) is this;
 	}
 
 	@property final StringEntryLogic.StringType type() const pure nothrow @nogc { return stringLogic.type; }
@@ -102,7 +102,7 @@ class Textbox : Widget
 			case "type":
 				type = getEnumValue!(StringEntryLogic.StringType)(value); break;
 			case "onChanged":
-				bindEvent!WidgetEvent(OnChanged, value); break;
+				bindEvent!OnChanged(value); break;
 			default:
 				super.setProperty(property, value);
 		}
@@ -118,7 +118,7 @@ class Textbox : Widget
 	}
 
 
-	WidgetEvent OnChanged;
+	Event!(Widget, const(char)[], const(InputSource)*) OnChanged;
 
 protected:
 	StringEntryLogic stringLogic;
@@ -158,19 +158,19 @@ protected:
 				updateCursorPos(ev.down.x, bUpdateSelection);
 
 				// allow drag selection
-				getUI().setFocus(ev.pSource, this);
+				ui.setFocus(ev.pSource, this);
 
 				// also claim keyboard focus...
 				pFocusKeyboard = manager.findSource(MFInputDevice.Keyboard, ev.pSource.deviceID);
 				if(pFocusKeyboard)
-					getUI().setFocus(pFocusKeyboard, this);
+					ui.setFocus(pFocusKeyboard, this);
 
 				blinkTime = 0.4f;
 				break;
 			}
 			case InputManager.EventType.Up:
 			{
-				getUI().setFocus(ev.pSource, null);
+				ui.setFocus(ev.pSource, null);
 			}
 			case InputManager.EventType.Drag:
 			{
@@ -190,11 +190,8 @@ protected:
 	{
 		blinkTime = 0.4f;
 
-		if(!OnChanged.empty)
-		{
-			WidgetTextEvent ev = WidgetTextEvent(this, text);
-			OnChanged(this, &ev.base);
-		}
+		if(OnChanged)
+			OnChanged(this, text, pFocusKeyboard);
 	}
 
 	final void updateCursorPos(float x, bool bUpdateSelection)

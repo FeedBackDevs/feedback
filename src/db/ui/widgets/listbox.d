@@ -4,9 +4,9 @@ import db.ui.widget;
 import db.ui.widgets.frame;
 import db.ui.widgets.layout;
 import db.ui.listadapter;
-import db.ui.widgetevent;
 import db.ui.inputmanager;
 import db.tools.enumkvp;
+import db.tools.event;
 
 import fuji.fuji;
 import fuji.vector;
@@ -26,6 +26,13 @@ class Listbox : Layout
 	enum Flags
 	{
 		HoverSelect = 1
+	}
+
+	enum WrapMode
+	{
+		None,		// no wrapping
+		Selection,	// wrap the selection cursor
+		Contents	// repeat contents as a cycle
 	}
 
 	this()
@@ -77,8 +84,8 @@ class Listbox : Layout
 
 			_selection = item;
 
-			auto ev = WidgetSelectEvent(this, item);
-			OnSelChanged(this, &ev.base);
+			if(OnSelChanged)
+				OnSelChanged(this, item);
 		}
 	}
 
@@ -144,9 +151,9 @@ class Listbox : Layout
 		else if(!icmp(property, "hoverSelect"))
 			flags = (flags & ~Flags.HoverSelect) | (getBoolFromString(value) ? Flags.HoverSelect : 0);
 		else if(!icmp(property, "onSelChanged"))
-			bindEvent!WidgetEvent(OnSelChanged, value);
+			bindEvent!OnSelChanged(value);
 		else if(!icmp(property, "onClick"))
-			bindEvent!WidgetEvent(OnClick, value);
+			bindEvent!OnClick(value);
 		else
 			super.setProperty(property, value);
 	}
@@ -159,8 +166,8 @@ class Listbox : Layout
 	}
 
 
-	WidgetEvent OnSelChanged;
-	WidgetEvent OnClick;
+	Event!(Widget, int) OnSelChanged;
+	Event!(Widget, int) OnClick;
 
 protected:
 	Orientation _orientation = Orientation.Vertical;
@@ -181,7 +188,7 @@ protected:
 	final void addView(Widget view)
 	{
 		// it might be better to write a custom ListItem widget here, Frame might be a bit heavy for the purpose...
-		Frame frame = getUI().createWidget!Frame();
+		Frame frame = ui.createWidget!Frame();
 		frame.addChild(view);
 		frame.clickable = true;
 		frame.hoverable = true;
@@ -247,8 +254,8 @@ protected:
 				MFRect rect = MFRect(0, 0, size.x, size.y);
 				if(!MFTypes_PointInRect(ev.down.x, ev.down.y, rect))
 				{
-					auto sel = WidgetSelectEvent(this, -1);
-					OnClick(this, &sel.base);
+					if(OnClick)
+						OnClick(this, -1);
 				}
 				break;
 			}
@@ -257,7 +264,7 @@ protected:
 				if(bDragging)
 				{
 					bDragging = false;
-					getUI().setFocus(ev.pSource, oldFocus);
+					ui.setFocus(ev.pSource, oldFocus);
 				}
 				break;
 			}
@@ -273,7 +280,7 @@ protected:
 				if(!bDragging)
 				{
 					bDragging = true;
-					oldFocus = getUI().setFocus(ev.pSource, this);
+					oldFocus = ui.setFocus(ev.pSource, this);
 				}
 				break;
 			}
@@ -347,7 +354,7 @@ protected:
 	}
 
 
-	final void onItemDown(Widget widget, WidgetEventInfo* ev)
+	final void onItemDown(Widget widget, const(InputSource)* pSource)
 	{
 		// a down stroke should immediately stop any innertial scrolling
 		velocity = 0;
@@ -357,19 +364,19 @@ protected:
 			selection = cast(int)getChildIndex(widget);
 	}
 
-	final void onItemClick(Widget widget, WidgetEventInfo* ev)
+	final void onItemClick(Widget widget, const(InputSource)* pSource)
 	{
-		auto sel = WidgetSelectEvent(widget, cast(int)getChildIndex(widget));
-		OnClick(this, &sel.base);
+		if(OnClick)
+			OnClick(this, cast(int)getChildIndex(widget));
 	}
 
-	final void onItemOver(Widget widget, WidgetEventInfo* ev)
+	final void onItemOver(Widget widget, const(InputSource)* pSource)
 	{
 		if(flags & Flags.HoverSelect)
 			selection = cast(int)getChildIndex(widget);
 	}
 
-	final void onItemOut(Widget widget, WidgetEventInfo* ev)
+	final void onItemOut(Widget widget, const(InputSource)* pSource)
 	{
 		if(flags & Flags.HoverSelect)
 			selection = -1;

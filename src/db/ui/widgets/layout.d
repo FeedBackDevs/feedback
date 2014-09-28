@@ -1,7 +1,6 @@
 module db.ui.widgets.layout;
 
 import db.ui.widget;
-import db.ui.widgetevent;
 import db.tools.enumkvp;
 
 import fuji.dbg;
@@ -23,12 +22,12 @@ class Layout : Widget
 
 	this() pure nothrow
 	{
-		OnResize ~= &onLayoutDirty;
+		OnResize ~= &onResize;
 	}
 
 	~this() pure nothrow
 	{
-		OnResize.unsubscribe(&onLayoutDirty);
+		OnResize.unsubscribe(&onResize);
 	}
 
 	override @property string typeName() const pure nothrow @nogc { return Unqual!(typeof(this)).stringof; }
@@ -214,7 +213,13 @@ protected:
 
 	abstract void arrangeChildren();
 
-	final void onLayoutDirty(Widget child, WidgetEventInfo* ev)
+	final void onResize(Widget child, MFVector size, MFVector oldSize)
+	{
+		// we may need to rearrange the children
+		arrangeChildren();
+	}
+
+	final void onLayoutDirty(Widget child)
 	{
 		// we may need to rearrange the children
 		arrangeChildren();
