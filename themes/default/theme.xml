@@ -1,4 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Frame id="theme" align="Center">
-	<Label id="press_start" align="Center" text="Press Start" text_height="60" text_colour="yellow" />
+<Frame id="theme" align="Fill">
+	<Script src="theme.lua" />
+	<Prefab id="mainmenu" prefab="mainmenu.xml" align="Fill" visibility="invisible" />
+	<Prefab id="optoins" prefab="options.xml" align="Fill" visibility="invisible" />
+	<Prefab id="songselect" prefab="songselect.xml" align="Fill" />
 </Frame>

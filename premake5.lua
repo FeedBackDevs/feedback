@@ -51,6 +51,10 @@ solution "FeedBack"
 		files { "src/**.d" }
 		includedirs { "src/", "LuaD/" }
 
+		-- include 'code' data
+		files { "data/**.lua", "data/**.xml", "data/**.ini", "data/**.mfx", "data/**.hlsl", "data/**.glsl" }
+		files { "themes/**.lua", "themes/**.xml" }
+
 		libdirs { "lib" }
 		links { "Fuji", "FujiD", "LuaD" }
 

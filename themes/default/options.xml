@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Frame id="options" align="Fill">
+	<Label id="press_start" align="Center" text="Options" text_height="60" text_colour="yellow" />
+</Frame>

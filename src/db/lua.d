@@ -11,6 +11,7 @@ import db.ui.widgets.linearlayout;
 import db.ui.widgets.textbox;
 import db.ui.widgets.listbox;
 import db.ui.listadapter;
+import db.game;
 
 import fuji.dbg;
 import fuji.vector;
@@ -20,6 +21,7 @@ import fuji.string;
 
 public import luad.base;
 import luad.all;
+import luad.error;
 import luad.c.lua;
 
 import std.string;
@@ -33,9 +35,16 @@ struct LuaDelegate(Args...)
 
 	void opCall(Args args)
 	{
-		d.call(args);
+		try
+		{
+			d.call(args);
 
-		// TODO: check return value, if we returned a function, then call it with (widget, ev)
+			// TODO: check return value, if we returned a function, then call it with (widget, ev)
+		}
+		catch(Exception e)
+		{
+			MFDebug_Error(e.msg);
+		}
 	}
 	@property auto getDelegate() pure nothrow { return &opCall; }
 
@@ -83,13 +92,25 @@ protected:
 
 LuaState initLua()
 {
+	static void panic(LuaState state, in char[] error)
+	{
+		MFDebug_Error(error);
+		throw new LuaErrorException(error.idup);
+	}
+
 	lua = new LuaState;
+	lua.setPanicHandler(&panic);
+
 	lua.openLibs();
 
 	lua["print"] = &luaPrint;
 	lua["error"] = &luaError;
 	lua["warn"] = &luaWarn;
 	lua["log"] = &luaLog;
+
+	lua.doString(luaCode);
+
+	lua["library"] = Game.instance.songLibrary;
 
 	// Fuji types
 	lua.set(MFVector.stringof, lua.registerType!MFVector());
@@ -172,6 +193,23 @@ LuaState lua;
 
 
 private:
+
+__gshared string luaCode = q{
+  function tprint (tbl, indent)
+    if not indent then indent = 0 end
+    for k, v in pairs(tbl) do
+    	if k ~= "package" and k ~= "_G" then
+      formatting = string.rep("  ", indent) .. k .. ": "
+      if type(v) == "table" then
+        print(formatting)
+        tprint(v, indent+1)
+      else
+        print(formatting .. tostring(v))
+      end
+      end
+    end
+  end
+};
 
 extern(C) void luaPrint(LuaObject[] params...)
 {

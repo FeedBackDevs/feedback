@@ -19,6 +19,8 @@ import db.formats.bms;
 import db.tools.filetypes;
 import db.tools.enumkvp;
 
+import luad.base;
+
 import std.string;
 import std.encoding;
 import std.range;
@@ -55,6 +57,31 @@ enum Streams
 
 struct Track
 {
+	void pause(bool bPause)
+	{
+		foreach(s; streams)
+			if(s)
+				MFSound_PauseStream(s, bPause);
+	}
+
+	void seek(float offsetInSeconds)
+	{
+		foreach(s; streams)
+			if(s)
+				MFSound_SeekStream(s, offsetInSeconds);
+	}
+
+	void setVolume(Part part, float volume)
+	{
+		// TODO: figure how parts map to playing streams
+	}
+
+	void setPan(Part part, float pan)
+	{
+		// TODO: figure how parts map to playing streams
+	}
+
+@noscript:
 	struct Source
 	{
 		struct File
@@ -154,44 +181,20 @@ struct Track
 		_background = null;
 		_fretboard = null;
 	}
-
-	void pause(bool bPause)
-	{
-		foreach(s; streams)
-			if(s)
-				MFSound_PauseStream(s, bPause);
-	}
-
-	void seek(float offsetInSeconds)
-	{
-		foreach(s; streams)
-			if(s)
-				MFSound_SeekStream(s, offsetInSeconds);
-	}
-
-	void setVolume(Part part, float volume)
-	{
-		// TODO: figure how parts map to playing streams
-	}
-
-	void setPan(Part part, float pan)
-	{
-		// TODO: figure how parts map to playing streams
-	}
 }
 
 class SongLibrary
 {
-	this()
+	this(string filename = null)
 	{
-		load();
+		load(filename ? filename : "system:cache/library.xml");
 	}
 
-	void load()
+	void load(string filename)
 	{
 		try
 		{
-			string file = MFFileSystem_LoadText("system:cache/library.xml").assumeUnique;
+			string file = MFFileSystem_LoadText(filename).assumeUnique;
 			if(!file)
 				return;
 
@@ -299,12 +302,17 @@ class SongLibrary
 		return name in library;
 	}
 
+	@property string[] songs()
+	{
+		return library.keys;
+	}
+
+private:
 	// local database
 	Track[string] library;
 
 	MFFileTime lastScan;
 
-private:
 	void scanPath(string path)
 	{
 		string searchPattern = path ~ "*";
@@ -475,7 +483,7 @@ string archiveName(string artist, string song, string suffix = null)
 			.map!(c => "\t_.-!?".canFind(c) ? cast(dchar)' ' : c.toLower)	// convert unwanted chars to spaces, and letters to lowercase
 			.filter!(c => !marks[c] && !"'\"".canFind(c) && filter(c))		// strip accents, select noise cahracters, and bracketed content
 			.text.strip														// strip leading and trailing whitespace
-			.map!(c => c == ' ' ? cast(dchar)'_' : c)									// convert spaces to underscores
+			.map!(c => c == ' ' ? cast(dchar)'_' : c)						// convert spaces to underscores
 			.text;
 	}
 
