@@ -113,6 +113,7 @@ LuaState initLua()
 	lua.doString(luaCode);
 
 	lua["quit"] = &MFSystem_Quit;
+	lua["startPerformance"] = &Game.instance.startPerformance;
 
 	lua["library"] = Game.instance.songLibrary;
 	lua["ui"] = Game.instance.ui;

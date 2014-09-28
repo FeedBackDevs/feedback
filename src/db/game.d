@@ -141,14 +141,6 @@ class Game
 			players ~= player;
 		}
 
-		// HACK: create a performance of the first song in the library
-		Track* track = songLibrary.find("dream_theater-pull_me_under");
-		if(track)
-		{
-			performance = new Performance(track, players);
-			performance.Begin();
-		}
-
 		// load the theme
 		theme = Theme.load(settings.theme);
 		if(!theme)
@@ -213,6 +205,17 @@ class Game
 	void saveSettings()
 	{
 		settings.Save();
+	}
+
+	void startPerformance(string song)
+	{
+		// HACK: create a performance of the first song in the library
+		Track* track = songLibrary.find(song);
+		if(track)
+		{
+			performance = new Performance(track, players);
+			performance.Begin();
+		}
 	}
 
 	//-------------------------------------------------------------------------------------------------------

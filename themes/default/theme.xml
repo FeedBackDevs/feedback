@@ -4,4 +4,5 @@
 	<Prefab id="mainmenu" prefab="mainmenu.xml" align="Fill" visibility="invisible" />
 	<Prefab id="options" prefab="options.xml" align="Fill" visibility="invisible" />
 	<Prefab id="songselect" prefab="songselect.xml" align="Fill" visibility="invisible" />
+	<Prefab id="performance" prefab="performance.xml" align="Fill" visibility="invisible" />
 </Frame>

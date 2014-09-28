@@ -85,7 +85,7 @@ class Listbox : Layout
 			_selection = item;
 
 			if(OnSelChanged)
-				OnSelChanged(this, item);
+				OnSelChanged(this, item + 1);
 		}
 	}
 
@@ -255,7 +255,7 @@ protected:
 				if(!MFTypes_PointInRect(ev.down.x, ev.down.y, rect))
 				{
 					if(OnClick)
-						OnClick(this, -1);
+						OnClick(this, 0);
 				}
 				break;
 			}
@@ -367,7 +367,7 @@ protected:
 	final void onItemClick(Widget widget, const(InputSource)* pSource)
 	{
 		if(OnClick)
-			OnClick(this, cast(int)getChildIndex(widget));
+			OnClick(this, cast(int)getChildIndex(widget) + 1);
 	}
 
 	final void onItemOver(Widget widget, const(InputSource)* pSource)

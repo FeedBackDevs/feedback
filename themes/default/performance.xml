@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Frame align="Fill">
+	<Label align="TopCenter" text="Performance" text_height="60" text_colour="yellow" />
+
+	<Prefab id="ingameoptions" prefab="ingameoptions.xml" align="Fill" visibility="invisible" />
+</Frame>

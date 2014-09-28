@@ -24,25 +24,35 @@ end
 
 songs = ArrayAdapter(library.songs, get, update)
 
-function selectSong(w, ev)
-	print("select Song!")
+function selectSong(w, i)
+	if i > 0 then
+		local song = library.songs[i]
+		print("Select Song: " .. song)
+	end
 end
 
-function playSong(w, ev)
+function playSong(w, i)
 	print("Play Song")
+
+	local song = library.songs[i]
+	print(song)
+	startPerformance(song);
+
+	ui:find("songselect").visibility = "Invisible"
+	ui:find("performance").visibility = "Visible"
 end
 
-function selectPlaySong(w, ev)
+function selectPlaySong()
 	print("select play song!")
 	ui:find("mainmenu").visibility = "Invisible"
 	ui:find("songselect").visibility = "Visible"
 end
 
-function selectSettings(w, ev)
+function selectSettings()
 	print("select settings!")
 end
 
-function selectExit(w, ev)
+function selectExit()
 	print("select exit")
 	quit()
 end
