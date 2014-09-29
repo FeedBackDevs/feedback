@@ -14,6 +14,8 @@ import fuji.fuji;
 import fuji.filesystem;
 import fuji.heap;
 
+import luad.base;
+
 import std.conv : to;
 import std.range: back, empty;
 import std.algorithm;
@@ -51,6 +53,8 @@ struct Variation
 
 class Song
 {
+
+@noscript:
 	this()
 	{
 		foreach(i, ref p; parts)

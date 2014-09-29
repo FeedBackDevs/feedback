@@ -26,12 +26,12 @@ bool LoadDWI(Track* track, DirEntry file)
 
 	MFDebug_Log(2, "Loading song: '" ~ file.filepath ~ "'");
 
-	track.song = new Song;
-	track.song.params["source_format"] = ".dwi";
+	track._song = new Song;
+	track._song.params["source_format"] = ".dwi";
 
 	string name = file.filename.stripExtension;
-	track.song.params["original_name"] = name;
-	track.song.name = name;
+	track._song.params["original_name"] = name;
+	track._song.name = name;
 
 	// search for the music and other stuff...
 	string songName = name.toLower;
@@ -42,7 +42,7 @@ bool LoadDWI(Track* track, DirEntry file)
 		if(isImageFile(filename))
 		{
 			if(fn[] == songName || fn[] == "disc")
-				track.cover = f.filepath;
+				track.coverImage = f.filepath;
 			else if(fn[] == songName ~ "-bg" || fn[] == "back" || fn[] == "title" || fn[] == "title-bg")
 				track.background = f.filepath;
 		}
@@ -51,7 +51,7 @@ bool LoadDWI(Track* track, DirEntry file)
 			if(fn[] == songName || fn[] == "song")
 				track.addSource().addStream(f.filepath);
 			if(fn[] == "intro")
-				track.preview = f.filepath;
+				track._preview = f.filepath;
 		}
 		else if(isVideoFile(filename))
 		{
@@ -69,16 +69,16 @@ bool LoadDWI(Track* track, DirEntry file)
 	track.LoadDWI(steps, path);
 
 	// split subtitle into variation
-	if(track.song.name[$-1] == ')')
+	if(track._song.name[$-1] == ')')
 	{
 		ptrdiff_t i;
-		for(i=track.song.name.length-2; i>0; --i)
+		for(i=track._song.name.length-2; i>0; --i)
 		{
-			if(track.song.name[i] == '(')
+			if(track._song.name[i] == '(')
 			{
-				track.song.variant = track.song.name[i+1..$-1].strip;
-				track.song.subtitle = track.song.variant;
-				track.song.name = track.song.name[0..i].strip;
+				track._song.variant = track._song.name[i+1..$-1].strip;
+				track._song.subtitle = track._song.variant;
+				track._song.name = track._song.name[0..i].strip;
 				break;
 			}
 		}
@@ -89,7 +89,7 @@ bool LoadDWI(Track* track, DirEntry file)
 
 bool LoadDWI(Track* track, const(char)[] dwi, string path)
 {
-	Song song = track.song;
+	Song song = track._song;
 
 	// Format description:
 	// http://dwi.ddruk.com/readme.php#4

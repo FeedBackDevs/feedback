@@ -57,6 +57,43 @@ enum Streams
 
 struct Track
 {
+	@property Song song()
+	{
+		if(!_song)
+			_song = new Song(localChart);
+
+		return _song;
+	}
+
+	@property string preview() { return _preview; }
+	@property string cover() { return coverImage; }
+
+	@property string path() { return song.songPath; }
+
+	@property string id() { return song.id; }
+	@property string name() { return song.name; }
+	@property string variant() { return song.variant; }
+	@property string subtitle() { return song.subtitle; }
+	@property string artist() { return song.artist; }
+	@property string album() { return song.album; }
+	@property string year() { return song.year; }
+	@property string packageName() { return song.packageName; }
+	@property string charterName() { return song.charterName; }
+
+	// TODO: tags should be split into an array
+//	@property string tags() { return song.tags; }
+	@property string genre() { return song.genre; }
+	@property string mediaType() { return song.mediaType; }
+
+	// TODO: is AA
+//	@property string params() { return song.params; }
+
+	@property int resolution() { return song.resolution; }
+	@property long startOffset() { return song.startOffset; }
+
+
+	// TODO: add something to fetch information about the streams...
+
 	void pause(bool bPause)
 	{
 		foreach(s; streams)
@@ -101,10 +138,10 @@ struct Track
 	string localChart;				// path to local chart file
 
 	// associated data
-	string preview;					// short preview clip
+	string _preview;				// short preview clip
 	string video;					// background video
 
-	string cover;					// cover image
+	string coverImage;				// cover image
 	string background;				// background image
 	string fretboard;				// custom fretboard graphic
 
@@ -112,7 +149,7 @@ struct Track
 	Source[] sources;
 
 	// runtime data
-	Song song;
+	Song _song;
 
 	MFAudioStream*[Streams.Count] streams;
 	MFVoice*[Streams.Count] voices;
@@ -135,9 +172,6 @@ struct Track
 
 	void prepare()
 	{
-		if(!song)
-			song = new Song(localChart);
-
 		song.prepare();
 
 		// load audio streams...
@@ -158,8 +192,8 @@ struct Track
 		}
 
 		// load data...
-		if(cover)
-			_cover = Material(cover);
+		if(coverImage)
+			_cover = Material(coverImage);
 		if(background)
 			_background = Material(background);
 		if(fretboard)
@@ -211,9 +245,9 @@ class SongLibrary
 					string id = xml.tag.attr["id"];
 
 					xml.onEndTag["localChart"]	= (in Element e) { track.localChart		= e.text(); };
-					xml.onEndTag["preview"]		= (in Element e) { track.preview		= e.text(); };
+					xml.onEndTag["preview"]		= (in Element e) { track._preview		= e.text(); };
 					xml.onEndTag["video"]		= (in Element e) { track.video			= e.text(); };
-					xml.onEndTag["cover"]		= (in Element e) { track.cover			= e.text(); };
+					xml.onEndTag["cover"]		= (in Element e) { track.coverImage		= e.text(); };
 					xml.onEndTag["background"]	= (in Element e) { track.background		= e.text(); };
 					xml.onEndTag["fretboard"]	= (in Element e) { track.fretboard		= e.text(); };
 
@@ -258,10 +292,10 @@ class SongLibrary
 
 			if(track.localChart)	t ~= new Element("localChart", track.localChart);
 
-			if(track.preview)		t ~= new Element("preview", track.preview);
+			if(track._preview)		t ~= new Element("preview", track._preview);
 			if(track.video)			t ~= new Element("video", track.video);
 
-			if(track.cover)			t ~= new Element("cover", track.cover);
+			if(track.coverImage)	t ~= new Element("cover", track.coverImage);
 			if(track.background)	t ~= new Element("background", track.background);
 			if(track.fretboard)		t ~= new Element("fretboard", track.fretboard);
 
@@ -328,7 +362,7 @@ private:
 			else if(e.filename.extension.icmp(".chart") == 0 && e.writeTime > lastScan)
 			{
 				Track track;
-				track.song = new Song(e.filepath);
+				track._song = new Song(e.filepath);
 
 				// search for the music and other stuff...
 				string songName = e.filename.stripExtension.toLower;
@@ -339,7 +373,7 @@ private:
 					if(isImageFile(filename))
 					{
 						if(fn[] == songName)
-							track.cover = f.filename;
+							track.coverImage = f.filename;
 						else if(fn[] == songName ~ "-bg")
 							track.background = f.filename;
 					}
@@ -348,7 +382,7 @@ private:
 						if(fn[] == songName)
 							track.addSource().addStream(f.filename);
 						if(fn[] == songName ~ "-intro")
-							track.preview = f.filename;
+							track._preview = f.filename;
 					}
 					else if(isVideoFile(filename))
 					{
@@ -357,7 +391,7 @@ private:
 					}
 				}
 
-				library[track.song.id] = track;
+				library[track._song.id] = track;
 			}
 		}
 
@@ -440,11 +474,11 @@ private:
 				if(addTrack)
 				{
 					// write out a .chart for the converted song
-					track.song.saveChart(dir);
-					track.localChart = track.song.songPath;
+					track._song.saveChart(dir);
+					track.localChart = track._song.songPath;
 
-					if(track.song.id !in library)
-						library[track.song.id] = track;
+					if(track._song.id !in library)
+						library[track._song.id] = track;
 				}
 			}
 			catch(Exception e)

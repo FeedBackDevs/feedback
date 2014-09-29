@@ -26,8 +26,8 @@ bool LoadGuitarPro(Track* track, DirEntry file)
 
 	MFDebug_Log(2, "Loading song: '" ~ file.filepath ~ "'");
 
-	track.song = new Song;
-	track.song.params["source_format"] = file.filename.extension.toLower;
+	track._song = new Song;
+	track._song.params["source_format"] = file.filename.extension.toLower;
 
 	// search for the music and other stuff...
 	string songName = file.filename.stripExtension.toLower;
@@ -38,7 +38,7 @@ bool LoadGuitarPro(Track* track, DirEntry file)
 		if(isImageFile(filename))
 		{
 			if(fn[] == songName)
-				track.cover = f.filepath;
+				track.coverImage = f.filepath;
 			else if(fn[] == songName ~ "-bg")
 				track.background = f.filepath;
 		}
@@ -47,7 +47,7 @@ bool LoadGuitarPro(Track* track, DirEntry file)
 			if(fn[] == songName)
 				track.addSource().addStream(f.filepath);
 			if(fn[] == "intro")
-				track.preview = f.filepath;
+				track._preview = f.filepath;
 		}
 		else if(isVideoFile(filename))
 		{
@@ -59,7 +59,7 @@ bool LoadGuitarPro(Track* track, DirEntry file)
 	GuitarProFile gpx = new GuitarProFile(file);
 //	gpx.WriteText(file.filepath.stripExtension ~ ".txt");
 
-	track.song.LoadGPx(gpx);
+	track._song.LoadGPx(gpx);
 
 	// search for music files
 	//...

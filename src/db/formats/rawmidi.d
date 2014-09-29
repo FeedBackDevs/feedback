@@ -20,15 +20,15 @@ bool LoadRawMidi(Track* track, DirEntry file)
 
 	MFDebug_Log(2, "Loading song: '" ~ file.filepath ~ "'");
 
-	track.song = new Song;
-	track.song.params["source_format"] = ".midi";
+	track._song = new Song;
+	track._song.params["source_format"] = ".midi";
 
-	track.song.name = file.filename.stripExtension;
+	track._song.name = file.filename.stripExtension;
 
 	MIDIFile midi = new MIDIFile(file);
 //	midi.WriteText(file.filepath.stripExtension ~ ".txt");
 
-	track.song.LoadRawMidi(midi);
+	track._song.LoadRawMidi(midi);
 
 	// search for the music and other stuff...
 	string songName = file.filename.stripExtension.toLower;
@@ -39,7 +39,7 @@ bool LoadRawMidi(Track* track, DirEntry file)
 		if(isImageFile(filename))
 		{
 			if(fn[] == songName)
-				track.cover = f.filepath;
+				track.coverImage = f.filepath;
 			else if(fn[] == songName || fn[] == songName ~ "-bg")
 				track.background = f.filepath;
 		}
@@ -48,7 +48,7 @@ bool LoadRawMidi(Track* track, DirEntry file)
 			if(fn[] == songName)
 				track.addSource().addStream(f.filepath);
 			if(fn[] == songName ~ "-intro")
-				track.preview = f.filepath;
+				track._preview = f.filepath;
 		}
 		else if(isVideoFile(filename))
 		{

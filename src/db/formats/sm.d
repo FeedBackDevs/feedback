@@ -24,11 +24,11 @@ bool LoadSM(Track* track, DirEntry file)
 
 	MFDebug_Log(2, "Loading song: '" ~ file.filepath ~ "'");
 
-	track.song = new Song;
+	track._song = new Song;
 
 	string name = file.filename.stripExtension;
-	track.song.params["original_name"] = name;
-	track.song.name = name;
+	track._song.params["original_name"] = name;
+	track._song.name = name;
 
 	// search for the music and other stuff...
 	string songName = file.filename.stripExtension.toLower;
@@ -39,7 +39,7 @@ bool LoadSM(Track* track, DirEntry file)
 		if(isImageFile(filename))
 		{
 			if(fn[] == songName || fn[] == "disc")
-				track.cover = f.filepath;
+				track.coverImage = f.filepath;
 			else if(fn[] == songName ~ "-bg" || fn[] == "back" || fn[] == "title" || fn[] == "title-bg")
 				track.background = f.filepath;
 		}
@@ -48,7 +48,7 @@ bool LoadSM(Track* track, DirEntry file)
 			if(fn[] == songName || fn[] == "song")
 				track.addSource().addStream(f.filepath);
 			if(fn[] == "intro")
-				track.preview = f.filepath;
+				track._preview = f.filepath;
 		}
 		else if(isVideoFile(filename))
 		{
@@ -70,7 +70,7 @@ bool LoadSM(Track* track, DirEntry file)
 
 bool LoadSM(Track* track, const(char)[] sm, string path)
 {
-	Song song = track.song;
+	Song song = track._song;
 	song.params["source_format"] = ".sm";
 
 	// Format description:
@@ -136,7 +136,7 @@ bool LoadSM(Track* track, const(char)[] sm, string path)
 				break;
 			case "BANNER":
 				song.params[tag.idup] = content.idup;
-				track.cover = (path ~ content).idup;
+				track.coverImage = (path ~ content).idup;
 				break;
 			case "BACKGROUND":
 				song.params[tag.idup] = content.idup;
@@ -357,16 +357,16 @@ bool LoadSM(Track* track, const(char)[] sm, string path)
 	song.sync.sort!("a.tick < b.tick");
 
 	// split subtitle into variation
-	if(track.song.name[$-1] == ')')
+	if(track._song.name[$-1] == ')')
 	{
 		ptrdiff_t i;
-		for(i=track.song.name.length-2; i>0; --i)
+		for(i=track._song.name.length-2; i>0; --i)
 		{
-			if(track.song.name[i] == '(')
+			if(track._song.name[i] == '(')
 			{
-				track.song.variant = track.song.name[i+1..$-1].strip;
-				track.song.subtitle = track.song.variant;
-				track.song.name = track.song.name[0..i].strip;
+				track._song.variant = track._song.name[i+1..$-1].strip;
+				track._song.subtitle = track._song.variant;
+				track._song.name = track._song.name[0..i].strip;
 				break;
 			}
 		}

@@ -27,8 +27,8 @@ bool LoadGHRBMidi(Track* track, DirEntry file)
 	MIDIFile midi = new MIDIFile(path ~ "notes.mid");
 //	midi.WriteText(path ~ "midi.txt");
 
-	track.song = new Song;
-	track.song.params["source_format"] = "ghrb.mid";
+	track._song = new Song;
+	track._song.params["source_format"] = "ghrb.mid";
 
 	// read song.ini
 	string text;
@@ -69,23 +69,23 @@ bool LoadGHRBMidi(Track* track, DirEntry file)
 							value = value.strip;
 						}
 					}
-					track.song.name = value;
+					track._song.name = value;
 					break;
-				case "artist":	track.song.artist = value; break;
-				case "album":	track.song.album = value; break;
-				case "year":	track.song.year = value; break;
-				case "genre":	track.song.genre = value; break;
-				case "frets":	track.song.charterName = value; break;
+				case "artist":	track._song.artist = value; break;
+				case "album":	track._song.album = value; break;
+				case "year":	track._song.year = value; break;
+				case "genre":	track._song.genre = value; break;
+				case "frets":	track._song.charterName = value; break;
 				default:
 					// unknown values become arbitrary params
-					track.song.params[key] = value;
+					track._song.params[key] = value;
 					break;
 			}
 		}
 	}
 
 	// load the midi
-	if(!track.song.LoadMidi(midi))
+	if(!track._song.LoadMidi(midi))
 	{
 		MFDebug_Warn(2, "Failed to load midi!".ptr);
 		return false;
@@ -100,7 +100,7 @@ bool LoadGHRBMidi(Track* track, DirEntry file)
 		{
 			switch(filename.stripExtension)
 			{
-				case "album":		track.cover = f.filepath; break;
+				case "album":		track.coverImage = f.filepath; break;
 				case "background":	track.background = f.filepath; break;
 				default:
 			}
@@ -111,13 +111,13 @@ bool LoadGHRBMidi(Track* track, DirEntry file)
 
 			string filepart = filename.stripExtension;
 			if(filepart[] == "preview")
-				track.preview = f.filepath;
+				track._preview = f.filepath;
 			else if(filepart[] == "rhythm")
 			{
 				if(!src) src = track.addSource();
 
 				// 'rhythm.ogg' is also be used for bass
-				if(track.song.parts[Part.RhythmGuitar].variations)
+				if(track._song.parts[Part.RhythmGuitar].variations)
 					src.addStream(f.filepath, Streams.Rhythm);
 				else
 					src.addStream(f.filepath, Streams.Bass);

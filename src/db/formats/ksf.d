@@ -39,12 +39,12 @@ bool LoadKSF(Track* track, DirEntry file, SongLibrary library)
 	Track* find = library.find(id);
 	if(!find)
 	{
-		track.song = new Song;
-		track.song.params["source_format"] = ".ksf";
+		track._song = new Song;
+		track._song.params["source_format"] = ".ksf";
 
-		track.song.id = id;
-		track.song.name = song;
-		track.song.artist = artist;
+		track._song.id = id;
+		track._song.name = song;
+		track._song.artist = artist;
 
 		// search for the music and other stuff...
 		foreach(f; dirEntries(path ~ "*", SpanMode.shallow))
@@ -54,7 +54,7 @@ bool LoadKSF(Track* track, DirEntry file, SongLibrary library)
 			if(isImageFile(filename))
 			{
 				if(fn[] == "disc")
-					track.cover = f.filepath;
+					track.coverImage = f.filepath;
 				else if(fn[] == "back" || fn[] == "title" || fn[] == "title-bg")
 					track.background = f.filepath;
 			}
@@ -63,7 +63,7 @@ bool LoadKSF(Track* track, DirEntry file, SongLibrary library)
 				if(fn[] == "song")
 					track.addSource().addStream(f.filepath);
 				if(fn[] == "intro")
-					track.preview = f.filepath;
+					track._preview = f.filepath;
 			}
 			else if(isVideoFile(filename))
 			{
@@ -72,13 +72,13 @@ bool LoadKSF(Track* track, DirEntry file, SongLibrary library)
 			}
 		}
 
-		track.song.LoadKSF(steps, file.filename);
+		track._song.LoadKSF(steps, file.filename);
 		return true;
 	}
 	else
 	{
-		find.song.LoadKSF(steps, file.filename);
-		find.song.saveChart(path);
+		find._song.LoadKSF(steps, file.filename);
+		find._song.saveChart(path);
 		return false;
 	}
 }
