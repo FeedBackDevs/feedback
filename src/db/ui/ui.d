@@ -28,18 +28,20 @@ alias WidgetFactory = Factory!Widget;
 
 class UserInterface
 {
+	alias InputEventDelegate = bool delegate(InputManager, const(InputManager.EventInfo)*);
+
 	static Widget createWidget(const(char)[] widgetType)
 	{
 		widgetType = widgetType.toLower;
 
-		if(!factory.exists(widgetType))
+		if(!_factory.exists(widgetType))
 		{
 			MFDebug_Log(2, "Widget type doesn't exist: " ~ widgetType);
 			return null;
 		}
 
 		Widget widget;
-		try widget = factory.create(widgetType);
+		try widget = _factory.create(widgetType);
 		catch {}
 		return widget;
 	}
@@ -92,11 +94,17 @@ class UserInterface
 		return root.findChild(id);
 	}
 
+	static void active(UserInterface ui) nothrow { _active = ui; }
+	static UserInterface active() nothrow @nogc { return _active; }
+
+	final InputEventDelegate registerInputEventHook(InputEventDelegate eventHook) pure nothrow @nogc { InputEventDelegate old = inputEventHook; inputEventHook = eventHook; return old; }
+	final InputEventDelegate registerUnhandledInputHandler(InputEventDelegate handler) pure nothrow @nogc { InputEventDelegate old = unhandledEventHandler; unhandledEventHandler = handler; return old; }
+
 @noscript:
 	// static stuff
 	static bool registerWidget(T)(const(char)[] name = T.stringof) if(is(T : Widget))
 	{
-		return factory.registerType!T(name.toLower);
+		return _factory.registerType!T(name.toLower);
 	}
 
 	static bool registerWidgetRenderer(R, W)(const(char)[] name = W.stringof) if(is(R : WidgetRenderer) && is(W : Widget))
@@ -120,9 +128,6 @@ class UserInterface
 		eventHandlerRegistry[name] = handler;
 	}
 	static WidgetEvent.Handler getEventHandler(const(char)[] name) { return name in eventHandlerRegistry ? eventHandlerRegistry[name] : null; }
-
-	static void setActive(UserInterface ui) nothrow { active = ui; }
-	static UserInterface getActive() nothrow @nogc { return active; }
 
 
 	// methods
@@ -166,6 +171,10 @@ protected:
 	Widget[InputManager.MaxSources] hoverList;
 	Widget[InputManager.MaxSources] downOver;
 
+	InputEventDelegate inputEventHook;
+	InputEventDelegate unhandledEventHandler;
+
+
 	static void localiseInput(InputManager.EventInfo* ev, Widget widget, ref const(MFVector) localPos) pure nothrow @nogc
 	{
 		ev.hover.x = localPos.x;
@@ -190,6 +199,14 @@ protected:
 
 	final void onInputEvent(InputManager manager, const(InputManager.EventInfo)* ev)
 	{
+		// allow a registered hook to process the event...
+		if(inputEventHook)
+		{
+			if(inputEventHook(manager, ev))
+				return;
+		}
+
+		// get focus widget
 		Widget focusWidget = focusList[ev.pSource.sourceID];
 
 		if(ev.pSource.device == MFInputDevice.Mouse || ev.pSource.device == MFInputDevice.TouchPanel)
@@ -249,11 +266,15 @@ protected:
 			// non-positional events
 			focusWidget.inputEvent(manager, ev);
 		}
+		else
+		{
+			unhandledEventHandler(manager, ev);
+		}
 	}
 
 	// static stuff
-	__gshared UserInterface active;
-	__gshared WidgetFactory factory;
+	__gshared UserInterface _active;
+	__gshared WidgetFactory _factory;
 
 	__gshared WidgetEvent.Handler[string] eventHandlerRegistry;
 

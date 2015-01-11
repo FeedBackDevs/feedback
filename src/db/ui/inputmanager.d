@@ -6,6 +6,8 @@ import fuji.fuji;
 import fuji.input;
 import fuji.display;
 
+import luad.base;
+
 struct InputSource
 {
 	int sourceID;
@@ -35,6 +37,7 @@ public:
 		ButtonTriggered,
 		ButtonDown,
 		ButtonUp,
+		Axis,
 		Character,
 		Wheel
 	}
@@ -79,13 +82,22 @@ public:
 			float deltaAngle;
 			int contact2;
 		}
-
-		EventType ev;			// event
+		struct Axis
+		{
+			float x, y;
+		}
 
 		const(InputSource)* pSource;
 
+		EventType ev;			// event
+
 		int contact;			// for multiple-contact devices (multiple mice/multi-touch screens)
 		int buttonID;			// button ID (always 0 for touch screens)
+
+		@property int sourceID() { return pSource.sourceID; }
+
+		@property MFInputDevice device() { return pSource.device; }
+		@property int deviceID() { return pSource.deviceID; }
 
 		union
 		{
@@ -96,11 +108,27 @@ public:
 			Up up;
 			Pinch pinch;
 			Spin spin;
+			Axis axis;
 		}
 	}
 
 	alias InputEvent = Event!(InputManager, const(EventInfo)*);
 
+
+	@property float dragThreshold() { return _dragThreshold; }
+	@property void dragThreshold(float threshold) { _dragThreshold = threshold; }
+
+	InputSource* findSource(MFInputDevice device, int deviceID = 0)
+	{
+		foreach(a; 0..numDevices)
+		{
+			if(sources[a].device == device && sources[a].deviceID == deviceID)
+				return &sources[a];
+		}
+		return null;
+	}
+
+@noscript:
 	this()
 	{
 		scanForDevices();
@@ -280,9 +308,49 @@ public:
 						}
 					}
 				}
-
-				if(device == MFInputDevice.Gamepad)
+				else if(device == MFInputDevice.Gamepad)
 				{
+					foreach(int b; 0..MFGamepadButton.Max)
+					{
+						if(b >= MFGamepadButton.Axis_LX && b <= MFGamepadButton.Axis_RY)
+						{
+							// handle axiis discreetly
+							float pX, pY;
+							float x = MFInput_Read(MFGamepadButton.Axis_LX, device, deviceID, &pX);
+							float y = MFInput_Read(MFGamepadButton.Axis_LY, device, deviceID, &pY);
+							if(x != pX || y != pY)
+							{
+								EventInfo info;
+								initAxisEvent(info, x, y, 0, a);
+								OnInputEvent(this, &info);
+							}
+
+							x = MFInput_Read(MFGamepadButton.Axis_RX, device, deviceID, &pX);
+							y = MFInput_Read(MFGamepadButton.Axis_RY, device, deviceID, &pY);
+							if(x != pX || y != pY)
+							{
+								EventInfo info;
+								initAxisEvent(info, x, y, 1, a);
+								OnInputEvent(this, &info);
+							}
+						}
+						else if(MFInput_WasPressed(b, device, deviceID))
+						{
+							EventInfo info;
+							initButtonEvent(info, EventType.ButtonDown, b, a);
+							OnInputEvent(this, &info);
+
+							// button trigger supports repeats... (not yet supported)
+//							info.ev = IE_ButtonTriggered;
+//							OnInputEvent(*this, info);
+						}
+						else if(MFInput_WasReleased(b, device, deviceID))
+						{
+							EventInfo info;
+							initButtonEvent(info, EventType.ButtonUp, b, a);
+							OnInputEvent(this, &info);
+						}
+					}
 				}
 			}
 		}
@@ -489,18 +557,6 @@ public:
 		}
 	}
 
-	@property float dragThreshold() { return _dragThreshold; }
-	@property void dragThreshold(float threshold) { _dragThreshold = threshold; }
-
-	InputSource* findSource(MFInputDevice device, int deviceID = 0)
-	{
-		foreach(a; 0..numDevices)
-		{
-			if(sources[a].device == device && sources[a].deviceID == deviceID)
-				return &sources[a];
-		}
-		return null;
-	}
 
 	InputEvent OnInputEvent;
 
@@ -632,5 +688,15 @@ protected:
 		info.contact = -1;
 		info.pSource = &sources[source];
 		info.buttonID = button;
+	}
+
+	void initAxisEvent(ref EventInfo info, float x, float y, int stick, int source)
+	{
+		info.ev = EventType.Axis;
+		info.contact = -1;
+		info.pSource = &sources[source];
+		info.buttonID = stick;
+		info.axis.x = x;
+		info.axis.y = y;
 	}
 }

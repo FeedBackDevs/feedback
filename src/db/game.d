@@ -101,7 +101,7 @@ class Game
 		MFDisplay_GetDisplayRect(&rect);
 
 		ui = new UserInterface(rect);
-		UserInterface.setActive(ui);
+		UserInterface.active = ui;
 
 		// init the lua VM
 		lua = initLua();

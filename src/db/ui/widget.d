@@ -33,7 +33,7 @@ import fuji.render;
 
 class Widget
 {
-	alias InputEventDelegate = bool delegate(InputManager, const(InputManager.EventInfo)*);
+	alias InputEventDelegate = UserInterface.InputEventDelegate;
 
 	enum Align
 	{
@@ -266,7 +266,7 @@ class Widget
 		return invMatrix;
 	}
 
-	final @property UserInterface ui() const nothrow @nogc { return UserInterface.getActive(); }
+	final @property UserInterface ui() const nothrow @nogc { return UserInterface.active; }
 
 	// methods
 	final bool isType(const(char)[] type) const

@@ -21,7 +21,6 @@ local function update(item, layout, userdata)
 	layout.text = item
 	print("update layout!")
 end
-
 songs = ArrayAdapter(library.songs, get, update)
 
 function selectSong(w, i)
@@ -35,7 +34,12 @@ function playSong(w, i)
 	print("Play Song")
 
 	local song = library.songs[i]
-	print(song)
+
+	local s = library:find(song)
+	if s then
+		print(s.deref.artist .. " " .. s.deref.name)
+	end
+
 	startPerformance(song);
 
 	ui:find("songselect").visibility = "Invisible"
