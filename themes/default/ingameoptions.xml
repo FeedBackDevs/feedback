@@ -1,4 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Frame align="Center">
-	<Label align="TopCenter" text="Game Paused!" text_height="60" text_colour="yellow" />
+<Frame align="Fill" background_colour="0,0,0,0.6">
+	<Script src="ingameoptions.lua" />
+	<LinearLayout align="Center" orientation="Vertical">
+		<Label align="TopCenter" text="Game Paused!" text_height="60" text_colour="yellow" />
+		<Button onClick="resumegame" text="Resume" text_height="50" text_colour="white" />
+		<Button onClick="quitsong" text="Quit Song" text_height="50" text_colour="white" />
+	</LinearLayout>
 </Frame>

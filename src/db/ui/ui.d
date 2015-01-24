@@ -29,6 +29,7 @@ alias WidgetFactory = Factory!Widget;
 class UserInterface
 {
 	alias InputEventDelegate = bool delegate(InputManager, const(InputManager.EventInfo)*);
+	alias UnknownPropertyDelegate = void delegate(Widget, const(char)[] property, const(char)[] value);
 
 	static Widget createWidget(const(char)[] widgetType)
 	{
@@ -99,6 +100,7 @@ class UserInterface
 
 	final InputEventDelegate registerInputEventHook(InputEventDelegate eventHook) pure nothrow @nogc { InputEventDelegate old = inputEventHook; inputEventHook = eventHook; return old; }
 	final InputEventDelegate registerUnhandledInputHandler(InputEventDelegate handler) pure nothrow @nogc { InputEventDelegate old = unhandledEventHandler; unhandledEventHandler = handler; return old; }
+	final UnknownPropertyDelegate registerUnknownPropertyHandler(UnknownPropertyDelegate handler) pure nothrow @nogc { UnknownPropertyDelegate old = unknownPropertyHandler; unknownPropertyHandler = handler; return old; }
 
 @noscript:
 	// static stuff
@@ -127,6 +129,7 @@ class UserInterface
 
 		eventHandlerRegistry[name] = handler;
 	}
+
 	static WidgetEvent.Handler getEventHandler(const(char)[] name) { return name in eventHandlerRegistry ? eventHandlerRegistry[name] : null; }
 
 
@@ -160,6 +163,15 @@ class UserInterface
 +/
 	}
 
+package:
+	void unknownProperty(Widget widget, const(char)[] property, const(char)[] value)
+	{
+		if(unknownPropertyHandler)
+			unknownPropertyHandler(widget, property, value);
+		else
+			MFDebug_Warn(2, format("Unknown property for '%s' %s=\"%s\"", widget.typeName, property, value));
+	}
+
 protected:
 	MFRect _displayRect;
 
@@ -173,7 +185,7 @@ protected:
 
 	InputEventDelegate inputEventHook;
 	InputEventDelegate unhandledEventHandler;
-
+	UnknownPropertyDelegate unknownPropertyHandler;
 
 	static void localiseInput(InputManager.EventInfo* ev, Widget widget, ref const(MFVector) localPos) pure nothrow @nogc
 	{

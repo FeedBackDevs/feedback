@@ -1,5 +1,8 @@
 module db.lua;
 
+public import luad.base;
+public import luad.table;
+
 import db.ui.widget;
 import db.ui.widgets.label;
 import db.ui.widgets.button;
@@ -20,8 +23,8 @@ import fuji.matrix;
 import fuji.quaternion;
 import fuji.string;
 import fuji.system;
+import fuji.input;
 
-public import luad.base;
 import luad.all;
 import luad.error;
 import luad.c.lua;
@@ -92,15 +95,34 @@ protected:
 	}
 }
 
+alias void * function(void *ud, void *ptr, size_t osize, size_t nsize)lua_Alloc;
+
 LuaState initLua()
 {
+	static extern(C) void* alloc(void* ud, void* ptr, size_t osize, size_t nsize)
+	{
+		import fuji.heap;
+		if(nsize == 0)
+		{
+			if(ptr)
+			{
+				MFHeap_Free(ptr);
+				ptr = null;
+			}
+		}
+		else
+			ptr = MFHeap_Realloc(ptr[0..osize], nsize).ptr;
+		return ptr;
+	}
+
 	static void panic(LuaState state, in char[] error)
 	{
 		MFDebug_Error(error);
 		throw new LuaErrorException(error.idup);
 	}
 
-	lua = new LuaState;
+//	lua = new LuaState(&alloc);
+	lua = new LuaState();
 	lua.setPanicHandler(&panic);
 
 	lua.openLibs();
@@ -114,9 +136,14 @@ LuaState initLua()
 
 	lua["quit"] = &MFSystem_Quit;
 	lua["startPerformance"] = &Game.instance.startPerformance;
+	lua["endPerformance"] = &Game.instance.endPerformance;
+	lua["pausePerformance"] = &Game.instance.pausePerformance;
 
 	lua["library"] = Game.instance.songLibrary;
 	lua["ui"] = Game.instance.ui;
+
+	// Fuji enums
+	lua.set("MFKey", lua.registerType!MFKey());
 
 	// Fuji types
 	lua.set("Rect", lua.registerType!MFRect());
@@ -139,6 +166,13 @@ LuaState initLua()
 //	lua.set(Selectbox.stringof, lua.registerType!Selectbox());
 
 	return lua;
+}
+
+void doFile(const(char)[] file)
+{
+	import fuji.filesystem;
+	char[] source = MFFileSystem_LoadText(file);
+	lua.doString(source);
 }
 
 bool isValidIdentifier(const(char)[] handler)
@@ -201,7 +235,7 @@ LuaState lua;
 private:
 
 __gshared string luaCode = q{
-  function tprint (tbl, indent)
+  function tprint(tbl, indent)
     if not indent then indent = 0 end
     for k, v in pairs(tbl) do
     	if k ~= "package" and k ~= "_G" then

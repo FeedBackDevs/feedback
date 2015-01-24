@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Frame id="theme" align="Fill" visibility="invisible">
 	<Script src="theme.lua" />
-	<Prefab id="mainmenu" prefab="mainmenu.xml" align="Fill" visibility="invisible" />
-	<Prefab id="options" prefab="options.xml" align="Fill" visibility="invisible" />
-	<Prefab id="songselect" prefab="songselect.xml" align="Fill" visibility="invisible" />
-	<Prefab id="performance" prefab="performance.xml" align="Fill" visibility="invisible" />
+	<Prefab screen="mainmenu" prefab="mainmenu.xml" align="Fill" />
+	<Prefab screen="options" prefab="options.xml" align="Fill" />
+	<Prefab screen="songselect" prefab="songselect.xml" align="Fill" />
+	<Prefab screen="performance" prefab="performance.xml" align="Fill" />
 </Frame>

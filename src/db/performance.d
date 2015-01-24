@@ -121,7 +121,7 @@ class Performance
 
 	~this()
 	{
-		track.release();
+		Release();
 	}
 
 	void ArrangePerformers()
@@ -152,18 +152,42 @@ class Performance
 			p.Begin(sync);
 	}
 
-	void End()
+	void Pause(bool bPause)
+	{
+		if(bPause && !bPaused)
+		{
+			track.pause(true);
+			pauseTime = sync.now;
+			bPaused = true;
+		}
+		else if(!bPause && bPaused)
+		{
+			track.pause(false);
+			startTime += sync.now - pauseTime;
+			bPaused = false;
+		}
+	}
+
+	void Release()
 	{
 		foreach(p; performers)
 			p.End();
+		performers = null;
+
+		if(track)
+			track.release();
+		track = null;
 	}
 
 	void Update()
 	{
-		time = sync.now - startTime;
+		if(!bPaused)
+		{
+			time = sync.now - startTime;
 
-		foreach(p; performers)
-			p.Update(time);
+			foreach(p; performers)
+				p.Update(time);
+		}
 	}
 
 	void Draw()
@@ -193,8 +217,10 @@ class Performance
 	Track* track;
 	Performer performers[];
 	SyncSource sync;
-	long startTime;
 	long time;
+	long startTime;
+	long pauseTime;
+	bool bPaused;
 
 	mixin Signal!() beginMusic;		// ()
 	mixin Signal!() endMusic;		// ()

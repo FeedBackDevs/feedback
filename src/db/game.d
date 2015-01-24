@@ -90,9 +90,6 @@ class Game
 		// create song library
 		songLibrary = new SongLibrary();
 
-		// scan for new songs
-		songLibrary.scan();
-
 		// save the settings (detected inputs and stuff)
 		saveSettings();
 
@@ -107,6 +104,7 @@ class Game
 		lua = initLua();
 
 		// load the bootup UI
+		doFile("boot.lua");
 		LayoutDescriptor desc = new LayoutDescriptor("boot.xml");
 		if(desc)
 		{
@@ -116,6 +114,9 @@ class Game
 		}
 
 		// TODO: the following stuff should all be asynchronous with a loading screen:
+
+		// scan for new songs
+		songLibrary.scan();
 
 		// HACK: configure a player for each detected input
 		int i = 0;
@@ -217,6 +218,18 @@ class Game
 			performance.Begin();
 		}
 	}
+
+	void endPerformance()
+	{
+		performance.Release();
+		performance = null;
+	}
+
+	void pausePerformance(bool bPause)
+	{
+		performance.Pause(bPause);
+	}
+
 
 	//-------------------------------------------------------------------------------------------------------
 	// data

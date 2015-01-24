@@ -368,7 +368,7 @@ class Widget
 				if(setRenderProperty(property, value, this))
 					return;
 				else
-					MFDebug_Warn(2, format("Unknown property for '%s' %s=\"%s\"", typeName, property, value));
+					ui.unknownProperty(this, property, value);
 			}
 		}
 	}
@@ -468,6 +468,8 @@ class Widget
 	Event!(Widget, const(InputSource)*) OnHoverOut;						// an input source left the bounds of a widget. applies to mouse events
 
 	Event!(Widget, const(InputSource)*, uint) OnCharacter;				// if the input was able to generate a unicode character
+
+	LuaTable data;
 
 @noscript: // TODO: remove this when 'package' fix makes it to DMD.
 //package(db.ui):
