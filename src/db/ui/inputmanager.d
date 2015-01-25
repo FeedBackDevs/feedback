@@ -1,12 +1,13 @@
 module db.ui.inputmanager;
 
 import db.tools.event;
+import db.player;
 
 import fuji.fuji;
 import fuji.input;
 import fuji.display;
 
-import luad.base;
+import luad.base : noscript;
 
 struct InputSource
 {
@@ -14,6 +15,11 @@ struct InputSource
 
 	MFInputDevice device;
 	int deviceID;
+
+	// HAX: We often have const(InputSource), but we want 'player' to be mutable
+	@property Player player() const { return cast(Player)_player; }
+	@property void player(Player player) const { (cast(InputSource*)&this)._player = player; }
+	private Player _player;
 }
 
 class InputManager
@@ -94,11 +100,6 @@ public:
 		int contact;			// for multiple-contact devices (multiple mice/multi-touch screens)
 		int buttonID;			// button ID (always 0 for touch screens)
 
-		@property int sourceID() { return pSource.sourceID; }
-
-		@property MFInputDevice device() { return pSource.device; }
-		@property int deviceID() { return pSource.deviceID; }
-
 		union
 		{
 			Hover hover;
@@ -110,6 +111,12 @@ public:
 			Spin spin;
 			Axis axis;
 		}
+
+	const: pure: nothrow: @safe:
+		@property int sourceID() { return pSource.sourceID; }
+
+		@property MFInputDevice device() { return pSource.device; }
+		@property int deviceID() { return pSource.deviceID; }
 	}
 
 	alias InputEvent = Event!(InputManager, const(EventInfo)*);

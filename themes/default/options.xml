@@ -1,5 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Frame id="options" align="Fill">
 	<Script src="options.lua" />
-	<Label id="press_start" align="Center" text="Options" text_height="60" text_colour="yellow" />
+	<LinearLayout align="Center" orientation="Vertical">
+		<Label align="Center" text="Options" text_height="60" text_colour="yellow" />
+		<Button onClick="opt_theme" text="Theme" text_height="50" text_colour="white" />
+		<Button onClick="opt_input" text="Input Devices" text_height="50" text_colour="white" />
+		<Button onClick="opt_latency" text="Latency Compensation" text_height="50" text_colour="white" />
+		<Button onClick="opt_back" text="Back" text_height="50" text_colour="white" />
+	</LinearLayout>
 </Frame>

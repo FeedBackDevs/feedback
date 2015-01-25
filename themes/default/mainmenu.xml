@@ -3,7 +3,9 @@
 	<Script src="mainmenu.lua" />
 	<LinearLayout align="Center" orientation="Vertical" >
 		<Label align="TopCenter" text="Main Menu" text_height="60" text_colour="yellow" />
-		<Button onClick="selectPlaySong" text="Play Song" text_height="50" text_colour="white" />
+		<Button onClick="selectPlay" text="Play" text_height="50" text_colour="white" />
+		<Button onClick="selectDownload" text="Download Songs" text_height="50" text_colour="white" />
+		<Button onClick="selectEditor" text="Editor" text_height="50" text_colour="white" />
 		<Button onClick="selectSettings" text="Settings" text_height="50" text_colour="white" />
 		<Button onClick="selectExit" text="Exit" text_height="50" text_colour="white" />
 	</LinearLayout>

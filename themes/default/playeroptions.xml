@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+ <Frame width="400" background_colour="1,0,0,0.6">
+	<LinearLayout align="Fill" orientation="Horizontal">
+		<Label text="Player 1"  text_height="60" text_colour="yellow" />
+	</LinearLayout>
+	<LinearLayout align="Center" orientation="Vertical">
+		<Label text="Sign In" text_height="40" text_colour="white" />
+		<Label text="Profile" text_height="40" text_colour="white" />
+		<Label text="Options" text_height="40" text_colour="white" />
+		<Label text="Leave Game" text_height="40" text_colour="white" />
+	</LinearLayout>
+</Frame>

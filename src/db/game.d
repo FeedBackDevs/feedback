@@ -85,7 +85,7 @@ class Game
 		MFInput_EnableBufferedInput(true, 200);
 
 		// TODO: auto-detect instruments (controllers, midi/audio devices)
-		InputDevice[] inputs = detectInstruments();
+		inputs = detectInstruments();
 
 		// create song library
 		songLibrary = new SongLibrary();
@@ -117,30 +117,6 @@ class Game
 
 		// scan for new songs
 		songLibrary.scan();
-
-		// HACK: configure a player for each detected input
-		int i = 0;
-		foreach(input; inputs)
-		{
-			Player player = new Player;
-
-			player.profile = new Profile;
-			player.profile.name = "Player " ~ to!string(i++);
-
-			player.input.device = input;
-			if(input.instrumentType == InstrumentType.GuitarController)
-				player.input.part = Part.LeadGuitar;
-			else if(input.instrumentType == InstrumentType.Drums)
-				player.input.part = Part.Drums;
-			else if(input.instrumentType == InstrumentType.Keyboard)
-				player.input.part = Part.ProKeys;
-			else if(input.instrumentType == InstrumentType.Dance)
-				player.input.part = Part.Dance;
-			else
-				player.input.part = Part.Unknown;
-
-			players ~= player;
-		}
 
 		// load the theme
 		theme = Theme.load(settings.theme);
@@ -230,6 +206,34 @@ class Game
 		performance.Pause(bPause);
 	}
 
+	void addPlayer(Player player)
+	{
+		players ~= player;
+	}
+
+	void removePlayer(Player player)
+	{
+		foreach(i, p; players)
+		{
+			if(p == player)
+			{
+				players = players[0..i] ~ players[i+1..$];
+				break;
+			}
+		}
+	}
+
+	InputDevice getInputForDevice(MFInputDevice device, int deviceID)
+	{
+		import db.inputs.controller;
+		foreach(i; inputs)
+		{
+			Controller c = cast(Controller)i;
+			if(c && c.device == device && c.deviceId == deviceID)
+				return i;
+		}
+		return null;
+	}
 
 	//-------------------------------------------------------------------------------------------------------
 	// data
@@ -240,6 +244,7 @@ class Game
 
 	SongLibrary songLibrary;
 
+	InputDevice[] inputs;
 	Player[] players;
 
 	Performance performance;

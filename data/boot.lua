@@ -12,6 +12,7 @@ local state = db.state
 -- the db api...
 
 db.currentScreen = nil
+
 state.screens = {}
 state.prevScreens = {}
 state.prevDepth = 0
@@ -115,7 +116,7 @@ ui:registerUnhandledInputHandler(function(inputManager, ev)
 		return true
 	end
 
-	print("Unhandled input event: " .. ev.deref.ev .. " - " .. ev.deref.buttonID)
+	print(ev.deref.sourceID .. " - " .. ev.deref.device .. "(" .. ev.deref.deviceID .. ") - " .. ev.deref.ev .. ": " .. ev.deref.buttonID)
 
 	return false
 end)
@@ -155,13 +156,18 @@ boot_screen.onExit = function()
 	end
 end
 
+-- set startup screen as current
 db.currentScreen = boot_screen
 
+-- register an input handler to handle keys and buttons to begin the game
+db.setInputHandler(function(ev, inputManager)
+	if ev.ev == "ButtonDown" and
+	  (ev.device == "Keyboard" and (ev.buttonID == 13 or ev.buttonID == 32)) or -- enter or space
+	  (ev.device == "Gamepad" and ev.buttonID == 8) then -- start
+		-- pass UI to the theme, supplying the input source that pressed start
+		begin(ev.pSource)
+	end
+end)
+
+
 -- load boox.xml, add it to the root node.
-
-
--- UI event handlers
-
-function bootScreenClick()
-	begin()
-end

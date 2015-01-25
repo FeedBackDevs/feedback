@@ -6,6 +6,7 @@ import db.tools.log;
 import db.i.inputdevice;
 import db.i.syncsource;
 import db.instrument;
+import db.sequence;
 import db.game;
 
 class Midi : InputDevice
@@ -21,6 +22,7 @@ class Midi : InputDevice
 
 		// HACK: assume keyboard for now?
 		instrumentType = InstrumentType.Keyboard;
+		supportedParts = [ Part.Keys, Part.ProKeys ];
 	}
 
 	~this()

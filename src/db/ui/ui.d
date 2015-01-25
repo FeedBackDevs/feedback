@@ -19,7 +19,7 @@ import fuji.input;
 import fuji.font;
 import fuji.dbg;
 
-import luad.base;
+import luad.base : noscript;
 
 import std.string;
 

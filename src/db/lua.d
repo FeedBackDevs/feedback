@@ -15,6 +15,8 @@ import db.ui.widgets.listbox;
 import db.ui.listadapter;
 import db.ui.ui;
 import db.game;
+import db.player;
+import db.profile;
 
 import fuji.dbg;
 import fuji.types;
@@ -95,7 +97,11 @@ protected:
 	}
 }
 
-alias void * function(void *ud, void *ptr, size_t osize, size_t nsize)lua_Alloc;
+
+void registerType(S, string name = S.stringof)()
+{
+	lua.set(name, lua.registerType!S());
+}
 
 LuaState initLua()
 {
@@ -139,31 +145,38 @@ LuaState initLua()
 	lua["endPerformance"] = &Game.instance.endPerformance;
 	lua["pausePerformance"] = &Game.instance.pausePerformance;
 
+	lua["addPlayer"] = &Game.instance.addPlayer;
+	lua["removePlayer"] = &Game.instance.removePlayer;
+
 	lua["library"] = Game.instance.songLibrary;
 	lua["ui"] = Game.instance.ui;
 
 	// Fuji enums
-	lua.set("MFKey", lua.registerType!MFKey());
+	registerType!MFKey();
 
 	// Fuji types
-	lua.set("Rect", lua.registerType!MFRect());
-	lua.set("Vector", lua.registerType!MFVector());
-	lua.set("Quaternion", lua.registerType!MFQuaternion());
-	lua.set("Matrix", lua.registerType!MFMatrix());
+	registerType!(MFRect, "Rect")();
+	registerType!(MFVector, "Vector")();
+	registerType!(MFQuaternion, "Quaternion")();
+	registerType!(MFMatrix, "Matrix")();
+
+	// Game objects
+	registerType!Player();
+	registerType!Profile();
 
 	// UI
-	lua.set("ArrayAdapter", lua.registerType!LuaArrayAdaptor());
+	registerType!(LuaArrayAdaptor, "ArrayAdapter")();
 
 	// Widgets
-	lua.set(Widget.stringof, lua.registerType!Widget());
-	lua.set(Label.stringof, lua.registerType!Label());
-	lua.set(Button.stringof, lua.registerType!Button());
-	lua.set(Prefab.stringof, lua.registerType!Prefab());
-	lua.set(Frame.stringof, lua.registerType!Frame());
-	lua.set(LinearLayout.stringof, lua.registerType!LinearLayout());
-	lua.set(Textbox.stringof, lua.registerType!Textbox());
-	lua.set(Listbox.stringof, lua.registerType!Listbox());
-//	lua.set(Selectbox.stringof, lua.registerType!Selectbox());
+	registerType!Widget();
+	registerType!Label();
+	registerType!Button();
+	registerType!Prefab();
+	registerType!Frame();
+	registerType!LinearLayout();
+	registerType!Textbox();
+	registerType!Listbox();
+//	registerType!Selectbox();
 
 	return lua;
 }

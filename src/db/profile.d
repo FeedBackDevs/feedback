@@ -4,6 +4,7 @@ import db.sequence;
 
 import fuji.vector;
 
+import luad.base : noscript;
 
 class Profile
 {
@@ -15,6 +16,21 @@ class Profile
 		bool bAllDrumLanes = false;
 	}
 
+	// login/logout
+	// read/write profile
+	// personal settings/preferences
+	// etc
+
+
+	// TODO: manage user profiles somehow...
+	// FaceBook connect? Google accounts? Steam? OpenFeint? Etc...
+
+	string name;
+
+	// preferences/settings
+	Settings settings;
+
+@noscript:
 	struct Score
 	{
 		struct Record
@@ -32,20 +48,5 @@ class Profile
 		Record[][][Part.Count] variations;
 	}
 
-
-	// login/logout
-	// read/write profile
-	// personal settings/preferences
-	// etc
-
-
-	// TODO: manage user profiles somehow...
-	// FaceBook connect? Google accounts? Steam? OpenFeint? Etc...
-
-	string name;
-
 	Score[string] scores;	// scores for songs (by song name)
-
-	// preferences/settings
-	Settings settings;
 }

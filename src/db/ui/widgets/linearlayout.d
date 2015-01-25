@@ -44,7 +44,7 @@ class LinearLayout : Layout
 
 
 protected:
-	Orientation _orientation = Orientation.Horizontal;
+	Orientation _orientation = Orientation.Vertical;
 
 	override void arrangeChildren()
 	{

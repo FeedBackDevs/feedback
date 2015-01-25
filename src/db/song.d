@@ -14,7 +14,7 @@ import fuji.fuji;
 import fuji.filesystem;
 import fuji.heap;
 
-import luad.base;
+import luad.base : noscript;
 
 import std.conv : to;
 import std.range: back, empty;

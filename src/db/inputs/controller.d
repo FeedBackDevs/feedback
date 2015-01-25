@@ -4,6 +4,7 @@ import db.tools.log;
 import db.i.inputdevice;
 import db.i.syncsource;
 import db.instrument;
+import db.sequence;
 import db.game;
 
 import fuji.fuji;
@@ -12,12 +13,13 @@ import fuji.input;
 
 class Controller : InputDevice
 {
-	this(int controllerId)
+	this(MFInputDevice device, int deviceId)
 	{
-		this.controllerId = controllerId;
+		this.device = device;
+		this.deviceId = deviceId;
 
 		// detect instrument type... (we have a database of USB id's for various music game controllers)
-		uint flags = MFInput_GetDeviceFlags(MFInputDevice.Gamepad, controllerId);
+		uint flags = MFInput_GetDeviceFlags(device, deviceId);
 
 		// instruments attached via adapters or proxy drivers can't be detected...
 		if(flags & (MFGamepadFlags.IsAdapter | MFGamepadFlags.IsProxy))
@@ -26,16 +28,17 @@ class Controller : InputDevice
 		if((flags & MFGamepadFlags.TypeMask) == MFGamepadFlags.Type_Guitar)
 		{
 			instrumentType = InstrumentType.GuitarController;
+			supportedParts = [ Part.LeadGuitar, Part.RhythmGuitar, Part.Bass ];
 
 			features |= flags & MFGamepadFlags.Guitar_HasTilt ? MFBit!(GuitarFeatures.HasTilt) : 0;
 			features |= flags & MFGamepadFlags.Guitar_HasSolo ? MFBit!(GuitarFeatures.HasSolo) : 0;
 			features |= flags & MFGamepadFlags.Guitar_HasSlider ? MFBit!(GuitarFeatures.HasSlider) : 0;
 			features |= flags & MFGamepadFlags.Guitar_HasPickupSwitch ? MFBit!(GuitarFeatures.HasPickupSwitch) : 0;
 		}
-
-		if((flags & MFGamepadFlags.TypeMask) == MFGamepadFlags.Type_Drums)
+		else if((flags & MFGamepadFlags.TypeMask) == MFGamepadFlags.Type_Drums)
 		{
 			instrumentType = InstrumentType.Drums;
+			supportedParts = [ Part.Drums ];
 
 			// Note: I think the most we can detect from the USB id's is whether it is meant for GH or RB
 			features |= flags & MFGamepadFlags.Drums_Has5Drums ? MFBit!(DrumFeatures.Has2Cymbals) : MFBit!(DrumFeatures.Has4Drums);
@@ -50,8 +53,14 @@ class Controller : InputDevice
 			if(features & (MFBit!(DrumFeatures.Has2Cymbals) | MFBit!(DrumFeatures.Has3Cymbals)))
 				features |= MFBit!(DrumFeatures.HasAnyCymbals);
 		}
+		else
+		{
+			// TODO: detect other types of controllers from other games...
 
-		// TODO: detect other types of controllers from other games...
+			// it's just a regular gamepad, or some type we can't detect???
+			instrumentType = InstrumentType.Unknown;
+			supportedParts = [ Part.LeadGuitar, Part.RhythmGuitar, Part.Bass, Part.Drums, Part.Keys, Part.Dance, Part.Beatmania ];
+		}
 	}
 
 	override @property long inputTime()
@@ -73,7 +82,7 @@ class Controller : InputDevice
 		// read midi stream, populate events
 		MFInputEvent[64] buffer;
 		MFInputEvent[] events;
-		while((events = MFInput_GetEvents(MFInputDevice.Gamepad, controllerId, buffer[])) != null)
+		while((events = MFInput_GetEvents(device, deviceId, buffer[])) != null)
 		{
 			foreach(ref e; events)
 			{
@@ -131,6 +140,10 @@ class Controller : InputDevice
 								continue;
 						}
 					}
+					else if(device == MFInputDevice.Keyboard)
+					{
+						// TODO: map keys to something sensible...
+					}
 
 					stream ~= ie;
 
@@ -140,7 +153,8 @@ class Controller : InputDevice
 		}
 	}
 
-	int controllerId;
+	MFInputDevice device;
+	int deviceId;
 	bool bCantDetectFeatures;
 
 	ulong startTime;
@@ -151,7 +165,9 @@ Controller[] detectControllers()
 	Controller[] controllers;
 
 	foreach(i; 0..MFInput_GetNumGamepads())
-		controllers ~= new Controller(i);
+		controllers ~= new Controller(MFInputDevice.Gamepad, i);
+	foreach(i; 0..MFInput_GetNumKeyboards())
+		controllers ~= new Controller(MFInputDevice.Keyboard, i);
 
 	return controllers;
 }

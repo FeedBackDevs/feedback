@@ -2,7 +2,10 @@ module db.i.inputdevice;
 
 import db.instrument;
 import db.i.syncsource;
+import db.sequence;
 import db.game;
+
+import luad.base : noscript;
 
 import std.range;
 
@@ -25,9 +28,18 @@ struct InputEvent
 
 class InputDevice
 {
+	InstrumentType instrumentType = InstrumentType.Unknown;
+	uint features;
+
+	Part[] supportedParts;
+
+	long deviceLatency;
+
 	abstract @property long inputTime();
 
 	@property InputEvent[] events() { return stream; }
+
+@noscript:
 
 	void Begin(SyncSource sync)
 	{
@@ -53,9 +65,4 @@ class InputDevice
 
 	SyncSource sync;
 	InputEvent[] stream;
-
-	InstrumentType instrumentType = InstrumentType.Unknown;
-	uint features;
-
-	long deviceLatency;
 }

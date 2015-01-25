@@ -13,3 +13,16 @@ options.onExit = function()
 		options.element.visibility = "Invisible"
 	end
 end
+
+function opt_theme()
+end
+
+function opt_input()
+end
+
+function opt_latency()
+end
+
+function opt_back()
+	db.showPrevScreen()
+end

@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Frame align="Fill" screen="boot_screen" visibility="visible">
-	<Frame id="welcome" align="Center">
-		<Label text="FeedBack!" text_height="100" text_colour="white" onDown="bootScreenClick" />
-	</Frame>
+	<LinearLayout id="welcome" align="Center" orientation="vertical">
+		<Label text="FeedBack!" align="Center" text_height="100" text_colour="white" />
+		<Label text="Press START or ENTER to begin..." align="Center" text_height="50" text_colour="yellow" />
+	</LinearLayout>
 	<Frame id="loading" align="Center" visibility="gone">
 		<Label text="Loading..." text_height="100" text_colour="white" />
 	</Frame>

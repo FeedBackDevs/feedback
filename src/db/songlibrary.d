@@ -19,7 +19,7 @@ import db.formats.bms;
 import db.tools.filetypes;
 import db.tools.enumkvp;
 
-import luad.base;
+import luad.base : noscript;
 
 import std.string;
 import std.encoding;

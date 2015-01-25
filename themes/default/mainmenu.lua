@@ -15,8 +15,16 @@ mainmenu.onExit = function()
 end
 
 
-function selectPlaySong()
+function selectPlay()
 	db.showScreen("songselect")
+end
+
+function selectDownload()
+	db.showScreen("download")
+end
+
+function selectEditor()
+	db.showScreen("editor")
 end
 
 function selectSettings()
