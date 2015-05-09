@@ -3,6 +3,7 @@ module db.instrument;
 import db.i.inputdevice;
 import db.inputs.controller;
 import db.inputs.midi;
+import db.inputs.audio;
 
 
 // list of instruments i've encountered in various music games
@@ -356,9 +357,11 @@ InputDevice[] detectInstruments()
 
 	Controller[] controllers = detectControllers();
 	Midi[] midiDevices = detectMidiDevices();
+	Audio[] audioDevices = detectAudioDevices();
 
 	devices ~= controllers;
 	devices ~= midiDevices;
+	devices ~= audioDevices;
 
 	return devices;
 }

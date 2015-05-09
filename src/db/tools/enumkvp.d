@@ -1,8 +1,10 @@
 module db.tools.enumkvp;
 
+import std.typetuple;
 import std.traits;
 import std.range;
 import std.string;
+import std.algorithm.iteration : splitter, map, filter;
 
 struct KeyValuePair(ValueType)
 {

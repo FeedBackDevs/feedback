@@ -384,7 +384,15 @@ class Widget
 			default:
 				return getRenderProperty(property);
 		}
-		return null;
+	}
+
+	// widgets may have a lua table for app-specific data
+	// we make this a property so that we don't allocate tables for widgets where it's never used
+	@property LuaTable data()
+	{
+		if(_data.isNil)
+			_data = createTable();
+		return _data;
 	}
 
 
@@ -469,8 +477,6 @@ class Widget
 
 	Event!(Widget, const(InputSource)*, uint) OnCharacter;				// if the input was able to generate a unicode character
 
-	LuaTable data;
-
 @noscript: // TODO: remove this when 'package' fix makes it to DMD.
 //package(db.ui):
 	// renderer stuff...
@@ -509,6 +515,8 @@ class Widget
 
 	bool bMatrixDirty = true;
 	bool bInvMatrixDirty = true;
+
+	LuaTable _data;
 
 	final @property void parent(Layout parent) pure nothrow @nogc { _parent = parent; }
 

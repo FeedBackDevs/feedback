@@ -2,21 +2,62 @@ module db.inputs.audio;
 
 import db.tools.log;
 import db.i.inputdevice;
+import db.i.syncsource;
 import db.instrument;
+import db.sequence;
 import db.game;
+
+import fuji.sound;
+import fuji.dbg;
+
+import dsignal.window;
+import dsignal.stft;
+
+
+import fuji.texture;
+import fuji.material;
+import graph.plot;
+import db.tools.image.image;
+
 
 class Audio : InputDevice
 {
-	this(int audioDeviceId)
+	this(size_t audioDeviceId)
 	{
-		deviceId = audioDeviceId;
+		deviceId = MFSound_GetCaptureDeviceId(audioDeviceId);
+
+		frames = new float[][](NumFrames, FFTWidth/2+1);
+		foreach(f; frames)
+			f[] = 0.0;
 
 		// this is either vocals, or pro-guitar
+		instrumentType = InstrumentType.Vocals;
+		supportedParts = [ Part.Vox ];
+
+		if(device.open(deviceId) == 0)
+			MFDebug_Warn(2, "Couldn't open audio capture device".ptr);
+		else
+			MFDebug_Log(2, "Opened audio capture device: " ~ device.name ~ " (" ~ device.id ~ ")");
+	}
+	~this()
+	{
+		device.close();
 	}
 
 	override @property long inputTime()
 	{
 		return Game.instance.performance.time - (deviceLatency + Game.instance.settings.micLatency)*1_000;
+	}
+
+	override void Begin(SyncSource sync)
+	{
+		super.Begin(sync);
+		device.start(&GetSamplesCallback, cast(void*)this);
+	}
+
+	override void End()
+	{
+		device.stop();
 	}
 
 	override void Update()
@@ -26,5 +67,117 @@ class Audio : InputDevice
 		// vox and guitar require different filtering
 	}
 
-	int deviceId;
+	Material GetSpectrum()
+	{
+		if(!spectrum)
+		{
+			spectrum.create2D("Spectrum", cast(int)frames.length, cast(int)frames[0].length, MFImageFormat.R_F32, MFTextureCreateFlags.Dynamic);
+			spectrumMat = Material("Spectrum");
+		}
+
+		MFLockedTexture map;
+		if(spectrum.map(map))
+		{
+			size_t w = frames.length;
+			size_t h = frames[0].length;
+			float[] pixels = cast(float[])map.pData[0..w*h*float.sizeof];
+			foreach(y; 0..h)
+			{
+				size_t offset = y*w;
+				foreach(x; 0..w)
+					pixels[offset+x] = float(frames[x][y]);
+			}
+			spectrum.unmap();
+		}
+
+		return spectrumMat;
+	}
+	Material GetWaveform()
+	{
+		if(!waveform)
+		{
+			waveform.create2D("Waveform", 1024, 256, MFImageFormat.A8R8G8B8, MFTextureCreateFlags.Dynamic);
+			waveformMat = Material("Waveform");
+		}
+		if(frames.length)
+			frames[(frameIndex+frames.length-1)%frames.length].plotAmplitude(1024, 256).colorMap!(c => cast(BGRA)c).updateTexture(waveform);
+		return waveformMat;
+	}
+
+private:
+	const(char)[] deviceId;
+	AudioCaptureDevice device;
+	int channel;
+
+	// frame analysis buffer
+	enum FFTWidth = 4096;
+	enum WindowSize = 4001;
+	enum HopSize = WindowSize/24;
+	enum NumFrames = 1024;
+
+	static immutable float[WindowSize] window = generateWindow!float(WindowType.Hamming, WindowSize);
+
+	float[][] frames;
+	size_t frameIndex;
+
+	// incoming audio buffer
+	enum BufferLen = 44100;
+	size_t offset, count;
+	float[BufferLen] sampleData;
+
+	// debug stuff...
+	Texture waveform;
+	Texture spectrum;
+	Material waveformMat;
+	Material spectrumMat;
+
+	void GetSamples(const(float)* pSamples, size_t numSamples, int numChannels) nothrow
+	{
+		import std.algorithm: min;
+
+		// this looks complicated because we're dealing with all circular buffers and shit
+		if(offset + count + numSamples > BufferLen)
+		{
+			sampleData[0..count] = sampleData[offset..offset+count];
+			offset = 0;
+		}
+		foreach(i; 0..numSamples)
+			sampleData[offset+count+i] = pSamples[i*numChannels + channel];
+		count += numSamples;
+
+		// for each frame, take an fft
+		if(count >= WindowSize)
+		{
+			size_t numFramesAvailable = 1 + (count - WindowSize)/HopSize;
+			while(numFramesAvailable)
+			{
+				size_t numFrames = min(numFramesAvailable, NumFrames-frameIndex);
+
+				STFT(sampleData[offset..offset+HopSize*numFrames+WindowSize-HopSize], window[], frames[frameIndex..frameIndex+numFrames], null, HopSize, FFTWidth);
+
+				offset += numFrames*HopSize;
+				count -= numFrames*HopSize;
+				frameIndex += numFrames;
+				if(frameIndex >= NumFrames)
+					frameIndex -= NumFrames;
+				numFramesAvailable -= numFrames;
+			}
+		}
+
+	}
+
+	static extern (C) void GetSamplesCallback(const(float)* pSamples, size_t numSamples, int numChannels, void* pUserData) nothrow
+	{
+		(cast(Audio)pUserData).GetSamples(pSamples, numSamples, numChannels);
+	}
+}
+
+Audio[] detectAudioDevices()
+{
+	Audio[] devices;
+
+	foreach(i; 0..MFSound_GetNumCaptureDevices())
+		devices ~= new Audio(i);
+
+	return devices;
 }

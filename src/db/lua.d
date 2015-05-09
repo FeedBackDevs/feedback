@@ -28,11 +28,13 @@ import fuji.system;
 import fuji.input;
 
 import luad.all;
+import luad.stack;
 import luad.error;
 import luad.c.lua;
 
 import std.string;
 import std.range;
+import std.algorithm.iteration : splitter;
 
 
 struct LuaDelegate(Args...)
@@ -179,6 +181,12 @@ LuaState initLua()
 //	registerType!Selectbox();
 
 	return lua;
+}
+
+LuaTable createTable()
+{
+	lua_newtable(lua.state);
+	return popValue!LuaTable(lua.state);
 }
 
 void doFile(const(char)[] file)

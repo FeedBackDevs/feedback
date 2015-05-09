@@ -56,6 +56,42 @@ effect Standard
 		}
 	}
 
+	ps_spectrum = src(hlsl) {
+		#include "fuji.hlsl"
+
+		float4 main(in VSOutput input) : COLOR
+		{
+			float2 uv = input.uv;
+			uv.y = 1-uv.y; // TODO: plot y^2
+
+			float e = tex2D(sDiffuseSampler, uv).x;
+			float amp = 20*log10(e);
+			float v = (amp-vUser0.x)/(vUser0.y-vUser0.x);
+			float t = clamp(v, 0, 1);
+
+			float4 colours[6];
+			colours[0] = vUser1;
+			colours[1] = vUser2;
+			colours[2] = vUser3;
+			colours[3] = vUser4;
+			colours[4] = vUser5;
+			colours[5] = vUser6;
+
+			t = t*5;
+			int i = floor(t);
+			float4 a = colours[i];
+			float4 b = colours[i+1];
+			t -= floor(t);
+			return a*(1-t) + b*t;
+		}
+	}
+
+	technique "Spectrum" (bUser0)
+	{
+		VertexShader = vs_static
+		PixelShader = ps_spectrum
+	}
+
 	technique "Animated" (bAnimated && bDiffuseSet)
 	{
 		VertexShader = vs_animated

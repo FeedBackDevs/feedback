@@ -6,9 +6,22 @@ import db.profile;
 import db.sequence;
 import db.song;
 import db.game;
-
 import db.lua;
 
+import fuji.vector;
+
+
+private immutable MFVector[] playerColours =
+[
+	MFVector.red,
+	MFVector.green,
+	MFVector.blue,
+	MFVector.yellow,
+	MFVector.magenta,
+	MFVector.cyan,
+	MFVector.white,
+	MFVector.black
+];
 
 class Player
 {
@@ -23,6 +36,15 @@ class Player
 
 		profile = new Profile();
 		profile.name = "Player " ~ to!string(Game.instance.players.length + 1);
+		profile.settings.colour = playerColours[Game.instance.players.length];
+
+		data = createTable();
+	}
+
+	~this()
+	{
+		if(pMenuInput)
+			pMenuInput.player = null;
 	}
 
 	Profile profile;

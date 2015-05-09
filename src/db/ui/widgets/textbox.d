@@ -171,6 +171,7 @@ protected:
 			case InputManager.EventType.Up:
 			{
 				ui.setFocus(ev.pSource, null);
+				break;
 			}
 			case InputManager.EventType.Drag:
 			{

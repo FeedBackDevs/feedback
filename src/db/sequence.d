@@ -6,6 +6,7 @@ import db.tools.tokeniser;
 import std.range;
 import std.string;
 import std.conv;
+import std.algorithm.iteration : splitter;
 
 enum Part
 {
@@ -250,6 +251,7 @@ struct Event
 				}
 				else
 					return format(f~"M %02x %d %d%s%s", prefix, tick, midi.type|midi.subType, midi.note, midi.velocity, dur(duration), suffix);
+				return null;
 			default:
 				return null;
 		}

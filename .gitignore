@@ -2,6 +2,9 @@
 # FeedBack files
 # ==============
 
+assets/
+test_songs/
+
 songs/
 cache/
 
