@@ -63,6 +63,7 @@ effect Standard
 		{
 			float2 uv = input.uv;
 			uv.y = 1-uv.y; // TODO: plot y^2
+			uv.y = uv.y*uv.y;
 
 			float e = tex2D(sDiffuseSampler, uv).x;
 			float amp = 20*log10(e);

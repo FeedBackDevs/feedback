@@ -132,6 +132,11 @@ class Game
 		}
 
 		ui.addTopLevelWidget(theme.ui);
+
+		// TODO: mic test!
+		import db.i.syncsource;
+		SyncSource ss;
+		inputs[$-3].Begin(ss);
 	}
 
 	void deinit()
@@ -178,6 +183,46 @@ class Game
 		MFView_SetOrtho(&rect);
 
 		DrawLog();
+
+		// TODO: mic test!
+		import db.inputs.audio;
+		import fuji.primitive;
+		Audio a = cast(Audio)inputs[$-3];
+		Material m = a.GetSpectrum();
+		m.setCurrent();
+
+		MFPrimitive(PrimType.TriStrip | PrimType.Prelit | PrimType.LargeStateBlock);
+		MFBegin(4);
+		MFSetTexCoord1(0, 0);
+		MFSetPosition(0, 0, 0);
+		MFSetTexCoord1(1, 0);
+		MFSetPosition(1024, 0, 0);
+		MFSetTexCoord1(0, 1);
+		MFSetPosition(0, 1024, 0);
+		MFSetTexCoord1(1, 1);
+		MFSetPosition(1024, 1024, 0);
+
+		__gshared spectrumColours = [
+			MFVector(0,0,1,1),
+			MFVector(0,1,1,1),
+			MFVector(1,1,0,1),
+			MFVector(1,0,0,1),
+			MFVector(0,0,0,1),
+			MFVector(0,0,0,1)
+		];
+		MFVector limits = MFVector(-120,-10,0,0); // min,max,?,?
+
+		MFStateBlock* pSB = MFPrimitive_GetPrimStateBlock();
+		MFStateBlock_SetBool(pSB, MFStateConstant_Bool.User0, true);
+		MFStateBlock_SetVector(pSB, MFStateConstant_Vector.User0, limits);
+		MFStateBlock_SetVector(pSB, MFStateConstant_Vector.User1, spectrumColours[0]);
+		MFStateBlock_SetVector(pSB, MFStateConstant_Vector.User2, spectrumColours[1]);
+		MFStateBlock_SetVector(pSB, MFStateConstant_Vector.User3, spectrumColours[2]);
+		MFStateBlock_SetVector(pSB, MFStateConstant_Vector.User4, spectrumColours[3]);
+		MFStateBlock_SetVector(pSB, MFStateConstant_Vector.User5, spectrumColours[4]);
+		MFStateBlock_SetVector(pSB, MFStateConstant_Vector.User6, spectrumColours[5]);
+		MFEnd();
+		//...
 
 		MFView_Pop();
 	}
