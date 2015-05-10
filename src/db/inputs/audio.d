@@ -7,6 +7,7 @@ import db.instrument;
 import db.sequence;
 import db.game;
 
+import fuji.device;
 import fuji.sound;
 import fuji.dbg;
 
@@ -22,9 +23,9 @@ import db.tools.image.image;
 
 class Audio : InputDevice
 {
-	this(size_t audioDeviceId)
+	this(size_t audioDeviceIndex)
 	{
-		deviceId = MFSound_GetCaptureDeviceId(audioDeviceId);
+		device = AudioCaptureDevice(Device(MFDeviceType.AudioCapture, audioDeviceIndex));
 
 		frames = new float[][](NumFrames, FFTWidth/2+1);
 		foreach(f; frames)
@@ -34,7 +35,7 @@ class Audio : InputDevice
 		instrumentType = InstrumentType.Vocals;
 		supportedParts = [ Part.Vox ];
 
-		if(device.open(deviceId) == 0)
+		if(device.open() == 0)
 			MFDebug_Warn(2, "Couldn't open audio capture device".ptr);
 		else
 			MFDebug_Log(2, "Opened audio capture device: " ~ device.name ~ " (" ~ device.id ~ ")");
@@ -66,7 +67,54 @@ class Audio : InputDevice
 
 		// vox and guitar require different filtering
 	}
+/+
+	Material GetSpectrum()
+	{
+		import dsignal.util;
+		import std.math: log10;
 
+		alias lRGB = Color!("rgb", double, ColorSpace.sRGB_l);
+		__gshared spectrumColours = [
+			lRGB(0,0,1),
+			lRGB(0,1,1),
+			lRGB(1,1,0),
+			lRGB(1,0,0),
+			lRGB(0,0,0)
+		];
+
+		if(!spectrum)
+		{
+			spectrum.create2D("Spectrum", cast(int)frames.length, cast(int)frames[0].length, MFImageFormat.A8R8G8B8, MFTextureCreateFlags.Dynamic);
+			spectrumMat = Material("Spectrum");
+		}
+
+		MFLockedTexture map;
+		if(spectrum.map(map))
+		{
+			size_t w = frames.length;
+			size_t h = frames[0].length;
+			BGRA[] pixels = cast(BGRA[])map.pData[0..w*h*BGRA.sizeof];
+			foreach(y; 0..h)
+			{
+				size_t ly;
+				if(logScale)
+					ly = h-cast(size_t)((double(y)/h)^^2.0*h)-1;
+				else
+					ly = h-y-1;
+				size_t offset = y*w;
+				foreach(x; 0..w)
+				{
+					double e = frames[x][ly];
+					pixels[offset+x] = cast(BGRA)lerpRange(clamp(20*log10(e)/200 + 1, 0, 1), spectrumColours);
+				}
+			}
+			spectrum.unmap();
+		}
+
+//		frames.plotSpectrum.colorMap!(c => cast(BGRA)c).updateTexture(spectrum);
+		return spectrumMat;
+	}
++/
 	Material GetSpectrum()
 	{
 		if(!spectrum)
@@ -105,7 +153,6 @@ class Audio : InputDevice
 	}
 
 private:
-	const(char)[] deviceId;
 	AudioCaptureDevice device;
 	int channel;
 
@@ -176,7 +223,7 @@ Audio[] detectAudioDevices()
 {
 	Audio[] devices;
 
-	foreach(i; 0..MFSound_GetNumCaptureDevices())
+	foreach(i; 0..MFDevice_GetNumDevices(MFDeviceType.AudioCapture))
 		devices ~= new Audio(i);
 
 	return devices;
