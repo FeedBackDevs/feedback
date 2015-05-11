@@ -20,8 +20,8 @@ F[][] STFT(F)(const(F)[] signal, const(F)[] window, F[][] amplitude, F[][] phase
 	assert(!phase || phase.length >= segments.length, "Not enough frames in phase buffer");
 
 	size_t samplesPerFrame = fftSize/2 + 1;
-	assert(!amplitude || amplitude[0].length == samplesPerFrame, "Incorrect number of samples per frame in amplitude buffer");
-	assert(!phase || phase[0].length == samplesPerFrame, "Incorrect number of samples per frame in amplitude buffer");
+	assert(!amplitude || amplitude[0].length <= samplesPerFrame, "Incorrect number of samples per frame in amplitude buffer");
+	assert(!phase || phase[0].length <= samplesPerFrame, "Incorrect number of samples per frame in amplitude buffer");
 
 	// allocate a temporary fft buffer
 	size_t bufferLen = Complex!F.sizeof*fftSize;
@@ -44,9 +44,9 @@ F[][] STFT(F)(const(F)[] signal, const(F)[] window, F[][] amplitude, F[][] phase
 
 		// write out positive half of FFT buffer
 		if(amplitude)
-			fftBuffer[0..samplesPerFrame].map!(e => std.complex.abs(e)).copy(amplitude[i]);
+			fftBuffer[0..samplesPerFrame].map!(e => std.complex.abs(e))[0..amplitude[i].length].copy(amplitude[i]);
 		if(phase)
-			fftBuffer[0..samplesPerFrame].map!(e => std.complex.arg(e)).copy(phase[i]); // TODO: do this in one pass?
+			fftBuffer[0..samplesPerFrame].map!(e => std.complex.arg(e))[0..phase[i].length].copy(phase[i]); // TODO: do this in one pass?
 		++i;
 	}
 

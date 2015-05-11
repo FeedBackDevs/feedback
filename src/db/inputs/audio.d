@@ -27,7 +27,7 @@ class Audio : InputDevice
 	{
 		device = AudioCaptureDevice(Device(MFDeviceType.AudioCapture, audioDeviceIndex));
 
-		frames = new float[][](NumFrames, FFTWidth/2+1);
+		frames = new float[][](NumFrames, FFTWidth/4);//2+1);
 		foreach(f; frames)
 			f[] = 0.0;
 
@@ -119,8 +119,8 @@ class Audio : InputDevice
 	{
 		if(!spectrum)
 		{
-			spectrum.create2D("Spectrum", cast(int)frames.length, cast(int)frames[0].length, MFImageFormat.R_F32, MFTextureCreateFlags.Dynamic);
-			spectrumMat = Material("Spectrum");
+			spectrum.create2D(device.id~"-Spectrum", cast(int)frames.length, cast(int)frames[0].length, MFImageFormat.R_F32, MFTextureCreateFlags.Dynamic);
+			spectrumMat = Material(device.id~"-Spectrum");
 		}
 
 		MFLockedTexture map;
@@ -144,8 +144,8 @@ class Audio : InputDevice
 	{
 		if(!waveform)
 		{
-			waveform.create2D("Waveform", 1024, 256, MFImageFormat.A8R8G8B8, MFTextureCreateFlags.Dynamic);
-			waveformMat = Material("Waveform");
+			waveform.create2D(device.id~"-Waveform", 1024, 256, MFImageFormat.A8R8G8B8, MFTextureCreateFlags.Dynamic);
+			waveformMat = Material(device.id~"-Waveform");
 		}
 		if(frames.length)
 			frames[(frameIndex+frames.length-1)%frames.length].plotAmplitude(1024, 256).colorMap!(c => cast(BGRA)c).updateTexture(waveform);
@@ -159,8 +159,8 @@ private:
 	// frame analysis buffer
 	enum FFTWidth = 4096;
 	enum WindowSize = 4001;
-	enum HopSize = WindowSize/24;
-	enum NumFrames = 1024;
+	enum HopSize = WindowSize/8;
+	enum NumFrames = 512;
 
 	static immutable float[WindowSize] window = generateWindow!float(WindowType.Hamming, WindowSize);
 
