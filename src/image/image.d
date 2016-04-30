@@ -51,7 +51,7 @@ struct Image(Color)
 		size(width, height);
 	}
 
-	this(Color pixels[], size_t width, size_t height)
+	this(Color[] pixels, size_t width, size_t height)
 	{
 		assert(pixels.length == width*height);
 		this.pixels = pixels;

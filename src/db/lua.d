@@ -35,6 +35,7 @@ import luad.c.lua;
 import std.string;
 import std.range;
 import std.algorithm.iteration : splitter;
+import std.traits : Unqual;
 
 
 struct LuaDelegate(Args...)

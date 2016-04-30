@@ -15,6 +15,8 @@ import db.songlibrary;
 import std.string;
 import std.encoding;
 import std.path;
+import std.conv : to;
+import std.range : back;
 
 bool LoadGHRBMidi(Track* track, DirEntry file)
 {
@@ -323,7 +325,7 @@ bool LoadMidi(Song song, MIDIFile midi, GHVersion ghVer = GHVersion.Unknown)
 							}
 
 							// prepend the drums type to the variation name
-							static __gshared immutable string variationNames[] = [ "-4drums", "-5drums", "-6drums", "-7drums", "-8drums" ];
+							static __gshared immutable string[] variationNames = [ "-4drums", "-5drums", "-6drums", "-7drums", "-8drums" ];
 							pVariation.name = pVariation.name ~ variationNames[drumType];
 							foreach(d; pVariation.difficulties)
 								d.variation = pVariation.name;
@@ -562,9 +564,9 @@ bool LoadMidi(Song song, MIDIFile midi, GHVersion ghVer = GHVersion.Unknown)
 
 										if(part == Drums)
 										{
-											static __gshared immutable int fourDrumMap[5] = [ DrumNotes.Kick, DrumNotes.Snare, DrumNotes.Tom1, DrumNotes.Tom2, DrumNotes.Tom3 ];
-											static __gshared immutable int fiveDrumMap[5] = [ DrumNotes.Kick, DrumNotes.Snare, DrumNotes.Hat, DrumNotes.Tom2, DrumNotes.Tom3 ];
-											static __gshared immutable int sevenDrumMap[5] = [ DrumNotes.Kick, DrumNotes.Snare, DrumNotes.Hat, DrumNotes.Ride, DrumNotes.Crash ];
+											static __gshared immutable int[5] fourDrumMap = [ DrumNotes.Kick, DrumNotes.Snare, DrumNotes.Tom1, DrumNotes.Tom2, DrumNotes.Tom3 ];
+											static __gshared immutable int[5] fiveDrumMap = [ DrumNotes.Kick, DrumNotes.Snare, DrumNotes.Hat, DrumNotes.Tom2, DrumNotes.Tom3 ];
+											static __gshared immutable int[5] sevenDrumMap = [ DrumNotes.Kick, DrumNotes.Snare, DrumNotes.Hat, DrumNotes.Ride, DrumNotes.Crash ];
 
 											switch(drumType) with(DrumsType)
 											{

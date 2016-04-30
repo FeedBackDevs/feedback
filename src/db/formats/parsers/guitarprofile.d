@@ -358,7 +358,7 @@ class GuitarProFile
 
 		string name;
 
-		String strings[];
+		String[] strings;
 
 		int midiPort;
 		int channel;

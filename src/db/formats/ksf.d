@@ -15,6 +15,7 @@ import std.string;
 import std.path;
 import std.exception;
 import std.array;
+import std.conv : to;
 
 bool LoadKSF(Track* track, DirEntry file, SongLibrary library)
 {

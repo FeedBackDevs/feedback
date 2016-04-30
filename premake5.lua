@@ -17,18 +17,15 @@ solution "FeedBack"
 		dofile  "fuji/Fuji/Project/fujidproj.lua"
 	end
 
-	-- include the Haku project...
---	dofile "fuji/Haku/Project/hakuproj.lua"
-
 	-- LuaD project
 	project "LuaD"
-		language "D"
+		language "C++"
 		kind "StaticLib"
 		flags { "StaticRuntime", "OmitDefaultLibrary" }
 
 		-- setup paths --
 		files { "LuaD/luad/**.d" }
-		includedirs { "LuaD/" }
+		importdirs { "LuaD/" }
 
 		targetname "luad"
 		targetdir("lib")
@@ -36,20 +33,15 @@ solution "FeedBack"
 
 		dofile "fuji/dist/Project/fujiconfig.lua"
 
-		configuration "Release"
-			flags { "NoBoundsCheck" }
-		configuration "Retail"
-			flags { "NoBoundsCheck" }
-
 		configuration { }
 
 	-- FeedBack project
 	project "FeedBack"
 		kind "WindowedApp"
-		language "D"
+		language "C++"
 
 		files { "src/**.d" }
-		includedirs { "src/", "LuaD/" }
+		importdirs { "src/", "LuaD/" }
 
 		-- include 'code' data
 		files { "data/**.lua", "data/**.xml", "data/**.ini", "data/**.mfx", "data/**.hlsl", "data/**.glsl" }
@@ -64,11 +56,6 @@ solution "FeedBack"
 
 		dofile "fuji/dist/Project/fujiconfig.lua"
 --		dofile "fuji/dist/Project/hakuconfig.lua"
-
-		configuration "Release"
-			flags { "NoBoundsCheck" }
-		configuration "Retail"
-			flags { "NoBoundsCheck" }
 
 		configuration { "windows" }
 			links { "Gdi32.lib", "Ole32.lib", "oleaut32.lib" }

@@ -43,7 +43,7 @@ class UserInterface
 
 		Widget widget;
 		try widget = _factory.create(widgetType);
-		catch {}
+		catch(Throwable) {}
 		return widget;
 	}
 

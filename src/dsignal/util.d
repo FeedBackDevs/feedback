@@ -8,23 +8,26 @@ import std.range;
 
 @safe: pure: nothrow: @nogc:
 
-ulong nextPowerOf2(ulong n)
+I nextPowerOf2(I)(I n) if(is(I : ulong))
 {
 	n--;
 	n |= n >> 1;
 	n |= n >> 2;
 	n |= n >> 4;
-	n |= n >> 8;
-	n |= n >> 16;
-	n |= n >> 32;
+	static if(I.sizeof > 1)
+		n |= n >> 8;
+	static if(I.sizeof > 2)
+		n |= n >> 16;
+	static if(I.sizeof > 4)
+		n |= n >> 32;
 	n++;
 	return n;
 }
 
-bool isPowerOf2(size_t sz)
-{
-    return (sz & (sz-1)) == 0;
-}
+//bool isPowerOf2(size_t sz)
+//{
+//    return (sz & (sz-1)) == 0;
+//}
 
 // return x so that (1 << x) >= i
 int iFloorLog2(size_t i)

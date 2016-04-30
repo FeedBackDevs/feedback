@@ -301,7 +301,7 @@ class Song
 		Variation* var;
 		bool bFound;
 
-		string preferences[];
+		string[] preferences;
 		size_t preference;
 
 		// TODO: should there be a magic name for the default variation rather than the first one?

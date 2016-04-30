@@ -15,6 +15,7 @@ import std.algorithm;
 import std.string;
 import std.path;
 import std.exception;
+import std.conv : to;
 
 bool LoadSM(Track* track, DirEntry file)
 {

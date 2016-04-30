@@ -10,28 +10,23 @@ auto detectPeaks(R)(R[] range, ElementType!R threshold)
 	{
 		R range;
 		E threshold;
-		E peak;
+		size_t offset;
 
-		@property bool empty() const { return range.empty; }
-		@property E front() { return peak; }
+		@property bool empty() const { return offset >= range.length-1; }
+		@property E front() { return range[offset]; }
 		void popFront()
 		{
 			if(empty)
 				return;
- 			E s[3];
-			s[2] = range.front;
-			range.popFront;
-
-			while(!range.empty)
+			foreach(i; offset+1 .. range.length-1)
 			{
-				s[0] = s[1];
-				s[1] = s[2];
-				s[2] = range.front;
-				range.popFront;
-
-				if(s[1] > threshold)
+				E s = range[i];
+				if(s < threshold)
+					continue;
+				if(s >= range[i-1] && s >= range[i+1])
 				{
-				   // check if we have a peak...
+					offset = i;
+					break;
 				}
 			}
 		}
@@ -39,7 +34,48 @@ auto detectPeaks(R)(R[] range, ElementType!R threshold)
 		@property auto save() { return this; }
 	}
 
-	auto r = DetectPeaks(range, threshold);
+	auto r = DetectPeaks(range, threshold, 0);
+	r.popFront();
+	return r;
+}
+
+auto interpolatePeaks(R)(R[] range, ElementType!R threshold, R[] phase)
+{
+	alias E = ElementType!R;
+
+	struct DetectPeaks
+	{
+		R range;
+		E threshold;
+		size_t offset;
+		E freq, amp, phase;
+
+		@property bool empty() const { return offset >= range.length-1; }
+		@property E front()
+		{
+			return range[offset];
+		}
+		void popFront()
+		{
+			if(empty)
+				return;
+			foreach(i; offset+1 .. range.length-1)
+			{
+				E s = range[i];
+				if(s < threshold)
+					continue;
+				if(s >= range[i-1] && s >= range[i+1])
+				{
+					offset = i;
+					break;
+				}
+			}
+		}
+
+		@property auto save() { return this; }
+	}
+
+	auto r = DetectPeaks(range, threshold, 0);
 	r.popFront();
 	return r;
 }

@@ -4,7 +4,8 @@ import image.image;
 import dsignal.util;
 
 import std.range;
-
+import std.traits : isFloatingPoint;
+import std.algorithm : map;
 
 struct PlotParams
 {

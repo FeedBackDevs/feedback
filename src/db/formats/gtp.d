@@ -14,6 +14,7 @@ import db.songlibrary;
 
 import std.string;
 import std.path;
+import std.conv : to;
 
 // Pieced together from multiple sources:
 // http://dguitar.sourceforge.net/GP4format.html
@@ -80,7 +81,7 @@ bool LoadGPx(Song song, GuitarProFile gpx)
 		song.artist = gpx.artist;
 		song.album = gpx.album;
 		song.charterName = gpx.transcriber;
-		
+
 /+
 		string songPath;
 

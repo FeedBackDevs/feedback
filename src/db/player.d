@@ -10,6 +10,8 @@ import db.lua;
 
 import fuji.vector;
 
+import std.conv : to;
+
 
 private immutable MFVector[] playerColours =
 [
