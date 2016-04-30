@@ -1,0 +1,108 @@
+effect Standard
+{
+	vs_static = src(glsl) {
+		#include "fuji.glsl"
+
+		attribute vec3 vPos;
+		attribute vec3 vNormal;
+		attribute vec4 vColour;
+		attribute vec2 vUV0;
+		attribute vec2 vUV1;
+
+		varying vec4 oColour;
+		varying vec2 oUV0;
+		varying vec2 oUV1;
+
+		void main()
+		{
+			oColour = vColour;
+			oUV0 = vUV0;
+			oUV1 = vUV1;
+			gl_Position = mWorldViewProjection * vec4(vPos, 1.0);
+		}
+	}
+
+	vs_animated = src(glsl) {
+		#include "fuji.glsl"
+
+		attribute vec3 vPos;
+		attribute vec3 vNormal;
+		attribute vec4 vColour;
+		attribute vec2 vUV0;
+		attribute vec2 vUV1;
+
+		varying vec4 oColour;
+		varying vec2 oUV0;
+		varying vec2 oUV1;
+
+		void main()
+		{
+			oColour = vColour;
+			oUV0 = vUV0;
+			oUV1 = vUV1;
+			gl_Position = mWorldViewProjection * vec4(vPos, 1.0);
+		}
+	}
+
+	ps_colourise = src(glsl) {
+		#include "fuji.glsl"
+
+		varying vec4 oColour;
+		varying vec2 oUV0;
+		varying vec2 oUV1;
+
+		void main(void)
+		{
+			vec4 image = texture2D(sDiffuseSampler, oUV0);
+			vec4 colour = texture2D(sDetailSampler, oUV0) * oColour;
+			gl_FragColor = vec4(image.xyz, 0) + colour;
+		}
+	}
+
+	ps_textured = src(glsl) {
+		#include "fuji.glsl"
+
+		varying vec4 oColour;
+		varying vec2 oUV0;
+
+		void main(void)
+		{
+			gl_FragColor = texture2D(sDiffuseSampler, oUV0) * oColour;
+		}
+	}
+
+	ps_untextured = src(glsl) {
+		#include "fuji.glsl"
+
+		varying vec4 oColour;
+
+		void main(void)
+		{
+			gl_FragColor = oColour;
+		}
+	}
+
+	technique "Animated" (bAnimated && bDiffuseSet)
+	{
+		VertexShader = vs_animated
+		PixelShader = ps_textured
+	}
+
+	technique "Static+ColourMap" (bDiffuseSet && bDetailMapSet)
+	{
+		VertexShader = vs_static
+		PixelShader = ps_colourise
+	}
+
+	technique "Static+Untextured" (bDiffuseSet)
+	{
+		VertexShader = vs_static
+		PixelShader = ps_textured
+	}
+
+	technique "Static"
+	{
+		VertexShader = vs_static
+		PixelShader = ps_untextured
+	}
+}
