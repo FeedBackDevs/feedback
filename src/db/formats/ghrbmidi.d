@@ -938,3 +938,23 @@ bool LoadMidi(Song song, MIDIFile midi, GHVersion ghVer = GHVersion.Unknown)
 		return true;
 	}
 }
+
+// HACK: workaround since we can't initialise static AA's
+__gshared immutable Streams[string] musicFileNames;
+shared static this()
+{
+	musicFileNames =
+	[
+		"song":			Streams.Song,
+		"song+crowd":	Streams.Vocals,
+		"vocals":		Streams.Vocals,
+		"crowd":		Streams.Crowd,
+		"guitar":		Streams.Guitar,
+		"rhythm":		Streams.Rhythm,
+		"drums":		Streams.Drums,
+		"drums_1":		Streams.Kick,
+		"drums_2":		Streams.Snare,
+		"drums_3":		Streams.Cymbals,
+		"drums_4":		Streams.Toms
+	];
+}

@@ -26,7 +26,7 @@ version(Windows)
 
 		try
 		{
-			rt_init();
+			Runtime.initialize();
 
 			Game game = Game.instance;
 
@@ -40,7 +40,7 @@ version(Windows)
 
 			result = Start();
 
-			rt_term();
+			Runtime.terminate();
 		}
 		catch (Throwable o)		// catch any uncaught exceptions
 		{
