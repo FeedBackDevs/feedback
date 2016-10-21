@@ -10,12 +10,6 @@ import db.game;
 
 version(Windows)
 {
-	// HACK: druntime doesn't define these!
-	import core.sys.windows.uuid;
-	extern(C) const IID IID_IDirectInput8W = {3212410929, 18490, 19874, [170, 153, 93, 100, 237, 54, 151, 0]};
-	extern(C) const IID IID_IDirectSoundBuffer8 = {1747297353, 29988, 19842, [146, 15, 80, 227, 106, 179, 171, 30]};
-	extern(C) const IID WKPDID_D3DDebugObjectName = {1117490210, 37256, 19212, [135, 66, 172, 176, 191, 133, 194, 0]};
-
 	// HACK: Linking against dynamic MSCRT seems to lost a symbol?!
 	extern(C) __gshared const(double) __imp__HUGE = double.infinity;
 
