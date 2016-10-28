@@ -43,6 +43,8 @@ class Game
 
 	this()
 	{
+		UserInterface.registerWidgets();
+
 		settings.Load();
 	}
 
@@ -102,6 +104,7 @@ class Game
 
 		// init the lua VM
 		lua = initLua();
+		luaRegister();
 
 		// load the bootup UI
 		doFile("boot.lua");
@@ -233,6 +236,62 @@ class Game
 				return i;
 		}
 		return null;
+	}
+
+	void luaRegister()
+	{
+		import db.ui.widgets.label;
+		import db.ui.widgets.button;
+		import db.ui.widgets.prefab;
+		import db.ui.widgets.layout;
+		import db.ui.widgets.frame;
+		import db.ui.widgets.linearlayout;
+		import db.ui.widgets.textbox;
+		import db.ui.widgets.listbox;
+
+		import fuji.types;
+		import fuji.vector;
+		import fuji.matrix;
+		import fuji.quaternion;
+
+		// register some functions with the VM
+		lua["quit"] = &MFSystem_Quit;
+		lua["startPerformance"] = &Game.instance.startPerformance;
+		lua["endPerformance"] = &Game.instance.endPerformance;
+		lua["pausePerformance"] = &Game.instance.pausePerformance;
+
+		lua["addPlayer"] = &Game.instance.addPlayer;
+		lua["removePlayer"] = &Game.instance.removePlayer;
+
+		lua["library"] = Game.instance.songLibrary;
+		lua["ui"] = Game.instance.ui;
+
+		// Fuji enums
+		registerType!MFKey();
+
+		// Fuji types
+		registerType!(MFRect, "Rect")();
+		registerType!(MFVector, "Vector")();
+		registerType!(MFQuaternion, "Quaternion")();
+		registerType!(MFMatrix, "Matrix")();
+
+		// Game objects
+		registerType!Player();
+		registerType!Profile();
+
+		// UI
+		registerType!(LuaArrayAdaptor, "ArrayAdapter")();
+
+		// Widgets
+		registerType!Widget();
+		registerType!Label();
+		registerType!Button();
+		registerType!Prefab();
+		registerType!Frame();
+		registerType!LinearLayout();
+		registerType!Textbox();
+		registerType!Listbox();
+		//	registerType!Selectbox();
 	}
 
 	//-------------------------------------------------------------------------------------------------------

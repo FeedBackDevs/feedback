@@ -17,6 +17,7 @@ import std.encoding;
 import std.range: back, empty;
 import std.path;
 import std.exception;
+import std.conv : to;
 
 bool LoadDWI(Track* track, DirEntry file)
 {

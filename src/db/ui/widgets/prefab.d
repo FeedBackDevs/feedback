@@ -4,6 +4,7 @@ import db.ui.widgets.frame;
 import db.ui.layoutdescriptor;
 
 import std.string;
+import std.traits : Unqual;
 
 class Prefab : Frame
 {

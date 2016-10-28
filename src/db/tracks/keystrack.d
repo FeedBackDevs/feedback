@@ -16,6 +16,7 @@ import db.sequence;
 
 import core.stdc.math;
 import std.string;
+import std.conv : to;
 
 class KeysTrack : NoteTrack
 {
@@ -241,8 +242,8 @@ class KeysTrack : NoteTrack
 		// draw the notes
 		auto notes = performer.sequence.notes.BetweenTimes(bottomTime, topTime);
 
-//		__gshared immutable MFVector colours[5] = [ MFVector.green, MFVector.red, MFVector(1,1,0,1), MFVector.blue, MFVector(1,0.5,0,1) ];
-		__gshared immutable MFVector colours[5] = [ MFVector.white, MFVector.white, MFVector.white, MFVector.white, MFVector.white ];
+//		__gshared immutable MFVector[5] colours = [ MFVector.green, MFVector.red, MFVector(1,1,0,1), MFVector.blue, MFVector(1,0.5,0,1) ];
+		__gshared immutable MFVector[5] colours = [ MFVector.white, MFVector.white, MFVector.white, MFVector.white, MFVector.white ];
 
 		foreach(ref e; notes)
 		{

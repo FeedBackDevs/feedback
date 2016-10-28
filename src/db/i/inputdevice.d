@@ -3,7 +3,6 @@ module db.i.inputdevice;
 import db.instrument;
 import db.i.syncsource;
 import db.sequence;
-import db.game;
 
 import luad.base : noscript;
 

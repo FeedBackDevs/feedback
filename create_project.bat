@@ -1,8 +1,8 @@
 @ECHO OFF
 
 ECHO Select the type of project you would like to create:
-ECHO 1. Visual Studio 2013 Solution
-ECHO 2. Visual Studio 2012 Solution
+ECHO 1. Visual Studio 2015 Solution
+ECHO 2. Visual Studio 2013 Solution
 ECHO 3. Visual Studio 2010 Solution
 ECHO 4. Visual Studio 2008 Solution
 ECHO 5. Visual Studio 2005 Solution
@@ -47,12 +47,12 @@ GOTO END
  bin\premake5.exe vs2010
  GOTO END
 :TWO
- ECHO Creating VS2012 Project...
- bin\premake5.exe vs2012
- GOTO END
-:ONE
  ECHO Creating VS2013 Project...
  bin\premake5.exe vs2013
+ GOTO END
+:ONE
+ ECHO Creating VS2015 Project...
+ bin\premake5.exe vs2015
  GOTO END
 
 :END

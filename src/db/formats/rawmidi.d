@@ -13,6 +13,9 @@ import db.songlibrary;
 
 import std.string;
 import std.path;
+import std.conv : to;
+import std.algorithm : canFind;
+import std.range : back;
 
 bool LoadRawMidi(Track* track, DirEntry file)
 {

@@ -9,6 +9,8 @@ import fuji.display;
 
 import luad.base : noscript;
 
+import std.math : sqrt;
+
 struct InputSource
 {
 	int sourceID;
@@ -411,7 +413,7 @@ public:
 						{
 							float distX = pos.x - contacts[a].downX;
 							float distY = pos.y - contacts[a].downY;
-							if(std.math.sqrt(distX*distX + distY*distY) >= dragThreshold)
+							if(sqrt(distX*distX + distY*distY) >= dragThreshold)
 							{
 								contacts[a].bDrag = true;
 
@@ -491,7 +493,7 @@ public:
 
 					float distX = pos.x - contacts[a].downX;
 					float distY = pos.y - contacts[a].downY;
-					if(!contacts[a].bDrag && std.math.sqrt(distX*distX + distY*distY) >= dragThreshold)
+					if(!contacts[a].bDrag && sqrt(distX*distX + distY*distY) >= dragThreshold)
 					{
 						contacts[a].bDrag = true;
 

@@ -10,14 +10,17 @@ import db.game;
 
 version(Windows)
 {
+	// HACK: Linking against dynamic MSCRT seems to lost a symbol?!
+	extern(C) __gshared const(double) __imp__HUGE = double.infinity;
+
 	import core.sys.windows.windows;
 	extern (Windows) int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 	{
-	    int result;
+		int result;
 
-	    try
-	    {
-			rt_init();
+		try
+		{
+			Runtime.initialize();
 
 			Game game = Game.instance;
 
@@ -31,25 +34,25 @@ version(Windows)
 
 			result = Start();
 
-			rt_term();
-	    }
-	    catch (Throwable o)		// catch any uncaught exceptions
-	    {
-	        MessageBoxA(null, cast(char *)o.toString(), "Error", MB_OK | MB_ICONEXCLAMATION);
-	        result = 0;		// failed
-	    }
+			Runtime.terminate();
+		}
+		catch (Throwable o)		// catch any uncaught exceptions
+		{
+			MessageBoxA(null, cast(char *)o.toString(), "Error", MB_OK | MB_ICONEXCLAMATION);
+			result = 0;		// failed
+		}
 
-	    return result;
+		return result;
 	}
 }
 else
 {
-	int main(string args[])
+	int main(string[] args)
 	{
-	    int result;
+		int result;
 
-	    try
-	    {
+		try
+		{
 			Game game = Game.instance;
 
 			const(char)*[] argv;
@@ -60,13 +63,13 @@ else
 			game.initParams.argv = argv.ptr;
 
 			result = Start();
-	    }
-	    catch (Throwable o)		// catch any uncaught exceptions
-	    {
-	        result = 0;		// failed
-	    }
+		}
+		catch (Throwable o)		// catch any uncaught exceptions
+		{
+			result = 0;		// failed
+		}
 
-	    return result;
+		return result;
 	}
 }
 

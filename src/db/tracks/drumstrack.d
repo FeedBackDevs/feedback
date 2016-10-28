@@ -16,6 +16,7 @@ import db.sequence;
 
 import core.stdc.math;
 import std.string;
+import std.conv : to;
 
 class GHDrums : NoteTrack
 {

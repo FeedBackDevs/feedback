@@ -215,7 +215,7 @@ class Performance
 	}
 
 	Track* track;
-	Performer performers[];
+	Performer[] performers;
 	SyncSource sync;
 	long time;
 	long startTime;

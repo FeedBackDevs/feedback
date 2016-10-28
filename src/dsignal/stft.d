@@ -4,9 +4,10 @@ import dsignal.fft;
 import dsignal.util;
 
 import std.complex;
-import std.c.stdlib;
+import core.sys.posix.stdlib;
 import std.range: retro, chain, zip;
 import std.typecons;
+import std.algorithm : map, copy;
 
 nothrow: @nogc:
 
@@ -35,7 +36,7 @@ F[][] STFT(F)(const(F)[] signal, const(F)[] window, F[][] amplitude, F[][] phase
 		s.chain(literalRange!(F(0))(window.length-s.length))	// padd range with 0's
 			.zip(window)										// pairs samples from signal and window
 			.map!(e => Complex!F(e[0] * e[1], 0))				// sample*window and return as complex real
-			.zeroPadd!true(fftSize)								// zero padd and zer phase window the buffer
+			.zeroPadd!true(fftSize)								// zero padd and zero phase window the buffer
 			.copy(fftBuffer);									// write to the FFT buffer
 
 		// do the fft

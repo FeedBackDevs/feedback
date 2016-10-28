@@ -5,10 +5,12 @@ import db.ui.inputmanager;
 import db.profile;
 import db.sequence;
 import db.song;
-import db.game;
+import db.game : Game;
 import db.lua;
 
 import fuji.vector;
+
+import std.conv : to;
 
 
 private immutable MFVector[] playerColours =

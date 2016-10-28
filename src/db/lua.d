@@ -4,28 +4,9 @@ public import luad.base;
 public import luad.table;
 
 import db.ui.widget;
-import db.ui.widgets.label;
-import db.ui.widgets.button;
-import db.ui.widgets.prefab;
-import db.ui.widgets.layout;
-import db.ui.widgets.frame;
-import db.ui.widgets.linearlayout;
-import db.ui.widgets.textbox;
-import db.ui.widgets.listbox;
 import db.ui.listadapter;
-import db.ui.ui;
-import db.game;
-import db.player;
-import db.profile;
 
 import fuji.dbg;
-import fuji.types;
-import fuji.vector;
-import fuji.matrix;
-import fuji.quaternion;
-import fuji.string;
-import fuji.system;
-import fuji.input;
 
 import luad.all;
 import luad.stack;
@@ -35,6 +16,7 @@ import luad.c.lua;
 import std.string;
 import std.range;
 import std.algorithm.iteration : splitter;
+import std.traits : Unqual;
 
 
 struct LuaDelegate(Args...)
@@ -141,44 +123,6 @@ LuaState initLua()
 	lua["log"] = &luaLog;
 
 	lua.doString(luaCode);
-
-	lua["quit"] = &MFSystem_Quit;
-	lua["startPerformance"] = &Game.instance.startPerformance;
-	lua["endPerformance"] = &Game.instance.endPerformance;
-	lua["pausePerformance"] = &Game.instance.pausePerformance;
-
-	lua["addPlayer"] = &Game.instance.addPlayer;
-	lua["removePlayer"] = &Game.instance.removePlayer;
-
-	lua["library"] = Game.instance.songLibrary;
-	lua["ui"] = Game.instance.ui;
-
-	// Fuji enums
-	registerType!MFKey();
-
-	// Fuji types
-	registerType!(MFRect, "Rect")();
-	registerType!(MFVector, "Vector")();
-	registerType!(MFQuaternion, "Quaternion")();
-	registerType!(MFMatrix, "Matrix")();
-
-	// Game objects
-	registerType!Player();
-	registerType!Profile();
-
-	// UI
-	registerType!(LuaArrayAdaptor, "ArrayAdapter")();
-
-	// Widgets
-	registerType!Widget();
-	registerType!Label();
-	registerType!Button();
-	registerType!Prefab();
-	registerType!Frame();
-	registerType!LinearLayout();
-	registerType!Textbox();
-	registerType!Listbox();
-//	registerType!Selectbox();
 
 	return lua;
 }

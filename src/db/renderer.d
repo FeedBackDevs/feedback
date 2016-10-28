@@ -30,7 +30,7 @@ class Renderer
 		pDefaultStates = MFStateBlock_CreateDefault();
 
 		// create the renderer with a single layer that clears before rendering
-		MFRenderLayerDescription layers[] = [
+		MFRenderLayerDescription[] layers = [
 			MFRenderLayerDescription("background"),
 			MFRenderLayerDescription("game"),
 			MFRenderLayerDescription("ui"),

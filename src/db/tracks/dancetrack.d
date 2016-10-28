@@ -16,6 +16,7 @@ import db.sequence;
 
 import core.stdc.math;
 import std.string;
+import std.conv : to;
 
 class DanceTrack : NoteTrack
 {
@@ -279,7 +280,7 @@ class DanceTrack : NoteTrack
 			// HACK: don't render notes for which we have no lanes!
 			if(key == -1)
 				continue;
- 
+
 			MFVector pos;
 			float noteWidth, noteDepth, noteHeight;
 

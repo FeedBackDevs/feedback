@@ -20,6 +20,7 @@ import db.formats.parsers.midifile;
 import core.stdc.math;
 import std.algorithm;
 import std.string;
+import std.conv : to;
 
 class ProKeysTrack : NoteTrack
 {

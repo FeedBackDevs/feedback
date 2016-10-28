@@ -1,7 +1,7 @@
 module db.ui.ui;
 
 import db.tools.factory;
-import db.ui.widget;
+import db.ui.widget : Widget;
 import db.ui.widgetevent;
 import db.ui.inputmanager;
 import db.ui.widgets.frame;
@@ -43,7 +43,7 @@ class UserInterface
 
 		Widget widget;
 		try widget = _factory.create(widgetType);
-		catch {}
+		catch(Throwable) {}
 		return widget;
 	}
 
@@ -290,15 +290,21 @@ protected:
 
 	__gshared WidgetEvent.Handler[string] eventHandlerRegistry;
 
-	shared static this()
+public:
+	static void registerWidgets()
 	{
-		UserInterface.registerWidget!Widget();
-		UserInterface.registerWidget!Frame();
-		UserInterface.registerWidget!LinearLayout();
-		UserInterface.registerWidget!Label();
-		UserInterface.registerWidget!Button();
-		UserInterface.registerWidget!Textbox();
-		UserInterface.registerWidget!Listbox();
-		UserInterface.registerWidget!Prefab();
+		__gshared calledBefore = false;
+		if(!calledBefore)
+		{
+			UserInterface.registerWidget!Widget();
+			UserInterface.registerWidget!Frame();
+			UserInterface.registerWidget!LinearLayout();
+			UserInterface.registerWidget!Label();
+			UserInterface.registerWidget!Button();
+			UserInterface.registerWidget!Textbox();
+			UserInterface.registerWidget!Listbox();
+			UserInterface.registerWidget!Prefab();
+			calledBefore = true;
+		}
 	}
 }

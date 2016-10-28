@@ -178,7 +178,8 @@ private:
 	Material waveformMat;
 	Material spectrumMat;
 
-	void GetSamples(const(float)* pSamples, size_t numSamples, int numChannels) nothrow
+nothrow @nogc:
+	void GetSamples(const(float)* pSamples, size_t numSamples, int numChannels)
 	{
 		import std.algorithm: min;
 
@@ -213,7 +214,7 @@ private:
 
 	}
 
-	static extern (C) void GetSamplesCallback(const(float)* pSamples, size_t numSamples, int numChannels, void* pUserData) nothrow
+	static extern (C) void GetSamplesCallback(const(float)* pSamples, size_t numSamples, int numChannels, void* pUserData)
 	{
 		(cast(Audio)pUserData).GetSamples(pSamples, numSamples, numChannels);
 	}

@@ -238,7 +238,7 @@ class GHGuitar : NoteTrack
 
 		// draw the notes
 		auto notes = performer.sequence.notes.BetweenTimes(bottomTime, topTime);
-		__gshared immutable MFVector colours[5] = [ MFVector.green, MFVector.red, MFVector(1,1,0,1), MFVector.blue, MFVector(1,0.5,0,1) ];
+		__gshared immutable MFVector[5] colours = [ MFVector.green, MFVector.red, MFVector(1,1,0,1), MFVector.blue, MFVector(1,0.5,0,1) ];
 		foreach(ref e; notes)
 		{
 			if(e.event != EventType.Note)
