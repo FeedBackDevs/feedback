@@ -18,7 +18,7 @@ class Prefab : Frame
 
 	override void setProperty(const(char)[] property, const(char)[] value)
 	{
-		if(!icmp(property, "prefab"))
+		if (!icmp(property, "prefab"))
 			loadPrefab(value);
 		else
 			super.setProperty(property, value);
@@ -26,7 +26,7 @@ class Prefab : Frame
 
 	override string getProperty(const(char)[] property)
 	{
-		if(!icmp(property, "prefab"))
+		if (!icmp(property, "prefab"))
 			return prefab;
 		return super.getProperty(property);
 	}
@@ -37,7 +37,7 @@ class Prefab : Frame
 
 		_prefab = prefab.idup;
 
-		if(prefab.length >= 4 && !icmp(prefab[$-4..$], ".xml"))
+		if (prefab.length >= 4 && !icmp(prefab[$-4..$], ".xml"))
 		{
 			LayoutDescriptor desc = new LayoutDescriptor(prefab);
 			addChild(desc.spawn());

@@ -21,12 +21,12 @@ void WriteLog(const(char)[] text, MFVector colour = MFVector.white)
 void DrawLog()
 {
 	float y = 10;
-	for(size_t i=0; i<messages.length;)
+	for (size_t i=0; i<messages.length;)
 	{
 		Message* m = &messages[i];
 
 		m.time -= MFSystem_GetTimeDelta();
-		if(m.time <= 0)
+		if (m.time <= 0)
 		{
 			messages = messages[1..$];
 			continue;

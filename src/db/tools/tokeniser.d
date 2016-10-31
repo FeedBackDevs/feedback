@@ -15,19 +15,19 @@ struct Tokeniser(string Separators = " \t\r\n", DelimiterPairs...)
 	void popFront()
 	{
 		token = null;
-		while(text.length && Separators.canFind(text[0]))
+		while (text.length && Separators.canFind(text[0]))
 			text = text[1..$];
-		if(!text.length)
+		if (!text.length)
 			return;
 		size_t offset;
 		int depth = 0;
-		while(offset < text.length && (depth > 0 || !Separators.canFind(text[offset])))
+		while (offset < text.length && (depth > 0 || !Separators.canFind(text[offset])))
 		{
-			foreach(d; DelimiterPairs)
+			foreach (d; DelimiterPairs)
 			{
-				if(text[offset] == d[0])
+				if (text[offset] == d[0])
 					++depth;
-				else if(text[offset] == d[1])
+				else if (text[offset] == d[1])
 					--depth;
 			}
 

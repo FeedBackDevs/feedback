@@ -1,7 +1,5 @@
 module db.profile;
 
-import db.sequence;
-
 import fuji.vector;
 
 import luad.base : noscript;
@@ -39,13 +37,13 @@ class Profile
 			int numPlays;
 		}
 
-		int Score(Part part, int variation, int difficulty)
+		int Score(string part, int variation, int difficulty)
 		{
 			return variations[part][variation][difficulty].score;
 		}
 
 		// [numDifficulties][numVariations][Part.Count]
-		Record[][][Part.Count] variations;
+		Record[][][string] variations;
 	}
 
 	Score[string] scores;	// scores for songs (by song name)

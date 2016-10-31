@@ -26,10 +26,10 @@ enum MIDIEventType : ubyte
 
 enum MIDIEvents : ubyte
 {
-	SequenceNumber = 0x00, // Sequence Number
+	SequenceNumber = 0x00, // Track Number
 	Text = 0x01, // Text
 	Copyright = 0x02, // Copyright
-	TrackName = 0x03, // Sequence/Track Name
+	TrackName = 0x03, // Track/Track Name
 	Instrument = 0x04, // Instrument
 	Lyric = 0x05, // Lyric
 	Marker = 0x06, // Marker
@@ -70,7 +70,7 @@ class MIDIFile
 
 	this(const(ubyte)[] buffer)
 	{
-		if(buffer[0..4] == "RIFF")
+		if (buffer[0..4] == "RIFF")
 		{
 			buffer.popFrontN(8);
 			assert(buffer[0..4] == "RMID", "Not a midi file...");
@@ -91,20 +91,20 @@ class MIDIFile
 		// we will only deal with type 1 midi files here..
 		assert(pHd.format == 1, "Invalid midi type.");
 
-		for(size_t t = 0; t < pHd.numTracks && !buffer.empty; ++t)
+		for (size_t t = 0; t < pHd.numTracks && !buffer.empty; ++t)
 		{
 			MTrk_Chunk *pTh = cast(MTrk_Chunk*)buffer.ptr;
 			MFEndian_BigToHost(pTh);
 
 			buffer.popFrontN(MTrk_Chunk.sizeof);
 
-			if(pTh.id[] == "MTrk")
+			if (pTh.id[] == "MTrk")
 			{
 				const(ubyte)[] track = buffer[0..pTh.length];
 				uint tick = 0;
 				ubyte lastStatus = 0;
 
-				while(!track.empty)
+				while (!track.empty)
 				{
 					uint delta = ReadVarLen(track);
 					tick += delta;
@@ -113,7 +113,7 @@ class MIDIFile
 					MIDIEvent ev;
 					bool appendEvent = true;
 
-					if(status == 0xFF)
+					if (status == 0xFF)
 					{
 						// non-midi event
 						MIDIEvents type = cast(MIDIEvents)track.getFront();
@@ -123,13 +123,13 @@ class MIDIFile
 						const(ubyte)[] event = track.getFrontN(bytes);
 
 						// read event
-						switch(type) with(MIDIEvents)
+						switch (type) with(MIDIEvents)
 						{
 							case MIDIEvents.SequenceNumber:
 								{
 									static int sequence = 0;
 
-									if(!bytes)
+									if (!bytes)
 										ev.sequenceNumber = sequence++;
 									else
 									{
@@ -197,10 +197,10 @@ class MIDIFile
 								appendEvent = false;
 						}
 
-						if(appendEvent)
+						if (appendEvent)
 							ev.subType = type;
 					}
-					else if(status == 0xF0)
+					else if (status == 0xF0)
 					{
 						uint bytes = ReadVarLen(track);
 
@@ -210,7 +210,7 @@ class MIDIFile
 					}
 					else
 					{
-						if(status < 0x80)
+						if (status < 0x80)
 						{
 							// HACK: stick the last byte we popped back on the front...
 							track = (track.ptr - 1)[0..track.length+1];
@@ -222,10 +222,10 @@ class MIDIFile
 
 						int param1 = ReadVarLen(track);
 						int param2;
-						if(eventType != MIDIEventType.ProgramChange && eventType != MIDIEventType.ChannelAfterTouch)
+						if (eventType != MIDIEventType.ProgramChange && eventType != MIDIEventType.ChannelAfterTouch)
 							param2 = ReadVarLen(track);
 
-						switch(eventType)
+						switch (eventType)
 						{
 							case MIDIEventType.NoteOn:
 							case MIDIEventType.NoteOff:
@@ -242,12 +242,12 @@ class MIDIFile
 					}
 
 					// append event to track
-					if(appendEvent)
+					if (appendEvent)
 					{
 						ev.tick = tick;
 						ev.delta = delta;
 						ev.type = status != 0xFF ? status & 0xF0 : status;
-						if(status != 0xFF)
+						if (status != 0xFF)
 							ev.subType = status & 0x0F;
 
 						tracks[t] ~= ev;
@@ -265,19 +265,19 @@ class MIDIFile
 		import std.digest.digest;
 
 		string file = .format("MIDI\r\nformat = %d\r\nresolution = %d\r\n", format, ticksPerBeat);
-		foreach(i, t; tracks)
+		foreach (i, t; tracks)
 		{
 			file ~= .format("Track %d\r\n", i+1);
-			foreach(e; t)
+			foreach (e; t)
 			{
 				file ~= .format("  %06d %s: ", e.tick, (cast(MIDIEventType)e.type).to!string);
 
-				switch(e.type)
+				switch (e.type)
 				{
 					case MIDIEventType.Custom:
 						file ~= .format("%s ", (cast(MIDIEvents)e.subType).to!string);
 
-						switch(e.subType) with(MIDIEvents)
+						switch (e.subType) with(MIDIEvents)
 						{
 							case MIDIEvents.SequenceNumber:
 								file ~= .format("%d", e.sequenceNumber);
@@ -392,16 +392,16 @@ void WriteVarLen(ref ubyte[] buffer, uint value)
 	uint buf;
 	buf = value & 0x7F;
 
-	while((value >>= 7))
+	while ((value >>= 7))
 	{
 		buf <<= 8;
 		buf |= ((value & 0x7F) | 0x80);
 	}
 
-	while(1)
+	while (1)
 	{
 		buffer ~= cast(ubyte)(buf & 0xFF);
-		if(buf & 0x80)
+		if (buf & 0x80)
 			buf >>= 8;
 		else
 			break;
@@ -416,7 +416,7 @@ uint ReadVarLen(ref const(ubyte)[] buffer)
 	value = buffer[0];
 	buffer = buffer[1..$];
 
-	if(value & 0x80)
+	if (value & 0x80)
 	{
 		value &= 0x7F;
 		do
@@ -425,7 +425,7 @@ uint ReadVarLen(ref const(ubyte)[] buffer)
 			buffer = buffer[1..$];
 			value = (value << 7) + (c & 0x7F);
 		}
-		while(c & 0x80);
+		while (c & 0x80);
 	}
 
 	return value;

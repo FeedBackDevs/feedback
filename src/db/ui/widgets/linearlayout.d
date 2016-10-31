@@ -29,7 +29,7 @@ class LinearLayout : Layout
 
 	override void setProperty(const(char)[] property, const(char)[] value)
 	{
-		if(!icmp(property, "orientation"))
+		if (!icmp(property, "orientation"))
 			orientation = getEnumValue!Orientation(value);
 		else
 			super.setProperty(property, value);
@@ -37,7 +37,7 @@ class LinearLayout : Layout
 
 	override string getProperty(const(char)[] property)
 	{
-		if(!icmp(property, "orientation"))
+		if (!icmp(property, "orientation"))
 			return getEnumFromValue(orientation);
 		return super.getProperty(property);
 	}
@@ -52,15 +52,15 @@ protected:
 		bool bFitHeight = bAutoHeight && vAlign != VAlign.Fill; // fitFlags & FitContentVertical
 
 		// early out?
-		if(children.length == 0)
+		if (children.length == 0)
 		{
-			if(bFitWidth || bFitHeight)
+			if (bFitWidth || bFitHeight)
 			{
 				// resize the layout
 				MFVector newSize = size;
-				if(bFitWidth)
+				if (bFitWidth)
 					newSize.x = padding.x + padding.z;
-				if(bFitHeight)
+				if (bFitHeight)
 					newSize.y = padding.y + padding.w;
 				resize(newSize);
 			}
@@ -70,16 +70,16 @@ protected:
 		// calculate weight and fit
 		float totalWeight = 0;
 		MFVector fit = MFVector(padding.x + padding.z, padding.y + padding.w);
-		foreach(widget; children)
+		foreach (widget; children)
 		{
-			if(widget.visibility == Visibility.Gone)
+			if (widget.visibility == Visibility.Gone)
 				continue;
 
 			const(MFVector) cSize = widget.sizeWithMargin;
 
-			if(orientation == Orientation.Horizontal)
+			if (orientation == Orientation.Horizontal)
 			{
-				if(widget.hAlign == Align.Fill) // fill horizontally
+				if (widget.hAlign == Align.Fill) // fill horizontally
 					totalWeight += widget.layoutWeight;
 				else
 					fit.x += cSize.x;
@@ -88,7 +88,7 @@ protected:
 			}
 			else
 			{
-				if(widget.vAlign == VAlign.Fill) // fill vertically
+				if (widget.vAlign == VAlign.Fill) // fill vertically
 					totalWeight += widget.layoutWeight;
 				else
 					fit.y += cSize.y;
@@ -97,13 +97,13 @@ protected:
 			}
 		}
 
-		if(bFitWidth || bFitHeight)
+		if (bFitWidth || bFitHeight)
 		{
 			// resize the layout
 			MFVector newSize = size;
-			if(bFitWidth)
+			if (bFitWidth)
 				newSize.x = fit.x;
-			if(bFitHeight)
+			if (bFitHeight)
 				newSize.y = fit.y;
 			resize(newSize);
 		}
@@ -113,9 +113,9 @@ protected:
 
 		MFVector slack = max(size - fit, MFVector.zero);
 
-		foreach(widget; children)
+		foreach (widget; children)
 		{
-			if(widget.visibility == Visibility.Gone)
+			if (widget.visibility == Visibility.Gone)
 				continue;
 
 			const(MFVector) cMargin = widget.layoutMargin;
@@ -129,9 +129,9 @@ protected:
 
 			MFVector newSize = cSize;
 
-			if(orientation == Orientation.Horizontal)
+			if (orientation == Orientation.Horizontal)
 			{
-				if(halign == Align.Fill) // fill horizontally
+				if (halign == Align.Fill) // fill horizontally
 				{
 					// this widget fills available empty space in the parent container
 					newSize.x = slack.x * (widget.layoutWeight / totalWeight);
@@ -143,7 +143,7 @@ protected:
 					pPos.x += cSize.x + cMargin.x + cMargin.z;
 				}
 
-				final switch(valign) with(VAlign)
+				final switch (valign) with(VAlign)
 				{
 					case None:
 					case Top:
@@ -163,7 +163,7 @@ protected:
 			}
 			else
 			{
-				if(valign == VAlign.Fill) // fill vertically
+				if (valign == VAlign.Fill) // fill vertically
 				{
 					// this widget fills available empty space in the parent container
 					newSize.y = slack.y * (widget.layoutWeight / totalWeight);
@@ -175,7 +175,7 @@ protected:
 					pPos.y += cSize.y + cMargin.y + cMargin.w;
 				}
 
-				final switch(halign) with(Align)
+				final switch (halign) with(Align)
 				{
 					case None:
 					case Left:

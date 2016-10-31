@@ -92,9 +92,9 @@ LuaState initLua()
 	static extern(C) void* alloc(void* ud, void* ptr, size_t osize, size_t nsize)
 	{
 		import fuji.heap;
-		if(nsize == 0)
+		if (nsize == 0)
 		{
-			if(ptr)
+			if (ptr)
 			{
 				MFHeap_Free(ptr);
 				ptr = null;
@@ -144,17 +144,17 @@ bool isValidIdentifier(const(char)[] handler)
 {
 	import std.ascii;
 
-	if(handler.length == 0)
+	if (handler.length == 0)
 		return false;
 
-	if(!handler[0].isAlpha && !(handler[0] == '_'))
+	if (!handler[0].isAlpha && !(handler[0] == '_'))
 		return false;
 
-	foreach(i, c; handler[1..$])
+	foreach (i, c; handler[1..$])
 	{
-		if(c == '.')
+		if (c == '.')
 			return handler[i+1..$].isValidIdentifier;
-		else if(!c.isAlphaNum && c != '_')
+		else if (!c.isAlphaNum && c != '_')
 			return false;
 	}
 	return true;
@@ -167,16 +167,16 @@ LuaObject getLuaObject(const(char)[] identifier)
 	LuaObject obj;
 
 	// if the string is an identifier
-	if(ident.isValidIdentifier)
+	if (ident.isValidIdentifier)
 	{
 		// search for lua global
 		LuaTable t = lua.globals;
-		foreach(token; ident.splitter('.'))
+		foreach (token; ident.splitter('.'))
 		{
-			if(!t.isNil)
+			if (!t.isNil)
 			{
 				obj = t[token];
-				if(obj.type == LuaType.Table)
+				if (obj.type == LuaType.Table)
 					t = obj.to!LuaTable;
 				else
 					t.release();
@@ -219,9 +219,9 @@ __gshared string luaCode = q{
 extern(C) void luaPrint(LuaObject[] params...)
 {
 	string msg;
-	if(params.length > 0)
+	if (params.length > 0)
 	{
-		foreach(param; params[0..$-1])
+		foreach (param; params[0..$-1])
 			msg ~= param.toString() ~ '\t';
 		msg ~= params[$-1].toString();
 	}
@@ -231,9 +231,9 @@ extern(C) void luaPrint(LuaObject[] params...)
 extern(C) void luaError(LuaObject[] params...)
 {
 	string msg;
-	if(params.length > 0)
+	if (params.length > 0)
 	{
-		foreach(param; params[0..$-1])
+		foreach (param; params[0..$-1])
 			msg ~= param.toString() ~ '\t';
 		msg ~= params[$-1].toString();
 	}
@@ -243,9 +243,9 @@ extern(C) void luaError(LuaObject[] params...)
 extern(C) void luaWarn(int level, LuaObject[] params...)
 {
 	string msg;
-	if(params.length > 0)
+	if (params.length > 0)
 	{
-		foreach(param; params[0..$-1])
+		foreach (param; params[0..$-1])
 			msg ~= param.toString() ~ '\t';
 		msg ~= params[$-1].toString();
 	}
@@ -255,9 +255,9 @@ extern(C) void luaWarn(int level, LuaObject[] params...)
 extern(C) void luaLog(int level, LuaObject[] params...)
 {
 	string msg;
-	if(params.length > 0)
+	if (params.length > 0)
 	{
-		foreach(param; params[0..$-1])
+		foreach (param; params[0..$-1])
 			msg ~= param.toString() ~ '\t';
 		msg ~= params[$-1].toString();
 	}

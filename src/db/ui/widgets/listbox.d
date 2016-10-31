@@ -63,7 +63,7 @@ class Listbox : Layout
 
 	@property final float maxSize() const pure nothrow @nogc
 	{
-		if(orientation == Orientation.Horizontal)
+		if (orientation == Orientation.Horizontal)
 			return contentSize + padding.x + padding.z;
 		else
 			return contentSize + padding.y + padding.w;
@@ -72,19 +72,19 @@ class Listbox : Layout
 	@property final int selection() const pure nothrow @nogc { return _selection; }
 	@property final void selection(int item)
 	{
-		if(item >= cast(int)children.length)
+		if (item >= cast(int)children.length)
 			item = -1;
 
-		if(_selection != item)
+		if (_selection != item)
 		{
-			if(selection > -1)
+			if (selection > -1)
 				children[_selection].setProperty("background_colour", "0,0,0,0");
-			if(item > -1)
+			if (item > -1)
 				children[item].setProperty("background_colour", "0,0,1,0.6");
 
 			_selection = item;
 
-			if(OnSelChanged)
+			if (OnSelChanged)
 				OnSelChanged(this, item + 1);
 		}
 	}
@@ -98,7 +98,7 @@ class Listbox : Layout
 	{
 		unbind();
 
-		if(!adapter)
+		if (!adapter)
 			return;
 
 		_list = adapter;
@@ -109,7 +109,7 @@ class Listbox : Layout
 		_list.OnTouchItem ~= &onChange;
 
 		// populate the children with each item
-		foreach(int i; 0 .. cast(int)_list.length)
+		foreach (int i; 0 .. cast(int)_list.length)
 		{
 			Widget item = _list.getItemView(i);
 			addView(item);
@@ -118,7 +118,7 @@ class Listbox : Layout
 
 	final void unbind()
 	{
-		if(_list)
+		if (_list)
 		{
 			// unsubscribe from adapter
 			_list.OnInsertItem.unsubscribe(&onInsert);
@@ -135,7 +135,7 @@ class Listbox : Layout
 
 	override void setProperty(const(char)[] property, const(char)[] value)
 	{
-		if(!icmp(property, "list"))
+		if (!icmp(property, "list"))
 		{
 			import db.lua;
 			try
@@ -146,13 +146,13 @@ class Listbox : Layout
 			catch(Exception e)
 				MFDebug_Warn(2, "Couldn't bind array '"~value~"'. "~e.msg);
 		}
-		else if(!icmp(property, "orientation"))
+		else if (!icmp(property, "orientation"))
 			orientation = getEnumValue!Orientation(value);
-		else if(!icmp(property, "hoverSelect"))
+		else if (!icmp(property, "hoverSelect"))
 			flags = (flags & ~Flags.HoverSelect) | (getBoolFromString(value) ? Flags.HoverSelect : 0);
-		else if(!icmp(property, "onSelChanged"))
+		else if (!icmp(property, "onSelChanged"))
 			bindEvent!OnSelChanged(value);
-		else if(!icmp(property, "onClick"))
+		else if (!icmp(property, "onClick"))
 			bindEvent!OnClick(value);
 		else
 			super.setProperty(property, value);
@@ -160,7 +160,7 @@ class Listbox : Layout
 
 	override string getProperty(const(char)[] property)
 	{
-		if(!icmp(property, "orientation"))
+		if (!icmp(property, "orientation"))
 			return getEnumFromValue(orientation);
 		return super.getProperty(property);
 	}
@@ -204,19 +204,19 @@ protected:
 
 	override void update()
 	{
-		if(!bDragging)
+		if (!bDragging)
 		{
-			if(velocity != 0)
+			if (velocity != 0)
 			{
 				// apply scroll velocity
 				velocity *= 1.0f - MFTimeDelta()*10.0f;
-				if(velocity < 0.01f)
+				if (velocity < 0.01f)
 					velocity = 0;
 
 				scrollOffset += velocity * MFTimeDelta();
 			}
 
-			if(scrollOffset > 0.0f)
+			if (scrollOffset > 0.0f)
 			{
 				scrollOffset = MFMax(scrollOffset - MFMax(scrollOffset * 10.0f * MFTimeDelta(), 1.0f), 0.0f);
 			}
@@ -224,7 +224,7 @@ protected:
 			{
 				float listSize = orientation == Orientation.Horizontal ? size.x - (padding.x + padding.z) : size.y - (padding.y + padding.w);
 				float overflow = MFMin(listSize - (contentSize + scrollOffset), -scrollOffset);
-				if(overflow > 0.0f)
+				if (overflow > 0.0f)
 				{
 					scrollOffset = MFMin(scrollOffset + MFMax(overflow * 10.0f * MFTimeDelta(), 1.0f), scrollOffset + overflow);
 				}
@@ -232,7 +232,7 @@ protected:
 		}
 
 		scrollOffset = scrollOffset.floor;
-		if(scrollOffset != prevScrollOffset)
+		if (scrollOffset != prevScrollOffset)
 		{
 			prevScrollOffset = scrollOffset;
 			arrangeChildren();
@@ -242,7 +242,7 @@ protected:
 	override bool inputEvent(InputManager manager, const(InputManager.EventInfo)* ev)
 	{
 		// try and handle the input event in some standard ways...
-		switch(ev.ev)
+		switch (ev.ev)
 		{
 			case InputManager.EventType.Down:
 			{
@@ -252,16 +252,16 @@ protected:
 
 				// if the down stroke is outside the listbox, we have triggered a non-click
 				MFRect rect = MFRect(0, 0, size.x, size.y);
-				if(!MFTypes_PointInRect(ev.down.x, ev.down.y, rect))
+				if (!MFTypes_PointInRect(ev.down.x, ev.down.y, rect))
 				{
-					if(OnClick)
+					if (OnClick)
 						OnClick(this, 0);
 				}
 				break;
 			}
 			case InputManager.EventType.Up:
 			{
-				if(bDragging)
+				if (bDragging)
 				{
 					bDragging = false;
 					ui.setFocus(ev.pSource, oldFocus);
@@ -277,7 +277,7 @@ protected:
 				enum float smooth = 0.5;
 				velocity = velocity*smooth + (delta / MFTimeDelta())*(1.0f-smooth);
 
-				if(!bDragging)
+				if (!bDragging)
 				{
 					bDragging = true;
 					oldFocus = ui.setFocus(ev.pSource, this);
@@ -294,7 +294,7 @@ protected:
 	override void arrangeChildren()
 	{
 		// early out?
-		if(children.length == 0)
+		if (children.length == 0)
 			return;
 
 		MFVector pPos = orientation == Orientation.Horizontal ? MFVector(padding.x + scrollOffset, padding.y) : MFVector(padding.x, padding.y + scrollOffset);
@@ -302,9 +302,9 @@ protected:
 
 		contentSize = 0;
 
-		foreach(widget; children)
+		foreach (widget; children)
 		{
-			if(widget.visibility == Visibility.Gone)
+			if (widget.visibility == Visibility.Gone)
 				continue;
 
 			MFVector cMargin = widget.layoutMargin;
@@ -313,7 +313,7 @@ protected:
 			MFVector tPos = pPos + MFVector(cMargin.x, cMargin.y);
 			MFVector tSize = max(pSize - MFVector(cMargin.x + cMargin.z, cMargin.y + cMargin.w), MFVector.zero);
 
-			if(orientation == Orientation.Horizontal)
+			if (orientation == Orientation.Horizontal)
 			{
 				float itemSize = cSize.x + cMargin.x + cMargin.z;
 				contentSize += itemSize;
@@ -360,25 +360,25 @@ protected:
 		velocity = 0;
 		scrollOffset = scrollOffset.floor;
 
-		if(!(flags & Flags.HoverSelect))
+		if (!(flags & Flags.HoverSelect))
 			selection = cast(int)getChildIndex(widget);
 	}
 
 	final void onItemClick(Widget widget, const(InputSource)* pSource)
 	{
-		if(OnClick)
+		if (OnClick)
 			OnClick(this, cast(int)getChildIndex(widget) + 1);
 	}
 
 	final void onItemOver(Widget widget, const(InputSource)* pSource)
 	{
-		if(flags & Flags.HoverSelect)
+		if (flags & Flags.HoverSelect)
 			selection = cast(int)getChildIndex(widget);
 	}
 
 	final void onItemOut(Widget widget, const(InputSource)* pSource)
 	{
-		if(flags & Flags.HoverSelect)
+		if (flags & Flags.HoverSelect)
 			selection = -1;
 	}
 }

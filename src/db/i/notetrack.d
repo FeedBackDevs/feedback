@@ -2,7 +2,7 @@ module db.i.notetrack;
 
 import db.i.syncsource;
 import db.instrument;
-import db.performance;
+import db.game.performance;
 
 import fuji.types;
 import fuji.vector;
@@ -45,7 +45,7 @@ abstract class NoteTrack
 	}
 
 	@property Orientation orientation();
-	@property InstrumentType instrumentType();
+	@property string instrumentType();
 
 	@property float laneWidth();
 

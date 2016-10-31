@@ -4,12 +4,12 @@ import fuji.fuji;
 import fuji.filesystem;
 import fuji.dbg;
 
-import db.song;
-import db.sequence;
+import db.chart;
 import db.instrument;
+import db.instrument.drums : DrumNotes, DrumNoteFlags;
 import db.formats.parsers.midifile;
 import db.tools.filetypes;
-import db.songlibrary;
+import db.library;
 
 import std.string;
 import std.path;
@@ -17,57 +17,57 @@ import std.conv : to;
 import std.algorithm : canFind;
 import std.range : back;
 
-bool LoadRawMidi(Track* track, DirEntry file)
+bool LoadRawMidi(Song* song, DirEntry file)
 {
 	string path = file.directory ~ "/";
 
 	MFDebug_Log(2, "Loading song: '" ~ file.filepath ~ "'");
 
-	track._song = new Song;
-	track._song.params["source_format"] = ".midi";
+	song._chart = new Chart;
+	song._chart.params["source_format"] = ".midi";
 
-	track._song.name = file.filename.stripExtension;
+	song._chart.name = file.filename.stripExtension;
 
 	MIDIFile midi = new MIDIFile(file);
 //	midi.WriteText(file.filepath.stripExtension ~ ".txt");
 
-	track._song.LoadRawMidi(midi);
+	song._chart.LoadRawMidi(midi);
 
 	// search for the music and other stuff...
 	string songName = file.filename.stripExtension.toLower;
-	foreach(f; dirEntries(path ~ "*", SpanMode.shallow))
+	foreach (f; dirEntries(path ~ "*", SpanMode.shallow))
 	{
 		string filename = f.filename.toLower;
 		string fn = filename.stripExtension;
-		if(isImageFile(filename))
+		if (isImageFile(filename))
 		{
-			if(fn[] == songName)
-				track.coverImage = f.filepath;
-			else if(fn[] == songName || fn[] == songName ~ "-bg")
-				track.background = f.filepath;
+			if (fn[] == songName)
+				song.coverImage = f.filepath;
+			else if (fn[] == songName || fn[] == songName ~ "-bg")
+				song.background = f.filepath;
 		}
-		else if(isAudioFile(filename))
+		else if (isAudioFile(filename))
 		{
-			if(fn[] == songName)
-				track.addSource().addStream(f.filepath);
-			if(fn[] == songName ~ "-intro")
-				track._preview = f.filepath;
+			if (fn[] == songName)
+				song.addSource().addStream(f.filepath);
+			if (fn[] == songName ~ "-intro")
+				song._preview = f.filepath;
 		}
-		else if(isVideoFile(filename))
+		else if (isVideoFile(filename))
 		{
-			if(fn[] == songName)
-				track.video = f.filepath;
+			if (fn[] == songName)
+				song.video = f.filepath;
 		}
 	}
 
 	return true;
 }
 
-bool LoadRawMidi(Song song, MIDIFile midi)
+bool LoadRawMidi(Chart song, MIDIFile midi)
 {
 	with(song)
 	{
-		if(midi.format != 1)
+		if (midi.format != 1)
 		{
 			MFDebug_Warn(2, "Unsupported midi format!".ptr);
 			return false;
@@ -77,15 +77,15 @@ bool LoadRawMidi(Song song, MIDIFile midi)
 
 		auto tracks = midi.tracks;
 
-		foreach(track, events; tracks)
+		foreach (track, events; tracks)
 		{
-			Part part;
+			string part = "unknown";
 			bool bIsEventTrack = true;
-			SongPart* pPart;
+			Part* pPart;
 			Variation* pVariation;
 
 			// detect which track we're looking at
-			if(track == 0)
+			if (track == 0)
 			{
 				// is sync track
 			}
@@ -97,30 +97,30 @@ bool LoadRawMidi(Song song, MIDIFile midi)
 				// search for lyrics; vox
 				bool bVox = !bDrums && canFind!((a) => a.isEvent(MIDIEvents.Lyric))(events);
 
-				if(bDrums)
+				if (bDrums)
 				{
-					part = Part.Drums;
-					pPart = &parts[part];
+					part = "drums";
+					pPart = &getPart(part);
 					pPart.part = part;
 					pPart.variations ~= Variation("Track " ~ to!string(track + 1) ~ "-8drums");
 					pVariation = &pPart.variations[$-1];
 
-					Sequence seq = new Sequence();
-					seq.part = part;
-					seq.variation = pVariation.name;
-					seq.difficulty = "Expert";
-					pVariation.difficulties ~= seq;
+					Track trk = new Track();
+					trk.part = part;
+					trk.variation = pVariation.name;
+					trk.difficulty = "Expert";
+					pVariation.difficulties ~= trk;
 				}
-				else if(bVox)
+				else if (bVox)
 				{
-					part = Part.Vox;
+					part = "vocals";
 				}
 			}
 
 			// parse the events
 			MIDIEvent*[128][16] currentNotes;
 			Event*[128][16] currentEvents;
-			foreach(ref e; events)
+			foreach (ref e; events)
 			{
 				Event ev;
 				ev.tick = e.tick;
@@ -128,9 +128,9 @@ bool LoadRawMidi(Song song, MIDIFile midi)
 				int note = e.note.note;
 				int channel = e.note.channel;
 
-				if(e.type == MIDIEventType.Custom)
+				if (e.type == MIDIEventType.Custom)
 				{
-					switch(e.subType) with(MIDIEvents)
+					switch (e.subType) with(MIDIEvents)
 					{
 						// sync track events
 						case TimeSignature:
@@ -151,7 +151,7 @@ bool LoadRawMidi(Song song, MIDIFile midi)
 						case Text:
 							string text = e.text.strip;
 
-							if(part == Part.Unknown)
+							if (part[] == "unknown")
 							{
 								// stash it in the events track
 								ev.event = EventType.Event;
@@ -167,7 +167,7 @@ bool LoadRawMidi(Song song, MIDIFile midi)
 							}
 							break;
 						case Lyric:
-							if(part != Part.Vox)
+							if (part[] != "vocals")
 							{
 								MFDebug_Warn(2, "Lyrics not on Vox track?!".ptr);
 								continue;
@@ -187,14 +187,14 @@ bool LoadRawMidi(Song song, MIDIFile midi)
 					continue;
 				}
 
-				if(e.type != MIDIEventType.NoteOff && e.type != MIDIEventType.NoteOn)
+				if (e.type != MIDIEventType.NoteOff && e.type != MIDIEventType.NoteOn)
 				{
 					MFDebug_Warn(2, "Unexpected event: " ~ to!string(e.type));
 					continue;
 				}
-				if(e.type == MIDIEventType.NoteOff || (e.type == MIDIEventType.NoteOn && e.note.velocity == 0))
+				if (e.type == MIDIEventType.NoteOff || (e.type == MIDIEventType.NoteOn && e.note.velocity == 0))
 				{
-					if(currentNotes[channel][note] == null)
+					if (currentNotes[channel][note] == null)
 					{
 						MFDebug_Warn(2, "Note already up: " ~ to!string(note));
 						continue;
@@ -204,24 +204,24 @@ bool LoadRawMidi(Song song, MIDIFile midi)
 					int duration = e.tick - currentNotes[channel][note].tick;
 
 					// Note: 240 (1/8th) seems like an established minimum sustain
-					if(part != Part.Drums && duration >= 240 && currentEvents[channel][note])
+					if (part[] != "drums" && duration >= 240 && currentEvents[channel][note])
 						currentEvents[channel][note].duration = duration;
 
 					currentNotes[channel][note] = null;
 					currentEvents[channel][note] = null;
 					continue;
 				}
-				if(e.type == MIDIEventType.NoteOn)
+				if (e.type == MIDIEventType.NoteOn)
 				{
-					if(currentNotes[channel][note] != null)
+					if (currentNotes[channel][note] != null)
 						MFDebug_Warn(2, "Note already down: " ~ to!string(note));
 
 					currentNotes[channel][note] = &e;
 				}
 
-				switch(part) with(Part)
+				switch (part)
 				{
-					case Drums:
+					case "drums":
 						assert(note >= 35 && note <= 81, "Invalid note!");
 
 						struct DrumMap
@@ -280,7 +280,7 @@ bool LoadRawMidi(Song song, MIDIFile midi)
 						];
 
 						int n = note - 35;
-						if(drumMap[n].note != -1)
+						if (drumMap[n].note != -1)
 						{
 							ev.event = EventType.Note;
 							ev.note.key = drumMap[n].note;
@@ -291,7 +291,7 @@ bool LoadRawMidi(Song song, MIDIFile midi)
 						}
 
 						break;
-					case Vox:
+					case "vocals":
 						// TODO: read vox...
 						break;
 					default:

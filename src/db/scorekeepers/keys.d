@@ -2,11 +2,10 @@ module db.scorekeepers.keys;
 
 import db.tools.log;
 import db.i.scorekeeper;
-import db.i.inputdevice;
-import db.sequence;
+import db.inputs.inputdevice;
+import db.chart.track;
 import db.instrument;
 import db.game;
-import db.song;
 
 import std.signals;
 import std.algorithm;
@@ -30,15 +29,15 @@ struct KeysNote
 
 class KeysScoreKeeper : ScoreKeeper
 {
-	this(Sequence sequence, InputDevice input)
+	this(Track sequence, Instrument instrument)
 	{
-		super(sequence, input);
+		super(sequence, instrument);
 
 		numNotes = cast(int)sequence.notes.count!(a => a.event == EventType.Note);
 		notes = new KeysNote[numNotes];
 
 		int i;
-		foreach(ref n; sequence.notes.filter!(a => a.event == EventType.Note))
+		foreach (ref n; sequence.notes.filter!(a => a.event == EventType.Note))
 		{
 			KeysNote* pKeysNote = &notes[i++];
 
@@ -50,7 +49,7 @@ class KeysScoreKeeper : ScoreKeeper
 	private KeysNote[] GetNext()
 	{
 		size_t end = offset;
-		while(notes.length > end && notes[end].time == notes[offset].time)
+		while (notes.length > end && notes[end].time == notes[offset].time)
 			++end;
 		return notes[offset..end];
 	}
@@ -58,18 +57,18 @@ class KeysScoreKeeper : ScoreKeeper
 	override void Update()
 	{
 		long audioLatency = Game.instance.settings.audioLatency*1_000;
-		long time = inputDevice.inputTime - audioLatency;
+		long time = instrument.inputTime - audioLatency;
 
-		inputDevice.Update();
+		instrument.Update();
 
 		long tolerance = window*1000 / 2;
 
 		// check for missed notes?
-		while(offset < notes.length)
+		while (offset < notes.length)
 		{
-			if(notes[offset].bHit)
+			if (notes[offset].bHit)
 				++offset;
-			else if(time > notes[offset].time + tolerance)
+			else if (time > notes[offset].time + tolerance)
 			{
 				WriteLog(format("%6d missed: %d", notes[offset].time/1000, notes[offset].key), MFVector(1,1,1,1));
 
@@ -78,7 +77,7 @@ class KeysScoreKeeper : ScoreKeeper
 				multiplier = 1;
 
 				noteMiss.emit(notes[offset].key);
-				if(oldCombo > 1)
+				if (oldCombo > 1)
 					lostCombo.emit();
 
 				++offset;
@@ -87,7 +86,7 @@ class KeysScoreKeeper : ScoreKeeper
 				break;
 		}
 
-		foreach(ref e; inputDevice.events)
+		foreach (ref e; instrument.events)
 		{
 			// adjust timestamp to compensate for audio latency
 			long timestamp = e.timestamp - audioLatency;
@@ -100,12 +99,12 @@ class KeysScoreKeeper : ScoreKeeper
 			int note = e.key;
 
 			bool bDidHit = false;
-			for(size_t i = offset; i < notes.length && timestamp >= notes[i].time - tolerance; ++i)
+			for (size_t i = offset; i < notes.length && timestamp >= notes[i].time - tolerance; ++i)
 			{
-				if(notes[i].bHit)
+				if (notes[i].bHit)
 					continue;
 
-				if(notes[i].key == note)
+				if (notes[i].key == note)
 				{
 					long error = timestamp - notes[i].time;
 					cumulativeError += error;
@@ -118,10 +117,11 @@ class KeysScoreKeeper : ScoreKeeper
 					// update counters
 					++numHits;
 					++combo;
+					longestCombo = max(combo, longestCombo);
 
 					int oldMultiplier = multiplier;
 					multiplier = min(1 + combo/10, 4);
-					if(bStarPowerActive)
+					if (bStarPowerActive)
 						multiplier *= 2;
 
 					// score note
@@ -129,16 +129,16 @@ class KeysScoreKeeper : ScoreKeeper
 
 					// emit sognals
 					noteHit.emit(note, error);
-					if(multiplier > oldMultiplier)
+					if (multiplier > oldMultiplier)
 						multiplierIncrease.emit();
 
 					bDidHit = true;
-					if(i == offset)
+					if (i == offset)
 						++offset;
 					break;
 				}
 			}
-			if(!bDidHit)
+			if (!bDidHit)
 			{
 				WriteLog(format("%6d bad: %d (%g)", timestamp/1000, note, e.velocity), MFVector(1,1,1,1));
 
@@ -147,12 +147,12 @@ class KeysScoreKeeper : ScoreKeeper
 				multiplier = 1;
 
 				badNote.emit(note);
-				if(oldCombo > 1)
+				if (oldCombo > 1)
 					lostCombo.emit();
 			}
 		}
 
-		inputDevice.Clear();
+		instrument.Clear();
 	}
 
 	override bool WasHit(Event* pEvent)

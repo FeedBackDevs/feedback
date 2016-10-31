@@ -8,7 +8,7 @@ import std.traits;
 
 struct Factory(T)
 {
-	static if(is(T == class))
+	static if (is(T == class))
 		alias RT = T;
 	else
 		alias RT = T*;
@@ -18,7 +18,7 @@ struct Factory(T)
 
 	bool registerType(const(char)[] name, CreateDelegate createDelegate)
 	{
-		if(name in factory)
+		if (name in factory)
 		{
 			MFDebug_Log(2, "Already Registered: " ~ name);
 			return false;
@@ -30,7 +30,7 @@ struct Factory(T)
 
 	bool registerType(const(char)[] name, CreateFunc createFunc)
 	{
-		if(name in factory)
+		if (name in factory)
 		{
 			MFDebug_Log(2, "Already Registered: " ~ name);
 			return false;
@@ -52,7 +52,7 @@ struct Factory(T)
 
 	T create(const(char)[] typeName)
 	{
-		if(typeName !in factory)
+		if (typeName !in factory)
 			throw new Exception(typeof(this).stringof ~ ".create(): Type '" ~ typeName.idup ~ "' not registered");
 		return factory[typeName](typeName);
 	}

@@ -5,14 +5,14 @@ import fuji.materials.standard;
 
 import db.i.notetrack;
 import db.i.scorekeeper;
-import db.i.inputdevice;
+import db.inputs.inputdevice;
 import db.i.syncsource;
 import db.instrument;
-import db.performance;
+import db.instrument.drums : DrumNotes, DrumFeatures;
+import db.game.performance;
 import db.renderer;
-import db.song;
-import db.songlibrary;
-import db.sequence;
+import db.library;
+import db.chart;
 
 import core.stdc.math;
 import std.string;
@@ -24,9 +24,9 @@ class GHDrums : NoteTrack
 	{
 		super(performer);
 
-		Track* t = performer.performance.track;
-		Song song = t.song;
-		this.song = song;
+		Song* t = performer.performance.song;
+		Chart chart = t.chart;
+		this.chart = chart;
 
 		string fb = t.fretboard ? t.fretboard : "fretboard0";
 		fretboard = Material(fb);
@@ -41,38 +41,38 @@ class GHDrums : NoteTrack
 		edge = Material("edge");
 		edge.parameters.zread = false;
 
-		InputDevice input = performer.scoreKeeper.inputDevice;
-		if((input.features & MFBit!(DrumFeatures.Has4Drums)) && (input.features & MFBit!(DrumFeatures.Has3Cymbals)) && (input.features & MFBit!(DrumFeatures.HasHiHat)))
+		Instrument input = performer.scoreKeeper.instrument;
+		if ((input.features & MFBit!(DrumFeatures.Has4Drums)) && (input.features & MFBit!(DrumFeatures.Has3Cymbals)) && (input.features & MFBit!(DrumFeatures.HasHiHat)))
 		{
 			// real kit - 3 cymbals
 			numLanes = 8;
 			laneMap = [ 0, 1, 2, 3, 4, 5, 6, 7, 8 ];
 		}
-		else if((input.features & MFBit!(DrumFeatures.Has4Drums)) && (input.features & MFBit!(DrumFeatures.Has2Cymbals)) && (input.features & MFBit!(DrumFeatures.HasHiHat)))
+		else if ((input.features & MFBit!(DrumFeatures.Has4Drums)) && (input.features & MFBit!(DrumFeatures.Has2Cymbals)) && (input.features & MFBit!(DrumFeatures.HasHiHat)))
 		{
 			// real kit - 2 cymbals
 			numLanes = 7;
 			laneMap = [ 0, 1, 2, 3, 4, -1, 5, 6, 8 ];
 		}
-		else if((input.features & MFBit!(DrumFeatures.Has4Drums)) && (input.features & MFBit!(DrumFeatures.Has3Cymbals)))
+		else if ((input.features & MFBit!(DrumFeatures.Has4Drums)) && (input.features & MFBit!(DrumFeatures.Has3Cymbals)))
 		{
 			// RB - 3 cymbals
 			numLanes = 7;
 			laneMap = [ -1, 0, 1, 2, 4, 3, 6, 5, 8 ];
 		}
-		else if((input.features & MFBit!(DrumFeatures.Has4Drums)) && (input.features & MFBit!(DrumFeatures.Has2Cymbals)))
+		else if ((input.features & MFBit!(DrumFeatures.Has4Drums)) && (input.features & MFBit!(DrumFeatures.Has2Cymbals)))
 		{
 			// RB - 2 cymbals
 			numLanes = 6;
 			laneMap = [ -1, 0, 1, 2, 3, -1, 5, 4, 8 ];
 		}
-		else if(input.features & MFBit!(DrumFeatures.Has2Cymbals))
+		else if (input.features & MFBit!(DrumFeatures.Has2Cymbals))
 		{
 			// GH
 			numLanes = 5;
 			laneMap = [ -1, 0, 1, -1, 2, -1, 4, 3, 8 ];
 		}
-		else if(input.features & MFBit!(DrumFeatures.Has4Drums))
+		else if (input.features & MFBit!(DrumFeatures.Has4Drums))
 		{
 			// RB
 			numLanes = 4;
@@ -85,9 +85,9 @@ class GHDrums : NoteTrack
 		return Orientation.Tall;
 	}
 
-	override @property InstrumentType instrumentType()
+	override @property string instrumentType()
 	{
-		return InstrumentType.Drums;
+		return "drums";
 	}
 
 	override @property float laneWidth()
@@ -146,7 +146,7 @@ class GHDrums : NoteTrack
 		float textureOffset = fmodf(scrollOffset, fretboardRepeat);
 
 		int a;
-		for(a=start; a<=end; a+=4)
+		for (a=start; a<=end; a+=4)
 		{
 			float z = cast(float)a;
 			MFSetTexCoord1(1.0f, 1.0f - (z+textureOffset) / fretboardRepeat);
@@ -180,9 +180,9 @@ class GHDrums : NoteTrack
 		MFBegin(10 + 6*(numLanes-1));
 
 		MFSetColour(0.0f, 0.0f, 0.0f, 0.3f);
-		for(int col=1; col<numLanes; col++)
+		for (int col=1; col<numLanes; col++)
 		{
-			if(col > 1)
+			if (col > 1)
 				MFSetPosition(-halfFB + columnWidth*cast(float)col - 0.02f, 0.0f, cast(float)end);
 
 			MFSetTexCoord1(0,0);
@@ -228,25 +228,25 @@ class GHDrums : NoteTrack
 		bar.setCurrent();
 		MFPrimitive(PrimType.TriStrip, 0);
 
-		int bottomTick = song.CalculateTickAtTime(bottomTime);
-		int res = song.resolution;
+		int bottomTick = chart.CalculateTickAtTime(bottomTime);
+		int res = chart.resolution;
 		int ticks = bHalfFrets ? res/2 : res;
 		int fretBeat = bottomTick + ticks - 1;
 		fretBeat -= fretBeat % ticks;
-		long fretTime = song.CalculateTimeOfTick(fretBeat);
+		long fretTime = chart.CalculateTimeOfTick(fretBeat);
 
-		while(fretTime < topTime)
+		while (fretTime < topTime)
 		{
 			bool halfBeat = (fretBeat % res) != 0;
 			bool bar = false;
 
-			if(!halfBeat)
+			if (!halfBeat)
 			{
-				ptrdiff_t lastTS = song.sync.GetMostRecentEvent(fretBeat, EventType.TimeSignature);
+				ptrdiff_t lastTS = chart.sync.GetMostRecentEvent(fretBeat, EventType.TimeSignature);
 
-				if(lastTS != -1)
-					bar = ((fretBeat - song.sync[lastTS].tick) % (song.sync[lastTS].ts.numerator*res)) == 0;
-				else if(fretBeat == 0)
+				if (lastTS != -1)
+					bar = ((fretBeat - chart.sync[lastTS].tick) % (chart.sync[lastTS].ts.numerator*res)) == 0;
+				else if (fretBeat == 0)
 					bar = true;
 			}
 
@@ -255,7 +255,7 @@ class GHDrums : NoteTrack
 
 			float position = (fretTime - offset)*scrollSpeed * (1.0f/1_000_000.0f);
 
-			if(!halfBeat)
+			if (!halfBeat)
 				MFSetColourV(MFVector.white);
 			else
 			{
@@ -274,7 +274,7 @@ class GHDrums : NoteTrack
 			MFEnd();
 
 			fretBeat += ticks;
-			fretTime = song.CalculateTimeOfTick(fretBeat);
+			fretTime = chart.CalculateTimeOfTick(fretBeat);
 		}
 
 		// draw the notes
@@ -283,27 +283,27 @@ class GHDrums : NoteTrack
 		static __gshared immutable MFVector[9] realColours = [ MFVector.red * MFVector.grey, MFVector.red, MFVector.yellow * MFVector.grey, MFVector.yellow, MFVector.blue, MFVector.blue * MFVector.grey, MFVector.green, MFVector.green * MFVector.grey, MFVector.magenta ];
 		static __gshared immutable MFVector[9] rbColours = [ MFVector.red * MFVector.grey, MFVector.red, MFVector.yellow * MFVector.grey, MFVector.yellow, MFVector.blue, MFVector.blue * MFVector.grey, MFVector.green, MFVector.green * MFVector.grey, MFVector.magenta ];
 		static __gshared immutable MFVector[9] ghColours = [ MFVector.red * MFVector.grey, MFVector.red, MFVector.yellow, MFVector.yellow, MFVector.blue, MFVector.blue, MFVector.green, MFVector.orange, MFVector.magenta ];
-		immutable MFVector[] colours = (performer.scoreKeeper.inputDevice.features & MFBit!(DrumFeatures.HasHiHat)) ? realColours : (!(performer.scoreKeeper.inputDevice.features & MFBit!(DrumFeatures.Has4Drums)) ? ghColours : rbColours);
+		immutable MFVector[] colours = (performer.scoreKeeper.instrument.features & MFBit!(DrumFeatures.HasHiHat)) ? realColours : (!(performer.scoreKeeper.instrument.features & MFBit!(DrumFeatures.Has4Drums)) ? ghColours : rbColours);
 
-		foreach(ref e; notes)
+		foreach (ref e; notes)
 		{
-			if(e.event != EventType.Note)
+			if (e.event != EventType.Note)
 				continue;
 
 			// if it was hit, we don't need to render it
-			if(performer.scoreKeeper.WasHit(&e))
+			if (performer.scoreKeeper.WasHit(&e))
 				continue;
 
 			int key = laneMap[e.note.key];
 
 			// HACK: don't render notes for which we have no lanes!
-			if(key == -1)
+			if (key == -1)
 				continue;
 
 			MFVector pos;
 			float noteWidth, noteDepth, noteHeight;
 
-			if(key == DrumNotes.Kick)	// bass drum is big
+			if (key == DrumNotes.Kick)	// bass drum is big
 			{
 				pos = GetPosForTime(offset, e.time, RelativePosition.Center);
 				noteWidth = fretboardWidth*0.48f;
@@ -318,7 +318,7 @@ class GHDrums : NoteTrack
 				noteHeight = columnWidth*0.2f;
 			}
 
-			if(e.duration > 0)
+			if (e.duration > 0)
 			{
 				MFVector end = GetPosForTick(offset, e.tick + e.duration, RelativePosition.Center);
 
@@ -356,10 +356,10 @@ class GHDrums : NoteTrack
 		MFRect rect = MFRect(0, 0, 1920, 1080);
 		MFView_SetOrtho(&rect);
 
-		auto songEvents = song.events.BetweenTimes(bottomTime, topTime);
-		foreach(ref e; songEvents)
+		auto songEvents = chart.events.BetweenTimes(bottomTime, topTime);
+		foreach (ref e; songEvents)
 		{
-			if(e.event != EventType.Event)
+			if (e.event != EventType.Event)
 				continue;
 
 			MFVector pos = GetPosForTime(offset, e.time, RelativePosition.Right);
@@ -370,9 +370,9 @@ class GHDrums : NoteTrack
 		}
 
 		auto trackEvents = performer.sequence.notes.BetweenTimes(bottomTime, topTime);
-		foreach(ref e; trackEvents)
+		foreach (ref e; trackEvents)
 		{
-			if(e.event != EventType.Event)
+			if (e.event != EventType.Event)
 				continue;
 
 			MFVector pos = GetPosForTime(offset, e.time, RelativePosition.Left);
@@ -398,7 +398,7 @@ class GHDrums : NoteTrack
 
 	override MFVector GetPosForTick(long offset, int tick, RelativePosition pos)
 	{
-		return GetPosForTime(offset, song.CalculateTimeOfTick(tick), pos);
+		return GetPosForTime(offset, chart.CalculateTimeOfTick(tick), pos);
 	}
 
 	override MFVector GetPosForTime(long offset, long time, RelativePosition pos)
@@ -411,25 +411,25 @@ class GHDrums : NoteTrack
 
 	override void GetVisibleRange(long offset, int* pStartTick, int* pEndTick, long* pStartTime, long* pEndTime)
 	{
-		if(pStartTime || pStartTick)
+		if (pStartTime || pStartTick)
 		{
 			long startTime = offset + cast(long)start*1_000_000/scrollSpeed;
-			if(pStartTime)
+			if (pStartTime)
 				*pStartTime = startTime;
-			if(pStartTick)
-				*pStartTick = song.CalculateTickAtTime(startTime);
+			if (pStartTick)
+				*pStartTick = chart.CalculateTickAtTime(startTime);
 		}
-		if(pEndTime || pEndTick)
+		if (pEndTime || pEndTick)
 		{
 			long endTime = offset + cast(long)end*1_000_000/scrollSpeed;
-			if(pEndTime)
+			if (pEndTime)
 				*pEndTime = endTime;
-			if(pEndTick)
-				*pEndTick = song.CalculateTickAtTime(endTime);
+			if (pEndTick)
+				*pEndTick = chart.CalculateTickAtTime(endTime);
 		}
 	}
 
-	Song song;
+	Chart chart;
 
 	Material fretboard;
 	Material bar;
@@ -438,7 +438,7 @@ class GHDrums : NoteTrack
 private:
 	float GetX(RelativePosition pos)
 	{
-		switch(pos) with(RelativePosition)
+		switch (pos) with(RelativePosition)
 		{
 			case Center:
 				return 0;

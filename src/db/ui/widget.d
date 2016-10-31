@@ -90,24 +90,24 @@ class Widget
 	final @property string style() const pure nothrow @nogc { return _style; }
 	final @property void style(const(char)[] style)
 	{
-		if(_style == style)
+		if (_style == style)
 			return;
 
 		_style = style.idup;
 
-		if(enabled || !styleDisabled.length)
+		if (enabled || !styleDisabled.length)
 			applyStyle(style);
 	}
 
 	final @property string styleDisabled() const pure nothrow @nogc { return _styleDisabled; }
 	final @property void styleDisabled(const(char)[] style)
 	{
-		if(_styleDisabled == style)
+		if (_styleDisabled == style)
 			return;
 
 		_styleDisabled = style.idup;
 
-		if(!enabled)
+		if (!enabled)
 			applyStyle(style);
 	}
 
@@ -117,14 +117,14 @@ class Widget
 	final @property bool enabled() const pure nothrow @nogc { return bEnabled && bParentEnabled; }
 	final @property void enabled(bool enabled)
 	{
-		if(bEnabled == enabled)
+		if (bEnabled == enabled)
 			return;
 
 		bEnabled = enabled;
 
 		updateStyle();
 
-		if(OnEnabledChanged)
+		if (OnEnabledChanged)
 			OnEnabledChanged(this, enabled);
 	}
 
@@ -132,19 +132,19 @@ class Widget
 	final @property void visibility(Visibility visibility)
 	{
 		Visibility old = visible;
-		if(visible != visibility)
+		if (visible != visibility)
 		{
 			visible = visibility;
 
-			if((old == Visibility.Gone || visible == Visibility.Gone) && OnLayoutChanged)
+			if ((old == Visibility.Gone || visible == Visibility.Gone) && OnLayoutChanged)
 				OnLayoutChanged(this);
-			if(OnVisibilityChanged)
+			if (OnVisibilityChanged)
 				OnVisibilityChanged(this, visible);
 		}
 	}
 
 	final @property int zdepth() const pure nothrow @nogc { return _parent ? _parent.getDepth(this) : -1; }
-	final @property void zdepth(int depth) pure nothrow { if(_parent) _parent.setDepth(this, depth); }
+	final @property void zdepth(int depth) pure nothrow { if (_parent) _parent.setDepth(this, depth); }
 
 	final @property bool clickable() const pure nothrow @nogc { return bClickable; }
 	final @property void clickable(bool clickable) pure nothrow @nogc { bClickable = clickable; }
@@ -156,14 +156,14 @@ class Widget
 	final @property ref const(MFVector) position() const pure nothrow @nogc { return _position; }
 	final @property void position(const(MFVector) position)
 	{
-		if(_position != position)
+		if (_position != position)
 		{
 			MFVector oldPos = _position;
 			_position = position;
 
 			dirtyMatrices();
 
-			if(OnMove)
+			if (OnMove)
 				OnMove(this, position, oldPos);
 		}
 	}
@@ -183,7 +183,7 @@ class Widget
 	final @property ref const(MFVector) scale() const pure nothrow @nogc { return _scale; }
 	final @property void scale(const(MFVector) scale) pure nothrow @nogc
 	{
-		if(_scale != scale)
+		if (_scale != scale)
 		{
 			_scale = scale;
 			dirtyMatrices();
@@ -193,7 +193,7 @@ class Widget
 	final @property ref const(MFVector) rotation() const pure nothrow @nogc { return _rotation; }
 	final @property void rotation(const(MFVector) rotation) pure nothrow @nogc
 	{
-		if(_rotation != rotation)
+		if (_rotation != rotation)
 		{
 			_rotation = rotation;
 			dirtyMatrices();
@@ -203,11 +203,11 @@ class Widget
 	final @property ref const(MFVector) layoutMargin() const pure nothrow @nogc { return _layoutMargin; }
 	final @property void layoutMargin(const(MFVector) margin)
 	{
-		if(_layoutMargin != margin)
+		if (_layoutMargin != margin)
 		{
 			_layoutMargin = margin;
 
-			if(OnLayoutChanged)
+			if (OnLayoutChanged)
 				OnLayoutChanged(this);
 		}
 	}
@@ -215,11 +215,11 @@ class Widget
 	final @property float layoutWeight() const pure nothrow @nogc { return _layoutWeight; }
 	final @property void layoutWeight(float weight)
 	{
-		if(_layoutWeight != weight)
+		if (_layoutWeight != weight)
 		{
 			_layoutWeight = weight;
 
-			if(OnLayoutChanged)
+			if (OnLayoutChanged)
 				OnLayoutChanged(this);
 		}
 	}
@@ -227,11 +227,11 @@ class Widget
 	final @property Justification layoutJustification() const pure nothrow @nogc { return _layoutJustification; }
 	final @property void layoutJustification(Justification justification)
 	{
-		if(_layoutJustification != justification)
+		if (_layoutJustification != justification)
 		{
 			_layoutJustification = justification;
 
-			if(OnLayoutChanged)
+			if (OnLayoutChanged)
 				OnLayoutChanged(this);
 		}
 	}
@@ -251,14 +251,14 @@ class Widget
 
 	final @property ref const(MFMatrix) transform() pure nothrow @nogc
 	{
-		if(bMatrixDirty)
+		if (bMatrixDirty)
 			buildTransform();
 		return matrix;
 	}
 
 	final @property ref const(MFMatrix) invTransform() pure nothrow @nogc
 	{
-		if(bInvMatrixDirty)
+		if (bInvMatrixDirty)
 		{
 			invMatrix = transform.inverse;
 			bInvMatrixDirty = false;
@@ -271,9 +271,9 @@ class Widget
 	// methods
 	final bool isType(const(char)[] type) const
 	{
-		foreach(T; BaseClassesTuple!(typeof(this)))
+		foreach (T; BaseClassesTuple!(typeof(this)))
 		{
-			if(T.stringof == type)
+			if (T.stringof == type)
 				return true;
 		}
 		return false;
@@ -288,7 +288,7 @@ class Widget
 
 	void setProperty(const(char)[] property, const(char)[] value)
 	{
-		switch(property.toLower)
+		switch (property.toLower)
 		{
 			case "style":
 				style = value; break;
@@ -365,7 +365,7 @@ class Widget
 				bindEvent!OnCharacter(value); break;
 			default:
 			{
-				if(setRenderProperty(property, value, this))
+				if (setRenderProperty(property, value, this))
 					return;
 				else
 					ui.unknownProperty(this, property, value);
@@ -375,7 +375,7 @@ class Widget
 
 	string getProperty(const(char)[] property)
 	{
-		switch(property.toLower)
+		switch (property.toLower)
 		{
 			case "id":
 				return id;
@@ -390,7 +390,7 @@ class Widget
 	// we make this a property so that we don't allocate tables for widgets where it's never used
 	@property LuaTable data()
 	{
-		if(_data.isNil)
+		if (_data.isNil)
 			_data = createTable();
 		return _data;
 	}
@@ -403,15 +403,15 @@ class Widget
 	final inout(Widget) findChild(const(char)[] id) inout pure nothrow @nogc
 	{
 		auto _children = children;
-		foreach(child; _children)
+		foreach (child; _children)
 		{
-			if(child._id == id)
+			if (child._id == id)
 				return child;
 		}
-		foreach(child; _children)
+		foreach (child; _children)
 		{
 			auto found = child.findChild(id);
-			if(found)
+			if (found)
 				return found;
 		}
 		return null;
@@ -419,9 +419,9 @@ class Widget
 
 	final ptrdiff_t getChildIndex(Widget child) const pure nothrow @nogc
 	{
-		foreach(i, c; children)
+		foreach (i, c; children)
 		{
-			if(c is child)
+			if (c is child)
 				return i;
 		}
 		return -1;
@@ -429,28 +429,28 @@ class Widget
 
 	final int raise()
 	{
-		if(_parent)
+		if (_parent)
 			return _parent.raise(this);
 		return -1;
 	}
 
 	final int lower()
 	{
-		if(_parent)
+		if (_parent)
 			return _parent.lower(this);
 		return -1;
 	}
 
 	final int stackUnder(Widget under)
 	{
-		if(_parent)
+		if (_parent)
 			return _parent.stackUnder(this, under);
 		return -1;
 	}
 
 	final int stackAbove(Widget above)
 	{
-		if(_parent)
+		if (_parent)
 			return _parent.stackAbove(this, above);
 		return -1;
 	}
@@ -523,50 +523,50 @@ class Widget
 	void update()
 	{
 		// update the children
-		foreach(child; children)
+		foreach (child; children)
 			child.update();
 	}
 
 	final void draw()
 	{
-		if(visibility != Visibility.Visible)
+		if (visibility != Visibility.Visible)
 			return;
 
 		render();
 
-		foreach(child; children)
+		foreach (child; children)
 			child.draw();
 	}
 
 
 	final void applyStyle(const(char)[] style)
 	{
-		if(style.empty)
+		if (style.empty)
 			return;
 
 		WidgetStyle* pStyle = WidgetStyle.findStyle(style);
-		if(pStyle)
+		if (pStyle)
 			pStyle.apply(this);
 	}
 
 	void updateStyle()
 	{
-		if(!bEnabled && !_styleDisabled.empty)
+		if (!bEnabled && !_styleDisabled.empty)
 			applyStyle(_styleDisabled);
-		else if(!_style.empty)
+		else if (!_style.empty)
 			applyStyle(_style);
 	}
 
 	final void dirtyMatrices() pure nothrow @nogc
 	{
 		bMatrixDirty = bInvMatrixDirty = true;
-		foreach(child; children)
+		foreach (child; children)
 			child.dirtyMatrices();
 	}
 
 	final void resize(ref const(MFVector) size)
 	{
-		if(_size != size)
+		if (_size != size)
 			doResize(size);
 	}
 
@@ -575,16 +575,16 @@ class Widget
 		MFVector oldSize = _size;
 		_size = size;
 
-		if(OnResize)
+		if (OnResize)
 			OnResize(this, size, oldSize);
 
-		if(OnLayoutChanged)
+		if (OnLayoutChanged)
 			OnLayoutChanged(this);
 	}
 
 	final void buildTransform() pure nothrow @nogc
 	{
-		if(_rotation == MFVector.zero)
+		if (_rotation == MFVector.zero)
 		{
 			matrix.setScale(_scale);
 		}
@@ -603,7 +603,7 @@ class Widget
 		matrix.t = MFVector(_position, 1);
 
 		// and multiply in the parent
-		if(_parent)
+		if (_parent)
 			matrix = mul(_parent.transform, matrix);
 
 		bMatrixDirty = false;
@@ -614,10 +614,10 @@ class Widget
 
 	Widget intersectWidget(ref const(MFVector) pos, ref const(MFVector) dir, MFVector* pLocalPos)
 	{
-		if(visibility != Visibility.Visible)
+		if (visibility != Visibility.Visible)
 			return null;
 
-		if(_size.z == 0.0f)
+		if (_size.z == 0.0f)
 		{
 			// the widget is 2d, much easier
 
@@ -626,32 +626,32 @@ class Widget
 			plane = -transform.z;
 
 			// normalise if the plane is scaled along z
-			if(_scale.z != 1.0f)
+			if (_scale.z != 1.0f)
 				plane *= 1.0f/_scale.z;
 
 			// calculate w
 			plane.w = -_position.dot3(plane);
 
 			MFRayIntersectionResult res;
-			if(MFCollision_RayPlaneTest(pos, dir, plane, &res))
+			if (MFCollision_RayPlaneTest(pos, dir, plane, &res))
 			{
 				MFVector intersection = invTransform.transformVectorH(pos + dir*res.time);
 
-				if(pLocalPos)
+				if (pLocalPos)
 					*pLocalPos = intersection;
 
 				MFRect rect = MFRect(0, 0, _size.x, _size.y);
-				if(MFTypes_PointInRect(intersection.x, intersection.y, rect))
+				if (MFTypes_PointInRect(intersection.x, intersection.y, rect))
 				{
 					Widget intersect = this;
 
-					foreach(c; children.retro)
+					foreach (c; children.retro)
 					{
 						MFVector childLocal;
 						Widget child = c.intersectWidget(pos, dir, &childLocal);
-						if(child)
+						if (child)
 						{
-							if(pLocalPos)
+							if (pLocalPos)
 								*pLocalPos = childLocal;
 
 							intersect = child;
@@ -675,20 +675,20 @@ class Widget
 	bool inputEvent(InputManager manager, const(InputManager.EventInfo)* ev)
 	{
 		// allow a registered hook to process the event...
-		if(inputEventHook)
+		if (inputEventHook)
 		{
-			if(inputEventHook(manager, ev))
+			if (inputEventHook(manager, ev))
 				return true;
 		}
 
 		// try and handle the input event in some standard ways...
-		switch(ev.ev)
+		switch (ev.ev)
 		{
 			case InputManager.EventType.Down:
 			{
-				if(bClickable)
+				if (bClickable)
 				{
-					if(OnDown)
+					if (OnDown)
 						OnDown(this, ev.pSource);
 					return true;
 				}
@@ -696,9 +696,9 @@ class Widget
 			}
 			case InputManager.EventType.Up:
 			{
-				if(bClickable)
+				if (bClickable)
 				{
-					if(OnUp)
+					if (OnUp)
 						OnUp(this, ev.pSource);
 					return true;
 				}
@@ -706,9 +706,9 @@ class Widget
 			}
 			case InputManager.EventType.Tap:
 			{
-				if(bClickable)
+				if (bClickable)
 				{
-					if(OnTap)
+					if (OnTap)
 						OnTap(this, ev.pSource);
 					return true;
 				}
@@ -716,9 +716,9 @@ class Widget
 			}
 			case InputManager.EventType.Hover:
 			{
-				if(bHoverable)
+				if (bHoverable)
 				{
-					if(OnHover)
+					if (OnHover)
 						OnHover(this, ev.pSource, MFVector(ev.hover.x, ev.hover.y), MFVector(ev.hover.deltaX, ev.hover.deltaY));
 					return true;
 				}
@@ -726,9 +726,9 @@ class Widget
 			}
 			case InputManager.EventType.Drag:
 			{
-				if(bDragable)
+				if (bDragable)
 				{
-					if(OnDrag)
+					if (OnDrag)
 						OnDrag(this, ev.pSource, MFVector(ev.hover.x, ev.hover.y), MFVector(ev.hover.deltaX, ev.hover.deltaY));
 					return true;
 				}
@@ -744,7 +744,7 @@ class Widget
 				break;
 		}
 
-		if(_parent)
+		if (_parent)
 			return _parent.inputEvent(manager, ev);
 		return false;
 	}
@@ -762,25 +762,25 @@ protected:
 
 	bool setRenderProperty(const(char)[] property, const(char)[] value, Widget widget = null)
 	{
-		switch(property.toLower)
+		switch (property.toLower)
 		{
 			case "background_image":
 				image.create(value);
-				if(image)
+				if (image)
 				{
 					int texW, texH;
 					Texture texture = image.parameters[MFMatStandardParameters.Texture][MFMatStandardTextures.DifuseMap].asTexture;
 					texWidth = texture.width;
 					texHeight = texture.height;
 
-					if(widget && (widget.bAutoWidth || widget.bAutoHeight))
+					if (widget && (widget.bAutoWidth || widget.bAutoHeight))
 					{
-						if(widget.bAutoWidth && widget.bAutoHeight)
+						if (widget.bAutoWidth && widget.bAutoHeight)
 						{
 							MFVector t = MFVector(texWidth, texHeight);
 							widget.resize(t);
 						}
-						else if(widget.bAutoWidth)
+						else if (widget.bAutoWidth)
 							widget.updateWidth(texWidth);
 						else
 							widget.updateHeight(texHeight);
@@ -822,7 +822,7 @@ protected:
 		size.x -= bgPadding.x + bgPadding.z;
 		size.y -= bgPadding.y + bgPadding.w;
 
-		if(bgColour.w > 0)
+		if (bgColour.w > 0)
 		{
 			float borderWidth = border.x + border.z;
 			float borderHeight = border.y + border.w;
@@ -831,18 +831,18 @@ protected:
 		}
 
 		MFVector bc = borderColour*_colour;
-		if(border.x > 0) // left
+		if (border.x > 0) // left
 			MFPrimitive_DrawUntexturedQuad(bgPadding.x, bgPadding.y, border.x, size.y, bc, transform);
-		if(border.y > 0) // top
+		if (border.y > 0) // top
 			MFPrimitive_DrawUntexturedQuad(bgPadding.x, bgPadding.y, size.x, border.y, bc, transform);
-		if(border.z > 0) // right
+		if (border.z > 0) // right
 			MFPrimitive_DrawUntexturedQuad(size.x - border.z + bgPadding.x, bgPadding.y, border.z, size.y, bc, transform);
-		if(border.w > 0) // bottom
+		if (border.w > 0) // bottom
 			MFPrimitive_DrawUntexturedQuad(bgPadding.x, bgPadding.y + size.y - border.w, size.x, border.w, bc, transform);
 
-		if(image)
+		if (image)
 		{
-			if(bg9CellMargin > 0)
+			if (bg9CellMargin > 0)
 			{
 				// 9 cell stuff...
 			}
@@ -853,9 +853,9 @@ protected:
 
 				float offset = 0;
 				float tc = MFRenderer_GetTexelCenterOffset();
-				if(tc > 0)
+				if (tc > 0)
 				{
-					if(size.x == texWidth && size.y == texHeight)
+					if (size.x == texWidth && size.y == texHeight)
 						offset = tc;
 				}
 
@@ -868,7 +868,7 @@ protected:
 
 bool getBoolFromString(const(char)[] value)
 {
-	if(!value.icmp("true") ||
+	if (!value.icmp("true") ||
 		!value.icmp("1") ||
 		!value.icmp("enabled") ||
 		!value.icmp("on") ||
@@ -881,29 +881,29 @@ MFVector getVectorFromString(const(char)[] value, MFVector defaultValue = MFVect
 {
 	float[4] f = [ defaultValue.x, defaultValue.y, defaultValue.z, defaultValue.w ];
 	size_t numComponents;
-	foreach(token; value.splitter(',').map!(a => a.strip))
+	foreach (token; value.splitter(',').map!(a => a.strip))
 	{
 		f[numComponents++] = to!float(token);
-		if(numComponents == 4)
+		if (numComponents == 4)
 			break;
 	}
-	if(numComponents == 1)
+	if (numComponents == 1)
 		f[1] = f[2] = f[3] = f[0];
 	return MFVector(f[0], f[1], f[2], f[3]);
 }
 
 MFVector getColourFromString(const(char)[] value)
 {
-	if(!value.length)
+	if (!value.length)
 		return MFVector.white;
 
-	if(value.startsWith("#"))
+	if (value.startsWith("#"))
 	{
 		assert(false, "Hex colours not supported... pester manu!");
 		return MFVector.white;
 	}
 
-	switch(value.toLower)
+	switch (value.toLower)
 	{
 		case "black":
 			return MFVector.black;

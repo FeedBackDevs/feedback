@@ -6,14 +6,14 @@ import fuji.system;
 
 import db.i.notetrack;
 import db.i.scorekeeper;
-import db.i.inputdevice;
+import db.inputs.inputdevice;
 import db.i.syncsource;
 import db.instrument;
-import db.performance;
+import db.instrument.keyboard;
+import db.game.performance;
 import db.renderer;
-import db.song;
-import db.songlibrary;
-import db.sequence;
+import db.library;
+import db.chart;
 
 import db.formats.parsers.midifile;
 
@@ -28,9 +28,9 @@ class ProKeysTrack : NoteTrack
 	{
 		super(performer);
 
-		Track* t = performer.performance.track;
-		Song song = t.song;
-		this.song = song;
+		Song* t = performer.performance.song;
+		Chart chart = t.chart;
+		this.chart = chart;
 
 		string fb = t.fretboard ? t.fretboard : "fretboard0";
 		fretboard = Material(fb);
@@ -51,9 +51,9 @@ class ProKeysTrack : NoteTrack
 		return Orientation.Tall;
 	}
 
-	override @property InstrumentType instrumentType()
+	override @property string instrumentType()
 	{
-		return InstrumentType.Keyboard;
+		return "keyboard";
 	}
 
 	override @property float laneWidth()
@@ -102,11 +102,11 @@ class ProKeysTrack : NoteTrack
 		GetVisibleRange(offset, null, null, &bottomTime, &topTime);
 
 		auto leftPosEv = performer.sequence.notes.GetMostRecentEventByTime(offset, EventType.KeyboardPosition);
-		if(leftPosEv != -1)
+		if (leftPosEv != -1)
 			leftLaneTarget = WhiteKeys[performer.sequence.notes[leftPosEv].position] & 0x7F;
 		else
 			leftLaneTarget = WhiteKeys[MIDINote.G4] & 0x7F;
-		if(leftLane != leftLaneTarget)
+		if (leftLane != leftLaneTarget)
 		{
 			float shift = MFSystem_GetTimeDelta() * shiftVelocity;
 			leftLane += leftLaneTarget < leftLane ? -min(leftLane - leftLaneTarget, shift) : min(leftLaneTarget - leftLane, shift);
@@ -123,7 +123,7 @@ class ProKeysTrack : NoteTrack
 		float textureOffset = fmodf(scrollOffset, fretboardRepeat);
 
 		int a;
-		for(a=start; a<=end; a+=4)
+		for (a=start; a<=end; a+=4)
 		{
 			float z = cast(float)a;
 			MFSetTexCoord1(1.0f, 1.0f - (z+textureOffset) / fretboardRepeat);
@@ -157,9 +157,9 @@ class ProKeysTrack : NoteTrack
 		MFBegin(10 + 6*(numLanes-1));
 
 		MFSetColour(0.0f, 0.0f, 0.0f, 0.3f);
-		for(int col=1; col<numLanes; col++)
+		for (int col=1; col<numLanes; col++)
 		{
-			if(col > 1)
+			if (col > 1)
 				MFSetPosition(-halfFB + columnWidth*cast(float)col - 0.02f, 0.0f, cast(float)end);
 
 			MFSetTexCoord1(0,0);
@@ -205,25 +205,25 @@ class ProKeysTrack : NoteTrack
 		bar.setCurrent();
 		MFPrimitive(PrimType.TriStrip, 0);
 
-		int bottomTick = song.CalculateTickAtTime(bottomTime);
-		int res = song.resolution;
+		int bottomTick = chart.CalculateTickAtTime(bottomTime);
+		int res = chart.resolution;
 		int ticks = bHalfFrets ? res/2 : res;
 		int fretBeat = bottomTick + ticks - 1;
 		fretBeat -= fretBeat % ticks;
-		long fretTime = song.CalculateTimeOfTick(fretBeat);
+		long fretTime = chart.CalculateTimeOfTick(fretBeat);
 
-		while(fretTime < topTime)
+		while (fretTime < topTime)
 		{
 			bool halfBeat = (fretBeat % res) != 0;
 			bool bar = false;
 
-			if(!halfBeat)
+			if (!halfBeat)
 			{
-				ptrdiff_t lastTS = song.sync.GetMostRecentEvent(fretBeat, EventType.TimeSignature);
+				ptrdiff_t lastTS = chart.sync.GetMostRecentEvent(fretBeat, EventType.TimeSignature);
 
-				if(lastTS != -1)
-					bar = ((fretBeat - song.sync[lastTS].tick) % (song.sync[lastTS].ts.numerator*res)) == 0;
-				else if(fretBeat == 0)
+				if (lastTS != -1)
+					bar = ((fretBeat - chart.sync[lastTS].tick) % (chart.sync[lastTS].ts.numerator*res)) == 0;
+				else if (fretBeat == 0)
 					bar = true;
 			}
 
@@ -232,7 +232,7 @@ class ProKeysTrack : NoteTrack
 
 			float position = (fretTime - offset)*scrollSpeed * (1.0f/1_000_000.0f);
 
-			if(!halfBeat)
+			if (!halfBeat)
 				MFSetColourV(MFVector.white);
 			else
 			{
@@ -251,19 +251,19 @@ class ProKeysTrack : NoteTrack
 			MFEnd();
 
 			fretBeat += ticks;
-			fretTime = song.CalculateTimeOfTick(fretBeat);
+			fretTime = chart.CalculateTimeOfTick(fretBeat);
 		}
 
 		// draw the notes
 		auto notes = performer.sequence.notes.BetweenTimes(bottomTime, topTime);
 
-		foreach(ref e; notes)
+		foreach (ref e; notes)
 		{
-			if(e.event != EventType.Note)
+			if (e.event != EventType.Note)
 				continue;
 
 			// if it was hit, we don't need to render it
-			if(performer.scoreKeeper.WasHit(&e))
+			if (performer.scoreKeeper.WasHit(&e))
 				continue;
 
 			int key = e.note.key;
@@ -271,7 +271,7 @@ class ProKeysTrack : NoteTrack
 			bool bIsBlack = !!(WhiteKeys[key] & 0x80);
 
 			// HACK: don't render notes for which we have no lanes!
-			if(lane < 0 || lane >= 10)
+			if (lane < 0 || lane >= 10)
 				continue;
 
 			MFVector pos = GetPosForTime(offset, e.time, Lane(cast(int)lane));
@@ -279,13 +279,13 @@ class ProKeysTrack : NoteTrack
 			float noteDepth = columnWidth*0.3f;
 			float noteHeight = columnWidth*0.2f;
 
-			if(bIsBlack)
+			if (bIsBlack)
 			{
 				pos.x += laneWidth * 0.4f;
 				noteWidth *= 0.75f;
 			}
 
-			if(e.duration > 0)
+			if (e.duration > 0)
 			{
 				MFVector end = GetPosForTick(offset, e.tick + e.duration, RelativePosition.Center);
 
@@ -323,10 +323,10 @@ class ProKeysTrack : NoteTrack
 		MFRect rect = MFRect(0, 0, 1920, 1080);
 		MFView_SetOrtho(&rect);
 
-		auto songEvents = song.events.BetweenTimes(bottomTime, topTime);
-		foreach(ref e; songEvents)
+		auto songEvents = chart.events.BetweenTimes(bottomTime, topTime);
+		foreach (ref e; songEvents)
 		{
-			if(e.event != EventType.Event)
+			if (e.event != EventType.Event)
 				continue;
 
 			MFVector pos = GetPosForTime(offset, e.time, RelativePosition.Right);
@@ -337,9 +337,9 @@ class ProKeysTrack : NoteTrack
 		}
 
 		auto trackEvents = performer.sequence.notes.BetweenTimes(bottomTime, topTime);
-		foreach(ref e; trackEvents)
+		foreach (ref e; trackEvents)
 		{
-			if(e.event != EventType.Event)
+			if (e.event != EventType.Event)
 				continue;
 
 			MFVector pos = GetPosForTime(offset, e.time, RelativePosition.Left);
@@ -365,7 +365,7 @@ class ProKeysTrack : NoteTrack
 
 	override MFVector GetPosForTick(long offset, int tick, RelativePosition pos)
 	{
-		return GetPosForTime(offset, song.CalculateTimeOfTick(tick), pos);
+		return GetPosForTime(offset, chart.CalculateTimeOfTick(tick), pos);
 	}
 
 	override MFVector GetPosForTime(long offset, long time, RelativePosition pos)
@@ -378,25 +378,25 @@ class ProKeysTrack : NoteTrack
 
 	override void GetVisibleRange(long offset, int* pStartTick, int* pEndTick, long* pStartTime, long* pEndTime)
 	{
-		if(pStartTime || pStartTick)
+		if (pStartTime || pStartTick)
 		{
 			long startTime = offset + cast(long)start*1_000_000/scrollSpeed;
-			if(pStartTime)
+			if (pStartTime)
 				*pStartTime = startTime;
-			if(pStartTick)
-				*pStartTick = song.CalculateTickAtTime(startTime);
+			if (pStartTick)
+				*pStartTick = chart.CalculateTickAtTime(startTime);
 		}
-		if(pEndTime || pEndTick)
+		if (pEndTime || pEndTick)
 		{
 			long endTime = offset + cast(long)end*1_000_000/scrollSpeed;
-			if(pEndTime)
+			if (pEndTime)
 				*pEndTime = endTime;
-			if(pEndTick)
-				*pEndTick = song.CalculateTickAtTime(endTime);
+			if (pEndTick)
+				*pEndTick = chart.CalculateTickAtTime(endTime);
 		}
 	}
 
-	Song song;
+	Chart chart;
 
 	Material fretboard;
 	Material bar;
@@ -405,7 +405,7 @@ class ProKeysTrack : NoteTrack
 private:
 	float GetX(RelativePosition pos)
 	{
-		switch(pos) with(RelativePosition)
+		switch (pos) with(RelativePosition)
 		{
 			case Center:
 				return 0;

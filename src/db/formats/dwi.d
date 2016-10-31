@@ -5,11 +5,11 @@ import fuji.filesystem;
 import fuji.heap;
 import fuji.dbg;
 
-import db.song;
-import db.sequence;
+import db.chart;
 import db.instrument;
 import db.tools.filetypes;
-import db.songlibrary;
+import db.library;
+import db.instrument.dance : DanceNotes;
 
 import std.algorithm;
 import std.string;
@@ -19,7 +19,7 @@ import std.path;
 import std.exception;
 import std.conv : to;
 
-bool LoadDWI(Track* track, DirEntry file)
+bool LoadDWI(Song* song, DirEntry file)
 {
 	string steps = enforce(MFFileSystem_LoadText(file.filepath).assumeUnique, "");
 
@@ -27,59 +27,59 @@ bool LoadDWI(Track* track, DirEntry file)
 
 	MFDebug_Log(2, "Loading song: '" ~ file.filepath ~ "'");
 
-	track._song = new Song;
-	track._song.params["source_format"] = ".dwi";
+	song._chart = new Chart;
+	song._chart.params["source_format"] = ".dwi";
 
 	string name = file.filename.stripExtension;
-	track._song.params["original_name"] = name;
-	track._song.name = name;
+	song._chart.params["original_name"] = name;
+	song._chart.name = name;
 
 	// search for the music and other stuff...
 	string songName = name.toLower;
-	foreach(f; dirEntries(path ~ "*", SpanMode.shallow))
+	foreach (f; dirEntries(path ~ "*", SpanMode.shallow))
 	{
 		string filename = f.filename.toLower;
 		string fn = filename.stripExtension;
-		if(isImageFile(filename))
+		if (isImageFile(filename))
 		{
-			if(fn[] == songName || fn[] == "disc")
-				track.coverImage = f.filepath;
-			else if(fn[] == songName ~ "-bg" || fn[] == "back" || fn[] == "title" || fn[] == "title-bg")
-				track.background = f.filepath;
+			if (fn[] == songName || fn[] == "disc")
+				song.coverImage = f.filepath;
+			else if (fn[] == songName ~ "-bg" || fn[] == "back" || fn[] == "title" || fn[] == "title-bg")
+				song.background = f.filepath;
 		}
-		else if(isAudioFile(filename))
+		else if (isAudioFile(filename))
 		{
-			if(fn[] == songName || fn[] == "song")
-				track.addSource().addStream(f.filepath);
-			if(fn[] == "intro")
-				track._preview = f.filepath;
+			if (fn[] == songName || fn[] == "song")
+				song.addSource().addStream(f.filepath);
+			if (fn[] == "intro")
+				song._preview = f.filepath;
 		}
-		else if(isVideoFile(filename))
+		else if (isVideoFile(filename))
 		{
-			if(fn[] == songName || fn[] == "song")
-				track.video = f.filepath;
+			if (fn[] == songName || fn[] == "song")
+				song.video = f.filepath;
 		}
-		else if(filename[] == songName ~ ".lrc")
+		else if (filename[] == songName ~ ".lrc")
 		{
-			// load lyrics into vocal track?
+			// load lyrics into vocal song?
 			// move this into the DWI loader?
 		}
 	}
 
 	// load the steps
-	track.LoadDWI(steps, path);
+	song.LoadDWI(steps, path);
 
 	// split subtitle into variation
-	if(track._song.name[$-1] == ')')
+	if (song._chart.name[$-1] == ')')
 	{
 		ptrdiff_t i;
-		for(i=track._song.name.length-2; i>0; --i)
+		for (i=song._chart.name.length-2; i>0; --i)
 		{
-			if(track._song.name[i] == '(')
+			if (song._chart.name[i] == '(')
 			{
-				track._song.variant = track._song.name[i+1..$-1].strip;
-				track._song.subtitle = track._song.variant;
-				track._song.name = track._song.name[0..i].strip;
+				song._chart.variant = song._chart.name[i+1..$-1].strip;
+				song._chart.subtitle = song._chart.variant;
+				song._chart.name = song._chart.name[0..i].strip;
 				break;
 			}
 		}
@@ -88,23 +88,23 @@ bool LoadDWI(Track* track, DirEntry file)
 	return true;
 }
 
-bool LoadDWI(Track* track, const(char)[] dwi, string path)
+bool LoadDWI(Song* song, const(char)[] dwi, string path)
 {
-	Song song = track._song;
+	Chart chart = song._chart;
 
 	// Format description:
 	// http://dwi.ddruk.com/readme.php#4
 
 	enum DwiResolution = 48;
-	song.resolution = DwiResolution;
+	chart.resolution = DwiResolution;
 
-	while(1)
+	while (1)
 	{
 		auto start = dwi.find('#');
-		if(!start)
+		if (!start)
 			break;
 		size_t split = start.countUntil(':');
-		if(split == -1)
+		if (split == -1)
 			break;
 
 		// get the tag
@@ -112,40 +112,40 @@ bool LoadDWI(Track* track, const(char)[] dwi, string path)
 
 		string term = tag[] == "BACKGROUND" ? "#END;" : ";";
 		auto end = countUntil(start[split..$], term);
-		if(end == -1)
+		if (end == -1)
 			break;
 
 		// get the content
 		auto content = start[split+1..split+end];
 		dwi = start[split+end+term.length..$];
 
-		switch(tag)
+		switch (tag)
 		{
 			case "TITLE":			// #TITLE:...;  	 title of the song.
-				song.name = content.idup;
-				song.params[tag.idup] = song.name;
+				chart.name = content.idup;
+				chart.params[tag.idup] = song.name;
 				break;
 			case "ARTIST":			// #ARTIST:...;  	 artist of the song.
-				song.artist = content.idup;
-				song.params[tag.idup] = song.artist;
+				chart.artist = content.idup;
+				chart.params[tag.idup] = song.artist;
 				break;
 
 				// Special Characters are denoted by giving filenames in curly-brackets.
 				//   eg. #DISPLAYTITLE:The {kanji.png} Song;
 				// The extra character files should be 50 pixels high and be black-and-white. The baseline for the font should be 34 pixels from the top.
 			case "DISPLAYTITLE":	// #DISPLAYTITLE:...;  	 provides an alternate version of the song name that can also include special characters.
-				song.params[tag.idup] = content.idup;
+				chart.params[tag.idup] = content.idup;
 				break;
 			case "DISPLAYARTIST":	// #DISPLAYARTIST:...; 	 provides an alternate version of the artist name that can also include special characters.
-				song.params[tag.idup] = content.idup;
+				chart.params[tag.idup] = content.idup;
 				break;
 
 			case "GAP":				// #GAP:...;  	 number of milliseconds that pass before the program starts counting beats. Used to sync the steps to the music.
-				song.params[tag.idup] = content.idup;
-				song.startOffset = to!long(content)*1_000;
+				chart.params[tag.idup] = content.idup;
+				chart.startOffset = to!long(content)*1_000;
 				break;
 			case "BPM":				// #BPM:...;  	 BPM of the music
-				song.params[tag.idup] = content.idup;
+				chart.params[tag.idup] = content.idup;
 
 				Event ev;
 				ev.tick = 0;
@@ -154,32 +154,32 @@ bool LoadDWI(Track* track, const(char)[] dwi, string path)
 				ev.event = EventType.TimeSignature;
 				ev.ts.numerator = 4;
 				ev.ts.denominator = 4;
-				song.sync ~= ev;
+				chart.sync ~= ev;
 
 				// set the starting BPM
 				ev.event = EventType.BPM;
 				ev.bpm.usPerBeat = cast(int)(60_000_000.0 / to!double(content) + 0.5);
-				song.sync ~= ev;
+				chart.sync ~= ev;
 				break;
 			case "DISPLAYBPM":		// #DISPLAYBPM:...;	tells DWI to display the BPM on the song select screen in a user-defined way.  Options can be:
 				// *    - BPM cycles randomly
 				// a    - BPM stays set at 'a' value (no cycling)
 				// a..b - BPM cycles between 'a' and 'b' values
-				song.params[tag.idup] = content.idup;
+				chart.params[tag.idup] = content.idup;
 				break;
 			case "FILE":			// #FILE:...;  	 path to the music file to play (eg. /music/mysongs/abc.mp3 )
 				// TODO: check if it exists?
-				track.addSource().addStream((path ~ content).idup);
-				song.params[tag.idup] = content.idup;
+				song.addSource().addStream((path ~ content).idup);
+				chart.params[tag.idup] = content.idup;
 				break;
 			case "MD5":				// #MD5:...;  	 an MD5 string for the music file. Helps ensure that same music file is used on all systems.
-				song.params[tag.idup] = content.idup;
+				chart.params[tag.idup] = content.idup;
 				break;
 			case "FREEZE":			// #FREEZE:...;  	 a value of the format "BBB=sss". Indicates that at 'beat' "BBB", the motion of the arrows should stop for "sss" milliseconds. Turn on beat-display in the System menu to help determine what values to use. Multiple freezes can be given by separating them with commas.
-				song.params[tag.idup] = content.idup;
+				chart.params[tag.idup] = content.idup;
 
 				auto freezes = content.splitter(',');
-				foreach(f; freezes)
+				foreach (f; freezes)
 				{
 					auto params = f.findSplit("=");
 					double offset = to!double(params[0]);
@@ -189,14 +189,14 @@ bool LoadDWI(Track* track, const(char)[] dwi, string path)
 					ev.tick = cast(int)(offset*DwiResolution) / 4; // TODO: wtf? why /4?? It's supposed to be in beats!
 					ev.event = EventType.Freeze;
 					ev.freeze.usToFreeze = cast(long)(ms*1_000);
-					song.sync ~= ev;
+					chart.sync ~= ev;
 				}
 				break;
 			case "CHANGEBPM":		// #CHANGEBPM:...;  	 a value of the format "BBB=nnn". Indicates that at 'beat' "BBB", the speed of the arrows will change to reflect a new BPM of "nnn". Multiple BPM changes can be given by separating them with commas.
-				song.params[tag.idup] = content.idup;
+				chart.params[tag.idup] = content.idup;
 
 				auto bpms = content.splitter(',');
-				foreach(b; bpms)
+				foreach (b; bpms)
 				{
 					auto params = b.findSplit("=");
 					double offset = to!double(params[0]);
@@ -206,40 +206,40 @@ bool LoadDWI(Track* track, const(char)[] dwi, string path)
 					ev.tick = cast(int)(offset*cast(double)DwiResolution) / 4; // TODO: wtf? why /4?? It's supposed to be in beats!
 					ev.event = EventType.BPM;
 					ev.bpm.usPerBeat = cast(int)(60_000_000.0 / bpm + 0.5);
-					song.sync ~= ev;
+					chart.sync ~= ev;
 				}
 				break;
 			case "STATUS":			// #STATUS:...;  	 can be "NEW" or "NORMAL". Changes the display of songs on the song-select screen.
-				song.params[tag.idup] = content.idup;
+				chart.params[tag.idup] = content.idup;
 				break;
 			case "GENRE":			// #GENRE:...;  	 a genre to assign to the song if "sort by Genre" is selected in the System Options. Multiple Genres can be given by separating them with commas.
-				song.genre = content.idup;
-				song.packageName = song.genre;
-				song.params[tag.idup] = song.genre;
+				chart.genre = content.idup;
+				chart.packageName = song.genre;
+				chart.params[tag.idup] = song.genre;
 				break;
 			case "CDTITLE":			// #CDTITLE:...;  	 points to a small graphic file (64x40) that will display in the song selection screen in the bottom right of the background, showing which CD the song is from. The colour of the pixel in the upper-left will be made transparent.
-				song.params[tag.idup] = content.idup;
+				chart.params[tag.idup] = content.idup;
 				break;
 			case "SAMPLESTART":		// #SAMPLESTART:...;  	 the time in the music file that the preview music should start at the song-select screen. Can be given in Milliseconds (eg. 5230), Seconds (eg. 5.23), or minutes (eg. 0:05.23). Prefix the number with a "+" to factor in the GAP value.
-				song.params[tag.idup] = content.idup;
+				chart.params[tag.idup] = content.idup;
 				break;
 			case "SAMPLELENGTH":	// #SAMPLELENGTH:...;  	 how long to play the preview music for at the song-select screen. Can be in milliseconds, seconds, or minutes.
-				song.params[tag.idup] = content.idup;
+				chart.params[tag.idup] = content.idup;
 				break;
 			case "RANDSEED":		// #RANDSEED:x;  	 provide a number that will influence what AVIs DWI picks and their order. Will be the same animation each time if AVI filenames and count doesn't change (default is random each time).
-				song.params[tag.idup] = content.idup;
+				chart.params[tag.idup] = content.idup;
 				break;
 			case "RANDSTART":		// #RANDSTART:x;  	 tells DWI what beat to start the animations on. Default is 32.
-				song.params[tag.idup] = content.idup;
+				chart.params[tag.idup] = content.idup;
 				break;
 			case "RANDFOLDER":		// #RANDFOLDER:...;  	 tells DWI to look in another folder when choosing AVIs, allowing 'themed' folders.
-				song.params[tag.idup] = content.idup;
+				chart.params[tag.idup] = content.idup;
 				break;
 			case "RANDLIST":		// #RANDLIST:...;  	 a list of comma-separated filenames to use in the folder.
-				song.params[tag.idup] = content.idup;
+				chart.params[tag.idup] = content.idup;
 				break;
 			case "BACKGROUND":		// #BACKGROUND:     ........     #END;
-				song.params[tag.idup] = content.idup;
+				chart.params[tag.idup] = content.idup;
 				break;
 
 			case "SINGLE", "DOUBLE", "COUPLE", "SOLO":
@@ -282,14 +282,14 @@ bool LoadDWI(Track* track, const(char)[] dwi, string path)
 					string variation = tag in variationMap ? variationMap[tag] : tag.idup;
 					string difficulty = diff in difficultyMap ? difficultyMap[diff] : diff.idup;
 
-					Sequence seq = new Sequence;
-					seq.part = Part.Dance;
-					seq.variation = variation;
-					seq.difficulty = difficulty;
-					seq.difficultyMeter = to!int(meter);
+					Track trk = new Track;
+					trk.part = "dance";
+					trk.variation = variation;
+					trk.difficulty = difficulty;
+					trk.difficultyMeter = to!int(meter);
 
 					// read notes...
-					static void ReadNotes(Sequence seq, const(char)[] steps, int shift)
+					static void ReadNotes(Track trk, const(char)[] steps, int shift)
 					{
 						int offset;
 
@@ -301,9 +301,9 @@ bool LoadDWI(Track* track, const(char)[] dwi, string path)
 
 						ptrdiff_t[9] holds = -1;
 
-						foreach(s; steps)
+						foreach (s; steps)
 						{
-							switch(s)
+							switch (s)
 							{
 								case '(':	step[++depth] = 16;		break;
 								case '[':	step[++depth] = 24;		break;
@@ -317,22 +317,22 @@ bool LoadDWI(Track* track, const(char)[] dwi, string path)
 								case '>':	--depth;				break;
 								case '!':	bHold = true;			break;
 								default:
-									if(bHold)
+									if (bHold)
 									{
 										// set the notes as holds
 										auto pNote = s in stepMap;
 										uint note = pNote ? *pNote : 0;
 
-										int lastOffset = seq.notes.back.tick;
-										if(note)
+										int lastOffset = trk.notes.back.tick;
+										if (note)
 										{
-											for(int i=0; i<9; ++i)
+											for (int i=0; i<9; ++i)
 											{
-												if(note & 1<<i)
+												if (note & 1<<i)
 												{
-													for(size_t j=seq.notes.length-1; j>=0 && seq.notes[j].tick == lastOffset; --j)
+													for (size_t j=trk.notes.length-1; j>=0 && trk.notes[j].tick == lastOffset; --j)
 													{
-														if(seq.notes[j].note.key == i+shift)
+														if (trk.notes[j].note.key == i+shift)
 														{
 															holds[i] = j;
 															break;
@@ -347,17 +347,17 @@ bool LoadDWI(Track* track, const(char)[] dwi, string path)
 									{
 										auto pStep = s in stepMap;
 										uint note = pStep ? *pStep : 0;
-										if(note)
+										if (note)
 										{
 											// produce a note for each bit
-											for(int i=0; i<9; ++i)
+											for (int i=0; i<9; ++i)
 											{
-												if(note & 1<<i)
+												if (note & 1<<i)
 												{
-													if(holds[i] != -1)
+													if (holds[i] != -1)
 													{
 														// terminate the hold
-														Event* pNote = &seq.notes[holds[i]];
+														Event* pNote = &trk.notes[holds[i]];
 														pNote.duration = offset - pNote.tick;
 														holds[i] = -1;
 													}
@@ -368,7 +368,7 @@ bool LoadDWI(Track* track, const(char)[] dwi, string path)
 														ev.tick = offset;
 														ev.event = EventType.Note;
 														ev.note.key = i+shift;
-														seq.notes ~= ev;
+														trk.notes ~= ev;
 													}
 												}
 											}
@@ -381,19 +381,19 @@ bool LoadDWI(Track* track, const(char)[] dwi, string path)
 						}
 					}
 
-					ReadNotes(seq, left, 0);
-					if(!right.empty)
+					ReadNotes(trk, left, 0);
+					if (!right.empty)
 					{
-						ReadNotes(seq, right, DanceNotes.Left2);
-						seq.notes.sort!("a.tick < b.tick", SwapStrategy.stable);
+						ReadNotes(trk, right, DanceNotes.Left2);
+						trk.notes.sort!("a.tick < b.tick", SwapStrategy.stable);
 					}
 
 					// find variation, if there isn't one, create it.
-					Variation* pVariation = song.GetVariation(Part.Dance, seq.variation, true);
+					Variation* pVariation = chart.getVariation(chart.getPart("dance"), trk.variation, true);
 
 					// create difficulty, set difficulty to feet rating
-					assert(!song.GetDifficulty(*pVariation, seq.difficulty), "Difficulty already exists!");
-					pVariation.difficulties ~= seq;
+					assert(!chart.GetDifficulty(*pVariation, trk.difficulty), "Difficulty already exists!");
+					pVariation.difficulties ~= trk;
 				}
 				break;
 
@@ -404,7 +404,7 @@ bool LoadDWI(Track* track, const(char)[] dwi, string path)
 	}
 
 	// since freezes and bpm changes are added at different times, they need to be sorted
-	song.sync.sort!("a.tick < b.tick");
+	chart.sync.sort!("a.tick < b.tick");
 
 	return false;
 }

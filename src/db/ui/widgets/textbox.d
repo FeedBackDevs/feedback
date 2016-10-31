@@ -33,7 +33,7 @@ class Textbox : Widget
 
 		clickable = true;
 
-		if(bAutoHeight)
+		if (bAutoHeight)
 			updateHeight(_textHeight + _padding*2);
 	}
 
@@ -61,7 +61,7 @@ class Textbox : Widget
 		_textHeight = height;
 		bAutoTextHeight = false;
 
-		if(bAutoHeight)
+		if (bAutoHeight)
 			updateHeight(_textHeight + _padding*2);
 	}
 
@@ -78,7 +78,7 @@ class Textbox : Widget
 
 	override void setProperty(const(char)[] property, const(char)[] value)
 	{
-		switch(property.toLower)
+		switch (property.toLower)
 		{
 			case "text":
 				text = value; break;
@@ -89,9 +89,9 @@ class Textbox : Widget
 			case "font":
 			{
 				_font.create(value);
-				if(bAutoTextHeight)
+				if (bAutoTextHeight)
 					_textHeight = _font.height;
-				if(bAutoHeight)
+				if (bAutoHeight)
 					updateHeight(_textHeight + _padding*2);
 				break;
 			}
@@ -110,9 +110,9 @@ class Textbox : Widget
 
 	override string getProperty(const(char)[] property)
 	{
-		if(!icmp(property, "text"))
+		if (!icmp(property, "text"))
 			return text.idup;
-		else if(!icmp(property, "font"))
+		else if (!icmp(property, "font"))
 			return _font.name.idup;
 		return super.getProperty(property);
 	}
@@ -142,14 +142,14 @@ protected:
 	{
 		super.update();
 
-		if(hasFocus)
+		if (hasFocus)
 			stringLogic.update();
 	}
 
 	override bool inputEvent(InputManager manager, const(InputManager.EventInfo)* ev)
 	{
 		// try and handle the input event in some standard ways...
-		switch(ev.ev)
+		switch (ev.ev)
 		{
 			case InputManager.EventType.Down:
 			{
@@ -162,7 +162,7 @@ protected:
 
 				// also claim keyboard focus...
 				pFocusKeyboard = manager.findSource(MFInputDevice.Keyboard, ev.pSource.deviceID);
-				if(pFocusKeyboard)
+				if (pFocusKeyboard)
 					ui.setFocus(pFocusKeyboard, this);
 
 				blinkTime = 0.4f;
@@ -191,7 +191,7 @@ protected:
 	{
 		blinkTime = 0.4f;
 
-		if(OnChanged)
+		if (OnChanged)
 			OnChanged(this, text, pFocusKeyboard);
 	}
 
@@ -201,11 +201,11 @@ protected:
 
 		float magnitude = 10000000.0f, downPos = x - 2;
 		size_t offset = 0, len = _text.count;
-		foreach(a; 0 .. len+1)
+		foreach (a; 0 .. len+1)
 		{
 			float _x = _font.getStringWidth(_text, _textHeight, 100000, cast(int)a);
 			float m = abs(_x - downPos);
-			if(m < magnitude)
+			if (m < magnitude)
 			{
 				magnitude = m;
 				offset = a;
@@ -230,7 +230,7 @@ protected:
 		bool bEnabled = enabled;
 		bool bHasFocus = hasFocus;
 
-		if(bDrawSelection)
+		if (bDrawSelection)
 		{
 			// draw selection (if selected)
 			int selMin = MFMin(selectionStart, selectionEnd);
@@ -243,21 +243,21 @@ protected:
 			MFPrimitive_DrawUntexturedQuad(_padding+selMinX, _padding, selMaxX-selMinX, _textHeight, selectionColour, transform);
 		}
 
-		if(text.length)
+		if (text.length)
 		{
 			// draw text
 			_font.draw(_text, _padding, _padding, _textHeight, bEnabled ? _textColour : MFVector.grey, transform);
 		}
 
-		if(bHasFocus)
+		if (bHasFocus)
 		{
 			// blink cursor
 			blinkTime -= MFTimeDelta();
-			if(blinkTime < -0.4f) blinkTime += 0.8f;
+			if (blinkTime < -0.4f) blinkTime += 0.8f;
 			bool bCursor = blinkTime > 0.0f;
 
 			// draw cursor
-			if(bCursor)
+			if (bCursor)
 			{
 				float cursorX =  _font.getStringWidth(_text, _textHeight, 10000, cursorPos);
 

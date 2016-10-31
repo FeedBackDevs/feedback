@@ -24,7 +24,7 @@ class LayoutDescriptor
 public:
 	this(const(char)[] filename = null)
 	{
-		if(filename)
+		if (filename)
 			loadFromXML(filename);
 	}
 
@@ -40,7 +40,7 @@ public:
 		this.filename = null;
 
 		string file = MFFileSystem_LoadText(filename).assumeUnique;
-		if(!file)
+		if (!file)
 			return false;
 
 		string fn = filename.idup;
@@ -63,7 +63,7 @@ public:
 
 	Widget spawn()
 	{
-		if(root)
+		if (root)
 			return spawn(root);
 		return null;
 	}
@@ -93,15 +93,15 @@ protected:
 	{
 		// create widget
 		Widget widget = UserInterface.createWidget(node.type);
-		if(!widget)
+		if (!widget)
 			return null;
 
 		// apply properties
-		foreach(ref a; node.attributes)
+		foreach (ref a; node.attributes)
 			widget.setProperty(a.property, a.value);
 
 		// execute script
-		if(node.script)
+		if (node.script)
 		{
 			try
 				Game.instance.lua.doString(node.script);
@@ -110,10 +110,10 @@ protected:
 		}
 
 		// spawn children
-		foreach(c; node.children)
+		foreach (c; node.children)
 		{
 			Widget child = spawn(c);
-			if(child)
+			if (child)
 			{
 				Layout layout = cast(Layout)widget;
 				layout.addChild(child);
@@ -125,11 +125,11 @@ protected:
 
 	void destroyNode(Node* node)
 	{
-		if(!node)
+		if (!node)
 			return;
 
 		// destroy the child nodes
-		foreach(c; node.children)
+		foreach (c; node.children)
 			destroyNode(c);
 	}
 
@@ -139,30 +139,30 @@ protected:
 
 		node.type = xml.tag.name;
 
-		foreach(p, v; xml.tag.attr)
+		foreach (p, v; xml.tag.attr)
 			node.attributes ~= Node.Attribute(p, v);
 
 		xml.onStartTag[null] = (ElementParser xml)
 		{
-			if(!icmp(xml.tag.name, "script"))
+			if (!icmp(xml.tag.name, "script"))
 			{
 				// load external script...
 				string file = xml.tag.attr["src"];
-				if(file)
+				if (file)
 				{
 					string fn = makePath(filepath, file);
 					string source = MFFileSystem_LoadText(fn).assumeUnique;
-					if(source)
+					if (source)
 						node.script ~= source;
 				}
 				else
 					MFDebug_Warn(2, "<script> element has no 'src' attribute. Can't load script.".ptr);
 			}
-			else if(!icmp(xml.tag.name, "style"))
+			else if (!icmp(xml.tag.name, "style"))
 			{
 				// load external script...
 				string file = xml.tag.attr["src"];
-				if(file)
+				if (file)
 				{
 //					WidgetStyle style = WidgetStyle.loadStylesFromXML(file);
 				}
@@ -172,16 +172,16 @@ protected:
 			else
 			{
 				Node* child = parseElement(xml);
-				if(child)
+				if (child)
 					node.children ~= child;
 			}
 		};
 
 		xml.onPI((string text) {
-			if(text.empty || isWhite(text[0]))
+			if (text.empty || isWhite(text[0]))
 				return;
 			string tag = text.splitter.front;
-			if(tag == "lua")
+			if (tag == "lua")
 				node.script ~= "\n" ~ text.drop(tag.length + 1);
 			else
 				MFDebug_Warn(2, "Unsupported script language: " ~ tag);

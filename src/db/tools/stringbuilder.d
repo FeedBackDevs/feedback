@@ -5,7 +5,7 @@ import fuji.string;
 import std.utf;
 import std.traits;
 
-struct StringBuilder(C) if(isSomeChar!C)
+struct StringBuilder(C) if (isSomeChar!C)
 {
 	alias text this;
 
@@ -18,19 +18,19 @@ struct StringBuilder(C) if(isSomeChar!C)
 	{
 		text = s;
 	}
-	void opOpAssign(string op)(const(char)[] s) pure nothrow if(op == "~")
+	void opOpAssign(string op)(const(char)[] s) pure nothrow if (op == "~")
 	{
 		replace(_length, 0, s);
 	}
-	void opOpAssign(string op)(dchar c) pure if(op == "~")
+	void opOpAssign(string op)(dchar c) pure if (op == "~")
 	{
-		static if(is(C == char) || is(C == wchar))
+		static if (is(C == char) || is(C == wchar))
 		{
 			enum N = is(C == char) ? 4 : 2;
 			C[N] e;
 			size_t l = encode(e, c);
 		}
-		else static if(is(C == dchar))
+		else static if (is(C == dchar))
 		{
 			dchar* e = &c;
 			size_t l = 1;
@@ -43,7 +43,7 @@ struct StringBuilder(C) if(isSomeChar!C)
 	@property const(char)[] text() const pure nothrow @nogc { return buffer[0..length]; }
 	@property void text(const(char)[] text) pure nothrow
 	{
-		if(buffer.length < text.length)
+		if (buffer.length < text.length)
 			increase(text.length);
 		_length = text.length;
 		buffer[0 .. _length] = text[];
@@ -60,13 +60,13 @@ struct StringBuilder(C) if(isSomeChar!C)
 	}
 	void insert(size_t offset, dchar c) pure
 	{
-		static if(is(C == char) || is(C == wchar))
+		static if (is(C == char) || is(C == wchar))
 		{
 			enum N = is(C == char) ? 4 : 2;
 			C[N] e;
 			size_t l = encode(e, c);
 		}
-		else static if(is(C == dchar))
+		else static if (is(C == dchar))
 		{
 			dchar* e = &c;
 			size_t l = 1;
@@ -80,21 +80,21 @@ struct StringBuilder(C) if(isSomeChar!C)
 		assert(offset + subString_length <= _length, "Sub-string _length too long");
 
 		ptrdiff_t move = s.length - subString_length;
-		if(move)
+		if (move)
 		{
 			size_t newLen = _length + move;
-			if(move > 0)
+			if (move > 0)
 			{
-				if(buffer.length < newLen)
+				if (buffer.length < newLen)
 					increase(newLen);
 				size_t start = offset + move;
-				for(size_t i = newLen-1; i >= start; --i)
+				for (size_t i = newLen-1; i >= start; --i)
 					buffer[i] = buffer[i-move];
 			}
 			else
 			{
 				size_t start = offset + s.length;
-				for(size_t i = start; i < newLen; ++i)
+				for (size_t i = start; i < newLen; ++i)
 					buffer[i] = buffer[i-move];
 			}
 			_length = newLen;
@@ -103,13 +103,13 @@ struct StringBuilder(C) if(isSomeChar!C)
 	}
 	void replace(size_t offset, size_t subString_length, dchar c) pure
 	{
-		static if(is(C == char) || is(C == wchar))
+		static if (is(C == char) || is(C == wchar))
 		{
 			enum N = is(C == char) ? 4 : 2;
 			C[N] e;
 			size_t l = encode(e, c);
 		}
-		else static if(is(C == dchar))
+		else static if (is(C == dchar))
 		{
 			dchar* e = &c;
 			size_t l = 1;
@@ -129,11 +129,11 @@ private:
 	void increase(size_t at_least) pure nothrow
 	{
 		size_t allocated = buffer.length;
-		if(allocated == 0)
+		if (allocated == 0)
 			allocated = at_least*4;
 		else
 		{
-			while(allocated <= at_least)
+			while (allocated <= at_least)
 				allocated *= 4;
 		}
 

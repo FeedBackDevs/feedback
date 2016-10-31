@@ -55,7 +55,7 @@ class Button : Label
 
 	override void setProperty(const(char)[] property, const(char)[] value)
 	{
-		switch(property.toLower)
+		switch (property.toLower)
 		{
 			case "style_pressed":
 				stylePressed = value; break;
@@ -74,7 +74,7 @@ class Button : Label
 
 	override string getProperty(const(char)[] property)
 	{
-		if(!icmp(property, "button_flags"))
+		if (!icmp(property, "button_flags"))
 			return getBitfieldFromValue!ButtonFlags(buttonFlags);
 		return super.getProperty(property);
 	}
@@ -94,7 +94,7 @@ protected:
 
 	final void setPressed(bool bPressed)
 	{
-		if(bPressed != this.bPressed)
+		if (bPressed != this.bPressed)
 		{
 			this.bPressed = bPressed;
 			updateStyle();
@@ -103,7 +103,7 @@ protected:
 
 	final void setButtonState(bool bState)
 	{
-		if(bState != this.bState)
+		if (bState != this.bState)
 		{
 			this.bState = bState;
 			updateStyle();
@@ -112,27 +112,27 @@ protected:
 
 	override void updateStyle()
 	{
-		if(!bEnabled && _styleDisabled.length > 0)
+		if (!bEnabled && _styleDisabled.length > 0)
 			applyStyle(_styleDisabled);
-		else if(bPressed && _stylePressed.length > 0)
+		else if (bPressed && _stylePressed.length > 0)
 			applyStyle(_stylePressed);
-		else if(bState && _styleOnState.length > 0)
+		else if (bState && _styleOnState.length > 0)
 			applyStyle(_styleOnState);
-		else if(_style.length > 0)
+		else if (_style.length > 0)
 			applyStyle(_style);
 	}
 
 	final void onButtonDown(Widget widget, const(InputSource)* pSource)
 	{
-		if(!bEnabled)
+		if (!bEnabled)
 			return;
 
-		if(_buttonFlags & ButtonFlags.TriggerOnDown)
+		if (_buttonFlags & ButtonFlags.TriggerOnDown)
 		{
-			if(buttonFlags & ButtonFlags.StateButton)
+			if (buttonFlags & ButtonFlags.StateButton)
 				setButtonState(!bState);
 
-			if(OnClick)
+			if (OnClick)
 				OnClick(this, pSource);
 		}
 		else
@@ -146,34 +146,34 @@ protected:
 
 	final void onButtonUp(Widget widget, const(InputSource)* pSource)
 	{
-		if(!bEnabled)
+		if (!bEnabled)
 			return;
 
 		bDown = false;
 
 		ui.setFocus(pSource, null);
 
-		if(bPressed)
+		if (bPressed)
 		{
 			setPressed(false);
 
-			if(_buttonFlags & ButtonFlags.StateButton)
+			if (_buttonFlags & ButtonFlags.StateButton)
 				setButtonState(!bState);
 
-			if(OnClick)
+			if (OnClick)
 				OnClick(this, pSource);
 		}
 	}
 
 	final void onHover(Widget widget, const(InputSource)* pSource, MFVector pos, MFVector delta)
 	{
-		if(!bEnabled)
+		if (!bEnabled)
 			return;
 
-		if(bDown)
+		if (bDown)
 		{
 			MFRect rect = MFRect(0, 0, size.x, size.y);
-			if(MFTypes_PointInRect(pos.x, pos.y, rect))
+			if (MFTypes_PointInRect(pos.x, pos.y, rect))
 				setPressed(true);
 			else
 				setPressed(false);

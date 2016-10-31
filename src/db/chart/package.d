@@ -1,64 +1,33 @@
-module db.song;
+module db.chart;
 
-import db.instrument;
-import db.sequence;
-import db.player;
-import db.tools.range;
-import db.tools.enumkvp;
-import db.formats.parsers.midifile;
-import db.formats.parsers.guitarprofile;
-import db.scorekeepers.drums;
-import db.songlibrary;
+import std.algorithm : max, map, filter, startsWith, endsWith;
+import std.conv : to;
+import std.exception : assumeUnique;
+import std.range : back, empty;
+import std.string : splitLines, strip, icmp;
+import std.xml;
 
-import fuji.fuji;
-import fuji.filesystem;
-import fuji.heap;
+import fuji.dbg;
+import fuji.filesystem : MFFileSystem_LoadText, MFFileSystem_Save;
+import fuji.fuji : MFBit;
 
 import luad.base : noscript;
 
-import std.conv : to;
-import std.range: back, empty;
-import std.algorithm;
-import std.string;
-import std.xml;
+import db.game.player : Player;
+import db.library : archiveName;
+import db.instrument.drums;
+
+public import db.chart.part;
+public import db.chart.event;
+public import db.chart.track;
 
 
-enum GHVersion { Unknown, GH, GH2, GH3, GHWT, GHA, GHM, GH5, GHWoR, BH, RB, RB2, RB3 }
-
-enum DrumsType
-{
-	Unknown = -1,
-
-	FourDrums = 0,	// 4 drums in line
-	FiveDrums,		// 3 drums, 2 cymbals
-	SixDrums,		// 4 drums, 2 cymbals
-	SevenDrums,		// 4 drums, 3 cymbals
-	EightDrums		// 4 drums, 3 cymbals, hihat
-}
-
-struct SongPart
-{
-	Part part;
-	Event[] events;			// events for the entire part (animation, etc)
-	Variation[] variations;	// variations for the part (different versions, instrument variations (4/5/pro drums, etc), customs...
-}
-
-struct Variation
-{
-	string name;
-	Sequence[] difficulties;	// sequences for each difficulty
-
-	bool bHasCoopMarkers;		// GH1/GH2 style co-op (players take turns)
-}
-
-class Song
+class Chart
 {
 
 @noscript:
 	this()
 	{
-		foreach(i, ref p; parts)
-			p.part = cast(Part)i;
 	}
 
 	this(string filename)
@@ -66,12 +35,9 @@ class Song
 		static void readSequence(string text, ref Event[] events)
 		{
 			int lastTick = 0;
-			foreach(l; text.splitLines.map!(l=>l.strip).filter!(l=>!l.empty))
+			foreach (l; text.splitLines.map!(l=>l.strip).filter!(l=>!l.empty))
 				events ~= Event(l, lastTick);
 		}
-
-		foreach(i, ref p; parts)
-			p.part = cast(Part)i;
 
 		try
 		{
@@ -114,9 +80,8 @@ class Song
 				xml.onStartTag["part"] = (ElementParser xml)
 				{
 					string part = xml.tag.attr["name"];
-					Part p = getEnumValue!Part(part);
 
-					xml.onEndTag["events"] = (in Element e) { readSequence(e.text(), parts[p].events); };
+					xml.onEndTag["events"] = (in Element e) { readSequence(e.text(), getPart(part).events); };
 
 					xml.onStartTag["variation"] = (ElementParser xml)
 					{
@@ -127,8 +92,8 @@ class Song
 
 						xml.onStartTag["difficulty"] = (ElementParser xml)
 						{
-							Sequence s = new Sequence;
-							s.part = p;
+							Track s = new Track;
+							s.part = part;
 							s.variation = v.name;
 							s.difficulty = xml.tag.attr["name"];
 							s.difficultyMeter = to!int(xml.tag.attr["meter"]);
@@ -140,7 +105,7 @@ class Song
 						};
 						xml.parse();
 
-						parts[p].variations ~= v;
+						getPart(part).variations ~= v;
 					};
 					xml.parse();
 				};
@@ -158,12 +123,14 @@ class Song
 
 	void saveChart(string path)
 	{
+		import std.array : join;
+
 		string writeSequence(Event[] events, int depth)
 		{
 			string prefix = "                    "[0..depth*1];
 			string sequence = "\n";
 			int lastTick = 0;
-			foreach(ref e; events)
+			foreach (ref e; events)
 			{
 				sequence ~= e.toString(lastTick, prefix, "\n");
 				lastTick = e.tick;
@@ -177,21 +144,21 @@ class Song
 		auto doc = new Document(new Tag("chart"));
 		doc.tag.attr["version"] = "2.0";
 
-								doc ~= new Element("id", id);
-								doc ~= new Element("name", name);
-		if(subtitle)			doc ~= new Element("subtitle", subtitle);
-								doc ~= new Element("artist", artist);
-		if(album)				doc ~= new Element("album", album);
-		if(year)				doc ~= new Element("year", year);
-		if(packageName)			doc ~= new Element("packageName", packageName);
-		if(charterName)			doc ~= new Element("charterName", charterName);
+		doc ~= new Element("id", id);
+		doc ~= new Element("name", name);
+		if (subtitle)			doc ~= new Element("subtitle", subtitle);
+		doc ~= new Element("artist", artist);
+		if (album)				doc ~= new Element("album", album);
+		if (year)				doc ~= new Element("year", year);
+		if (packageName)		doc ~= new Element("packageName", packageName);
+		if (charterName)		doc ~= new Element("charterName", charterName);
 
-		if(tags)				doc ~= new Element("tags", tags);
-		if(genre)				doc ~= new Element("genre", genre);
-		if(mediaType)			doc ~= new Element("mediaType", mediaType);
+		if (tags)				doc ~= new Element("tags", tags);
+		if (genre)				doc ~= new Element("genre", genre);
+		if (mediaType)			doc ~= new Element("mediaType", mediaType);
 
 		auto kvps = new Element("params");
-		foreach(k, v; params)
+		foreach (k, v; params)
 		{
 			auto kvp = new Element("param", v);
 			kvp.tag.attr["key"] = k;
@@ -209,25 +176,25 @@ class Song
 		doc ~= globalEvents;
 
 		auto partsElement = new Element("parts");
-		foreach(ref part; parts)
+		foreach (ref part; parts)
 		{
-			if(!part.variations)
+			if (!part.variations)
 				continue;
 
 			auto partElement = new Element("part");
-			partElement.tag.attr["name"] = getEnumFromValue(part.part);
+			partElement.tag.attr["name"] = part.part;
 
 			auto partEvents = new Element("events", writeSequence(part.events, 4));
 			partElement ~= partEvents;
 
-			foreach(ref v; part.variations)
+			foreach (ref v; part.variations)
 			{
 				auto variationElement = new Element("variation");
 				variationElement.tag.attr["name"] = v.name;
 
-				if(v.bHasCoopMarkers)	variationElement ~= new Element("hasCoopMarkers", "true");
+				if (v.bHasCoopMarkers)	variationElement ~= new Element("hasCoopMarkers", "true");
 
-				foreach(d; v.difficulties)
+				foreach (d; v.difficulties)
 				{
 					auto difficultyElement = new Element("difficulty");
 					difficultyElement.tag.attr["name"] = d.difficulty;
@@ -254,48 +221,67 @@ class Song
 	{
 		// calculate the note times for all tracks
 		CalculateNoteTimes(events, 0);
-		foreach(ref p; parts)
+		foreach (ref p; parts)
 		{
 			CalculateNoteTimes(p.events, 0);
-			foreach(ref v; p.variations)
+			foreach (ref v; p.variations)
 			{
-				foreach(d; v.difficulties)
+				foreach (d; v.difficulties)
 					CalculateNoteTimes(d.notes, 0);
 			}
 		}
 	}
 
-	Variation* GetVariation(Part part, const(char)[] variation, bool bCreate = false)
+	ref Part getPart(const(char)[] name)
 	{
-		SongPart* pPart = &parts[part];
-		foreach(ref v; pPart.variations)
+		Part* p = name in parts;
+		if (!p)
 		{
-			if(!variation || (variation && v.name[] == variation))
+			string iname = name.idup;
+			parts[iname] = Part(iname);
+			p = name in parts;
+		}
+		return *p;
+	}
+
+	Variation* getVariation(ref Part part, const(char)[] variation, bool bCreate = false)
+	{
+		foreach (ref v; part.variations)
+		{
+			if (!variation || (variation && v.name[] == variation))
 				return &v;
 		}
-		if(bCreate)
+		if (bCreate)
 		{
-			pPart.variations ~= Variation(variation.idup);
-			return &pPart.variations.back;
+			part.variations ~= Variation(variation.idup);
+			return &part.variations.back;
 		}
 		return null;
 	}
 
-	Sequence GetDifficulty(ref Variation variation, const(char)[] difficulty)
+	Variation* getVariation(string part, const(char)[] variation, bool bCreate = false)
 	{
-		foreach(d; variation.difficulties)
+		Part* pPart = part in parts;
+		if (!pPart)
+			return null;
+		return getVariation(*pPart, variation, bCreate);
+	}
+
+	Track GetDifficulty(ref Variation variation, const(char)[] difficulty)
+	{
+		foreach (d; variation.difficulties)
 		{
-			if(d.difficulty[] == difficulty)
+			if (d.difficulty[] == difficulty)
 				return d;
 		}
 		return null;
 	}
 
-	Sequence GetSequence(Player player, const(char)[] variation, const(char)[] difficulty)
+	Track GetSequence(Player player, const(char)[] variation, const(char)[] difficulty)
 	{
-		Part part = player.input.part;
-		SongPart* pPart = &parts[part];
-		if(pPart.variations.empty)
+		string part = player.input.part;
+		Part* pPart = part in parts;
+		if (!pPart || pPart.variations.empty)
 			return null;
 
 		Variation* var;
@@ -307,37 +293,37 @@ class Song
 		// TODO: should there be a magic name for the default variation rather than the first one?
 		//...
 
-		if(part == Part.Drums)
+		if (part[] == "drums")
 		{
 			// each drums configuration has a different preference for conversion
-			auto device = player.input.device;
-			if((device.features & MFBit!(DrumFeatures.Has4Drums)) && (device.features & MFBit!(DrumFeatures.Has3Cymbals)) && (device.features & MFBit!(DrumFeatures.HasHiHat)))
+			auto i = player.input.instrument;
+			if ((i.features & MFBit!(DrumFeatures.Has4Drums)) && (i.features & MFBit!(DrumFeatures.Has3Cymbals)) && (i.features & MFBit!(DrumFeatures.HasHiHat)))
 				preferences = [ "-8drums", "-7drums", "-6drums", "-5drums", "-4drums" ];
-			else if((device.features & MFBit!(DrumFeatures.Has4Drums)) && (device.features & MFBit!(DrumFeatures.Has2Cymbals)) && (device.features & MFBit!(DrumFeatures.HasHiHat)))
+			else if ((i.features & MFBit!(DrumFeatures.Has4Drums)) && (i.features & MFBit!(DrumFeatures.Has2Cymbals)) && (i.features & MFBit!(DrumFeatures.HasHiHat)))
 				preferences = [ "-8drums", "-7drums", "-6drums", "-5drums", "-4drums" ];
-			else if((device.features & MFBit!(DrumFeatures.Has4Drums)) && (device.features & MFBit!(DrumFeatures.Has3Cymbals)))
+			else if ((i.features & MFBit!(DrumFeatures.Has4Drums)) && (i.features & MFBit!(DrumFeatures.Has3Cymbals)))
 				preferences = [ "-7drums", "-8drums", "-6drums", "-5drums", "-4drums" ];
-			else if((device.features & MFBit!(DrumFeatures.Has4Drums)) && (device.features & MFBit!(DrumFeatures.Has2Cymbals)))
+			else if ((i.features & MFBit!(DrumFeatures.Has4Drums)) && (i.features & MFBit!(DrumFeatures.Has2Cymbals)))
 				preferences = [ "-6drums", "-7drums", "-8drums", "-5drums", "-4drums" ];
-			else if(device.features & MFBit!(DrumFeatures.Has2Cymbals))
+			else if (i.features & MFBit!(DrumFeatures.Has2Cymbals))
 				preferences = [ "-5drums", "-6drums", "-7drums", "-8drums", "-4drums" ];
-			else if(device.features & MFBit!(DrumFeatures.Has4Drums))
+			else if (i.features & MFBit!(DrumFeatures.Has4Drums))
 				preferences = [ "-4drums", "-7drums", "-8drums", "-6drums", "-5drums" ];
 			else
 				assert(false, "What kind of kit is this?!");
 
 			// find the appropriate variation for the player's kit
-			outer: foreach(i, pref; preferences)
+			outer: foreach (j, pref; preferences)
 			{
-				foreach(ref v; pPart.variations)
+				foreach (ref v; pPart.variations)
 				{
-					if(v.name.endsWith(pref))
+					if (v.name.endsWith(pref))
 					{
-						if(!variation || (variation && v.name.startsWith(variation)))
+						if (!variation || (variation && v.name.startsWith(variation)))
 						{
 							var = &v;
 							bFound = true;
-							preference = i;
+							preference = j;
 							break outer;
 						}
 					}
@@ -346,9 +332,9 @@ class Song
 		}
 		else
 		{
-			foreach(ref v; pPart.variations)
+			foreach (ref v; pPart.variations)
 			{
-				if(!variation || (variation && v.name == variation))
+				if (!variation || (variation && v.name == variation))
 				{
 					var = &v;
 					bFound = true;
@@ -357,41 +343,42 @@ class Song
 			}
 		}
 
-		if(!bFound)
+		if (!bFound)
 			return null;
 
-		Sequence s;
-		if(difficulty)
+		Track s;
+		if (difficulty)
 			s = GetDifficulty(*var, difficulty);
 
 		// TODO: should there be some fallback logic if a requested difficulty isn't available?
 		//       can we rank difficulties by magic name strings?
-		if(!s)
+		if (!s)
 			s = var.difficulties.back;
 
-		if(part == Part.Drums && preference != 0)
+		if (part[] == "drums" && preference != 0)
 		{
-			// fabricate a sequence for the players kit
-			s = FabricateSequence(this, preferences[0], s);
+			import db.scorekeepers.drums : fabricateTrack;
+			// fabricate a track for the players kit
+			s = fabricateTrack(this, preferences[0], s);
 		}
 
 		return s;
 	}
 
-	bool IsPartPresent(Part part)
+	bool IsPartPresent(string part)
 	{
-		return parts[part].variations != null;
+		return (part in parts) != null;
 	}
 
 	int GetLastNoteTick()
 	{
 		// find the last event in the song
 		int lastTick = sync.empty ? 0 : sync.back.tick;
-		foreach(ref p; parts)
+		foreach (ref p; parts)
 		{
-			foreach(ref v; p.variations)
+			foreach (ref v; p.variations)
 			{
-				foreach(d; v.difficulties)
+				foreach (d; v.difficulties)
 					lastTick = max(lastTick, d.notes.empty ? 0 : d.notes.back.tick);
 			}
 		}
@@ -400,11 +387,11 @@ class Song
 
 	@property int startUsPB() const pure nothrow
 	{
-		foreach(ref e; sync)
+		foreach (ref e; sync)
 		{
-			if(e.tick != 0)
+			if (e.tick != 0)
 				break;
-			if(e.event == EventType.BPM || e.event == EventType.Anchor)
+			if (e.event == EventType.BPM || e.event == EventType.Anchor)
 				return e.bpm.usPerBeat;
 		}
 
@@ -418,34 +405,34 @@ class Song
 		long playTime = startOffset;
 		long tempoTime = 0;
 
-		foreach(si, ref sev; sync)
+		foreach (si, ref sev; sync)
 		{
-			if(sev.event == EventType.BPM || sev.event == EventType.Anchor)
+			if (sev.event == EventType.BPM || sev.event == EventType.Anchor)
 			{
 				tempoTime = cast(long)(sev.tick - offset)*microsecondsPerBeat/resolution;
 
 				// calculate event time (if event is not an anchor)
-				if(sev.event != EventType.Anchor)
+				if (sev.event != EventType.Anchor)
 					sev.time = playTime + tempoTime;
 
 				// calculate note times
 				ptrdiff_t note = stream.GetNextEvent(offset);
-				if(note != -1)
+				if (note != -1)
 				{
-					for(; note < stream.length && stream[note].tick < sev.tick; ++note)
+					for (; note < stream.length && stream[note].tick < sev.tick; ++note)
 						stream[note].time = playTime + cast(long)(stream[note].tick - offset)*microsecondsPerBeat/resolution;
 				}
 
 				// increment play time to BPM location
-				if(sev.event == EventType.Anchor)
+				if (sev.event == EventType.Anchor)
 					playTime = sev.time;
 				else
 					playTime += tempoTime;
 
 				// find if next event is an anchor or not
-				for(auto i = si + 1; i < sync.length && sync[i].event != EventType.BPM; ++i)
+				for (auto i = si + 1; i < sync.length && sync[i].event != EventType.BPM; ++i)
 				{
-					if(sync[i].event == EventType.Anchor)
+					if (sync[i].event == EventType.Anchor)
 					{
 						// if it is, we need to calculate the BPM for this interval
 						long timeDifference = sync[i].time - sev.time;
@@ -468,9 +455,9 @@ class Song
 
 		// calculate remaining note times
 		ptrdiff_t note = stream.GetNextEvent(offset);
-		if(note != -1)
+		if (note != -1)
 		{
-			for(; note < stream.length; ++note)
+			for (; note < stream.length; ++note)
 				stream[note].time = playTime + cast(long)(stream[note].tick - offset)*microsecondsPerBeat/resolution;
 		}
 	}
@@ -481,7 +468,7 @@ class Song
 		long time;
 
 		Event *pEv = GetMostRecentSyncEvent(tick);
-		if(pEv)
+		if (pEv)
 		{
 			time = pEv.time;
 			offset = pEv.tick;
@@ -494,7 +481,7 @@ class Song
 			currentUsPB = startUsPB;
 		}
 
-		if(offset < tick)
+		if (offset < tick)
 			time += cast(long)(tick - offset)*currentUsPB/resolution;
 
 		return time;
@@ -520,7 +507,7 @@ class Song
 
 		Event *e = GetMostRecentSyncEventTime(time);
 
-		if(e)
+		if (e)
 		{
 			lastEventTime = e.time;
 			lastEventOffset = e.tick;
@@ -533,7 +520,7 @@ class Song
 			currentUsPerBeat = startUsPB;
 		}
 
-		if(pUsPerBeat)
+		if (pUsPerBeat)
 			*pUsPerBeat = currentUsPerBeat;
 
 		return lastEventOffset + cast(int)((time - lastEventTime)*resolution/currentUsPerBeat);
@@ -565,179 +552,5 @@ class Song
 
 	Event[] sync;					// song sync stuff
 	Event[] events;					// general song/venue events (sections, effects, lighting, etc?)
-	SongPart[Part.Count] parts;
-}
-
-
-// Binary search on the events
-// before: true = return event one before requested time, false = return event one after requested time
-// type: "tick", "time" to search by tick or by time
-private ptrdiff_t GetEventForOffset(bool before, bool byTime)(Event[] events, long offset)
-{
-	enum member = byTime ? "time" : "tick";
-
-	if(events.empty)
-		return -1;
-
-	// get the top bit
-	size_t i = events.length, topBit = 0;
-	while((i >>= 1))
-		++topBit;
-	i = topBit = 1 << topBit;
-
-	// binary search bitchez!!
-	ptrdiff_t target = -1;
-	while(true)
-	{
-		if(i >= events.length) // if it's an invalid index
-		{
-			i = (i & ~topBit) | topBit>>1;
-		}
-		else if(mixin("events[i]." ~ member) == offset)
-		{
-			// return the first in sequence
-			while(i > 0 && mixin("events[i-1]." ~ member) == mixin("events[i]." ~ member))
-				--i;
-			return i;
-		}
-		else if(mixin("events[i]." ~ member) > offset)
-		{
-			static if(!before)
-				target = i;
-			i = (i & ~topBit) | topBit>>1;
-		}
-		else
-		{
-			static if(before)
-				target = i;
-			i |= topBit>>1;
-		}
-		if(!topBit)
-			break;
-		topBit >>= 1;
-	}
-
-	return target;
-}
-
-private template AllIs(Ty, T...)
-{
-	static if(T.length == 0)
-		enum AllIs = true;
-	else
-		enum AllIs = is(T[0] == Ty) && AllIs!(T[1..$], Ty);
-}
-
-// skip over events of specified types
-ptrdiff_t SkipEvents(bool reverse = false, Types...)(Event[] events, ptrdiff_t e, Types types) if(AllIs!(E.EventType, Types))
-{
-	outer: for(; (reverse && e >= 0) || (!reverse && e < events.length); e += reverse ? -1 : 1)
-	{
-		foreach(t; types)
-		{
-			if(events[e].event == t)
-				continue outer;
-		}
-		return e;
-	}
-	return -1;
-}
-
-// skip events until we find one we're looking for
-ptrdiff_t SkipToEvents(bool reverse = false, Types...)(Event[] events, ptrdiff_t e, Types types) if(AllIs!(EventType, Types))
-{
-	for(; (reverse && e >= 0) || (!reverse && e < events.length); e += reverse ? -1 : 1)
-	{
-		foreach(t; types)
-		{
-			if(events[e].event == t)
-				return e;
-		}
-	}
-	return -1;
-}
-
-// get all events at specified tick
-Event[] EventsAt(Event[] events, int tick)
-{
-	ptrdiff_t i = events.GetEventForOffset!(false, false)(tick);
-	if(i != tick)
-		return null;
-	auto e = i;
-	while(e < events.length-1 && events[e+1].tick == events[e].tick)
-		++e;
-	return events[i..e+1];
-}
-
-ptrdiff_t FindEvent(Event[] events, EventType type, int tick, int key = -1)
-{
-	// find the events at the requested offset
-	auto ev = events.EventsAt(tick);
-	if(!ev)
-		return -1;
-
-	// match the other conditions
-	foreach(ref e; ev)
-	{
-		if(!type || e.event == type)
-		{
-			if(key == -1 || e.note.key == key)
-				return &e - events.ptr; // return it as an index (TODO: should this return a ref instead?)
-		}
-	}
-	return -1;
-}
-
-private ptrdiff_t GetEvent(bool reverse, bool byTime, Types...)(Event[] events, long offset, Types types) if(AllIs!(EventType, Types))
-{
-	ptrdiff_t e = events.GetEventForOffset!(reverse, byTime)(offset);
-	if(e < 0 || Types.length == 0)
-		return e;
-	return events.SkipToEvents!reverse(e, types);
-}
-
-ptrdiff_t GetNextEvent(Types...)(Event[] events, int tick, Types types) if(AllIs!(EventType, Types))
-{
-	return events.GetEvent!(false, false)(tick, types);
-}
-
-ptrdiff_t GetNextEventByTime(Types...)(Event[] events, long time, Types types) if(AllIs!(EventType, Types))
-{
-	return events.GetEvent!(false, true)(time, types);
-}
-
-ptrdiff_t GetMostRecentEvent(Types...)(Event[] events, int tick, Types types) if(AllIs!(EventType, Types))
-{
-	return events.GetEvent!(true, false)(tick, types);
-}
-
-ptrdiff_t GetMostRecentEventByTime(Types...)(Event[] events, long time, Types types) if(AllIs!(EventType, Types))
-{
-	return events.GetEvent!(true, true)(time, types);
-}
-
-Event[] Between(Event[] events, int startTick, int endTick)
-{
-	assert(endTick >= startTick, "endTick must be greater than startTick");
-	size_t first = events.GetNextEvent(startTick);
-	size_t last = events.GetNextEvent(endTick+1);
-	if(first == -1)
-		return events[$..$];
-	else if(last == -1)
-		return events[first..$];
-	else
-		return events[first..last];
-}
-
-Event[] BetweenTimes(Event[] events, long startTime, long endTime)
-{
-	assert(endTime >= startTime, "endTime must be greater than startTime");
-	size_t first = events.GetNextEventByTime(startTime);
-	size_t last = events.GetNextEventByTime(endTime+1);
-	if(first == -1)
-		return events[$..$];
-	else if(last == -1)
-		return events[first..$];
-	else
-		return events[first..last];
+	Part[string] parts;
 }

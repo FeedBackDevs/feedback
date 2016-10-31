@@ -19,7 +19,7 @@ class ListAdapter
 	ListEvent OnTouchItem;
 }
 
-class RangeAdapter(T) : ListAdapter if(isRandomAccessRange!T)
+class RangeAdapter(T) : ListAdapter if (isRandomAccessRange!T)
 {
 	alias ET = ElementType!T;
 

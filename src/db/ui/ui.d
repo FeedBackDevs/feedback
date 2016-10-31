@@ -35,7 +35,7 @@ class UserInterface
 	{
 		widgetType = widgetType.toLower;
 
-		if(!_factory.exists(widgetType))
+		if (!_factory.exists(widgetType))
 		{
 			MFDebug_Log(2, "Widget type doesn't exist: " ~ widgetType);
 			return null;
@@ -69,12 +69,12 @@ class UserInterface
 	{
 		Widget old = focusList[pSource.sourceID];
 
-		if(old && old.OnFocusChanged)
+		if (old && old.OnFocusChanged)
 			old.OnFocusChanged(old, false, focusWidget, old);
 
 		focusList[pSource.sourceID] = focusWidget;
 
-		if(focusWidget && focusWidget.OnFocusChanged)
+		if (focusWidget && focusWidget.OnFocusChanged)
 			focusWidget.OnFocusChanged(focusWidget, true, focusWidget, old);
 
 		return old;
@@ -104,24 +104,24 @@ class UserInterface
 
 @noscript:
 	// static stuff
-	static bool registerWidget(T)(const(char)[] name = T.stringof) if(is(T : Widget))
+	static bool registerWidget(T)(const(char)[] name = T.stringof) if (is(T : Widget))
 	{
 		return _factory.registerType!T(name.toLower);
 	}
 
-	static bool registerWidgetRenderer(R, W)(const(char)[] name = W.stringof) if(is(R : WidgetRenderer) && is(W : Widget))
+	static bool registerWidgetRenderer(R, W)(const(char)[] name = W.stringof) if (is(R : WidgetRenderer) && is(W : Widget))
 	{
 		return renderFactory.registerType!R(name.toLower);
 	}
 
-	static T createWidget(T)() if(is(T : Widget))
+	static T createWidget(T)() if (is(T : Widget))
 	{
 		return cast(T)createWidget(T.stringof);
 	}
 
 	static void registerEventHandler(const(char)[] name, WidgetEvent.Handler handler)
 	{
-		if(name in eventHandlerRegistry)
+		if (name in eventHandlerRegistry)
 		{
 			MFDebug_Log(2, "Event handler already registered: " ~ name);
 			return;
@@ -156,7 +156,7 @@ class UserInterface
 		root.draw();
 /+
 		Font font = Font.debugFont;
-		if(hoverList[0])
+		if (hoverList[0])
 			font.draw(hoverList[0].id ? hoverList[0].id : hoverList[0].typeName, 100, 100, 20);
 		else
 			font.draw("none", 100, 100, 20);
@@ -166,7 +166,7 @@ class UserInterface
 package:
 	void unknownProperty(Widget widget, const(char)[] property, const(char)[] value)
 	{
-		if(unknownPropertyHandler)
+		if (unknownPropertyHandler)
 			unknownPropertyHandler(widget, property, value);
 		else
 			MFDebug_Warn(2, format("Unknown property for '%s' %s=\"%s\"", widget.typeName, property, value));
@@ -192,7 +192,7 @@ protected:
 		ev.hover.x = localPos.x;
 		ev.hover.y = localPos.y;
 
-		if(ev.ev == InputManager.EventType.Hover || ev.ev == InputManager.EventType.Drag)
+		if (ev.ev == InputManager.EventType.Hover || ev.ev == InputManager.EventType.Drag)
 		{
 			// transform delta
 			MFVector transformedDelta = widget.invTransform.transformVector3(MFVector(ev.hover.deltaX, ev.hover.deltaY));
@@ -200,7 +200,7 @@ protected:
 			ev.hover.deltaY = transformedDelta.y;
 		}
 
-		if(ev.ev == InputManager.EventType.Drag)
+		if (ev.ev == InputManager.EventType.Drag)
 		{
 			// transform secondary position
 			MFVector transformedStart = widget.invTransform.transformVectorH(MFVector(ev.drag.startX, ev.drag.startY));
@@ -212,16 +212,16 @@ protected:
 	final void onInputEvent(InputManager manager, const(InputManager.EventInfo)* ev)
 	{
 		// allow a registered hook to process the event...
-		if(inputEventHook)
+		if (inputEventHook)
 		{
-			if(inputEventHook(manager, ev))
+			if (inputEventHook(manager, ev))
 				return;
 		}
 
 		// get focus widget
 		Widget focusWidget = focusList[ev.pSource.sourceID];
 
-		if(ev.pSource.device == MFInputDevice.Mouse || ev.pSource.device == MFInputDevice.TouchPanel)
+		if (ev.pSource.device == MFInputDevice.Mouse || ev.pSource.device == MFInputDevice.TouchPanel)
 		{
 			// positional events will be sent to the hierarchy
 			MFVector pos = MFVector(ev.hover.x, ev.hover.y, 0, 1);
@@ -230,10 +230,10 @@ protected:
 			MFVector localPos;
 
 			Widget widget = null;
-			if(focusWidget)
+			if (focusWidget)
 			{
 				widget = focusWidget.intersectWidget(pos, dir, &localPos);
-				if(!widget)
+				if (!widget)
 					widget = focusWidget;
 			}
 			else
@@ -242,38 +242,38 @@ protected:
 			}
 
 			// update the down widget
-			if(ev.ev == InputManager.EventType.Down)
+			if (ev.ev == InputManager.EventType.Down)
 				downOver[ev.pSource.sourceID] = widget;
-			else if(ev.ev == InputManager.EventType.Tap)
+			else if (ev.ev == InputManager.EventType.Tap)
 			{
 				// if we receive a tap event, check that it was on the same widget we recorded the down event for
-				if(downOver[ev.pSource.sourceID] != widget)
+				if (downOver[ev.pSource.sourceID] != widget)
 					return;
 			}
 
 			// check if the hover has changed
 			Widget hover = hoverList[ev.pSource.sourceID];
-			if(hover != widget)
+			if (hover != widget)
 			{
 				hoverList[ev.pSource.sourceID] = widget;
 
-				if(hover && hover.OnHoverOut)
+				if (hover && hover.OnHoverOut)
 					hover.OnHoverOut(hover, ev.pSource);
-				if(widget && widget.OnHoverOver)
+				if (widget && widget.OnHoverOver)
 					widget.OnHoverOver(widget, ev.pSource);
 			}
 
-			if(widget)
+			if (widget)
 			{
 				InputManager.EventInfo transformedEv = *ev;
 				localiseInput(&transformedEv, widget, localPos);
 
 				// send the input event
-				if(widget.inputEvent(manager, &transformedEv))
+				if (widget.inputEvent(manager, &transformedEv))
 					return;
 			}
 		}
-		else if(focusWidget)
+		else if (focusWidget)
 		{
 			// non-positional events
 			focusWidget.inputEvent(manager, ev);
@@ -294,7 +294,7 @@ public:
 	static void registerWidgets()
 	{
 		__gshared calledBefore = false;
-		if(!calledBefore)
+		if (!calledBefore)
 		{
 			UserInterface.registerWidget!Widget();
 			UserInterface.registerWidget!Frame();

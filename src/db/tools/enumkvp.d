@@ -16,7 +16,7 @@ template EnumKeyValuePair(Enum)
 {
 	template impl(size_t len, size_t offset, Items...)
 	{
-		static if(offset == len)
+		static if (offset == len)
 			alias impl = TypeTuple!();
 		else
 			alias impl = TypeTuple!(KeyValuePair!Enum(Items[offset], Items[len + offset]), impl!(len, offset + 1, Items));
@@ -35,15 +35,15 @@ immutable(KeyValuePair!Enum)[] getKeyValuePair(Enum)() nothrow
 	return kvp;
 }
 
-Enum getEnumValue(Enum)(const(char)[] value) if(is(Enum == enum))
+Enum getEnumValue(Enum)(const(char)[] value) if (is(Enum == enum))
 {
 	value = value.strip;
-	if(!value.empty)
+	if (!value.empty)
 	{
 		auto kvp = getKeyValuePair!Enum();
-		foreach(ref i; kvp)
+		foreach (ref i; kvp)
 		{
-			if(!icmp(i.key, value))
+			if (!icmp(i.key, value))
 				return i.value;
 		}
 	}
@@ -53,10 +53,10 @@ Enum getEnumValue(Enum)(const(char)[] value) if(is(Enum == enum))
 uint getBitfieldValue(Enum)(const(char)[] flags)
 {
 	uint value;
-	foreach(token; flags.splitter('|').map!(a => a.strip).filter!(a => !a.empty))
+	foreach (token; flags.splitter('|').map!(a => a.strip).filter!(a => !a.empty))
 	{
 		Enum val = getEnumValue!Enum(token);
-		if(val != cast(Enum)-1)
+		if (val != cast(Enum)-1)
 			value |= val;
 	}
 	return value;
@@ -65,9 +65,9 @@ uint getBitfieldValue(Enum)(const(char)[] flags)
 string getEnumFromValue(Enum)(Enum value)
 {
 	auto kvp = getKeyValuePair!Enum();
-	foreach(ref i; kvp)
+	foreach (ref i; kvp)
 	{
-		if(value == i.value)
+		if (value == i.value)
 			return i.key;
 	}
 	return null;
@@ -76,16 +76,16 @@ string getEnumFromValue(Enum)(Enum value)
 string getBitfieldFromValue(Enum)(uint bits)
 {
 	string bitfield;
-	foreach(i; 0..32)
+	foreach (i; 0..32)
 	{
 		uint bit = 1 << i;
-		if(!(bits & bit))
+		if (!(bits & bit))
 			continue;
 
 		string key = getEnumFromValue(cast(Enum)bit);
-		if(key)
+		if (key)
 		{
-			if(!bitfield)
+			if (!bitfield)
 				bitfield = key;
 			else
 				bitfield = bitfield ~ "|" ~ key;

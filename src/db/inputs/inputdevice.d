@@ -1,12 +1,11 @@
-module db.i.inputdevice;
+module db.inputs.inputdevice;
 
-import db.instrument;
-import db.i.syncsource;
-import db.sequence;
+import db.i.syncsource : SyncSource;
+import db.instrument : Instrument;
 
 import luad.base : noscript;
 
-import std.range;
+import std.range : empty, popFront;
 
 enum InputEventType
 {
@@ -27,14 +26,11 @@ struct InputEvent
 
 class InputDevice
 {
-	InstrumentType instrumentType = InstrumentType.Unknown;
-	uint features;
-
-	Part[] supportedParts;
-
 	long deviceLatency;
 
-	abstract @property long inputTime();
+	abstract @property const(char)[] name() const;
+
+	abstract @property long inputTime() const;
 
 	@property InputEvent[] events() { return stream; }
 
@@ -53,14 +49,16 @@ class InputDevice
 
 	void Clear(long until = -1)
 	{
-		if(until == -1)
+		if (until == -1)
 			stream = null;
 		else
 		{
-			while(!stream.empty && stream[0].timestamp < until)
+			while (!stream.empty && stream[0].timestamp < until)
 				stream.popFront();
 		}
 	}
+
+	Instrument instrument;
 
 	SyncSource sync;
 	InputEvent[] stream;

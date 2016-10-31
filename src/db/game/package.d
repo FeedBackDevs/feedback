@@ -9,16 +9,17 @@ import fuji.display;
 
 import db.tools.log;
 import db.renderer;
-import db.songlibrary;
+import db.library;
 import db.theme;
 import db.instrument;
-import db.player;
+import db.game.player;
 import db.profile;
-import db.performance;
-import db.sequence;
+import db.game.performance;
+import db.chart.track : Track;
 import db.settings;
 
-import db.i.inputdevice;
+import db.inputs.inputdevice;
+import db.inputs.devicemanager;
 
 import db.ui.ui;
 import db.ui.layoutdescriptor;
@@ -86,8 +87,11 @@ class Game
 		// enable buffered input (200hz == 5ms precision)
 		MFInput_EnableBufferedInput(true, 200);
 
-		// TODO: auto-detect instruments (controllers, midi/audio devices)
-		inputs = detectInstruments();
+		// register instrument types
+		registerBuiltinInstrumentTypes();
+
+		// detect input devices
+		initInputDevices();
 
 		// create song library
 		songLibrary = new SongLibrary();
@@ -109,10 +113,10 @@ class Game
 		// load the bootup UI
 		doFile("boot.lua");
 		LayoutDescriptor desc = new LayoutDescriptor("boot.xml");
-		if(desc)
+		if (desc)
 		{
 			Widget boot = desc.spawn();
-			if(boot)
+			if (boot)
 				ui.addTopLevelWidget(boot);
 		}
 
@@ -123,9 +127,9 @@ class Game
 
 		// load the theme
 		theme = Theme.load(settings.theme);
-		if(!theme)
+		if (!theme)
 			theme = Theme.load("Default");
-		if(!theme)
+		if (!theme)
 		{
 			MFDebug_Warn(2, "Couldn't load theme!".ptr);
 			return;
@@ -143,7 +147,9 @@ class Game
 
 	void update()
 	{
-		if(performance)
+		updateInputDevices();
+
+		if (performance)
 			performance.Update();
 
 		ui.update();
@@ -151,7 +157,7 @@ class Game
 
 	void draw()
 	{
-		if(performance)
+		if (performance)
 		{
 			performance.Draw();
 		}
@@ -190,10 +196,10 @@ class Game
 	void startPerformance(string song)
 	{
 		// HACK: create a performance of the first song in the library
-		Track* track = songLibrary.find(song);
-		if(track)
+		Song* pSong = songLibrary.find(song);
+		if (pSong)
 		{
-			performance = new Performance(track, players);
+			performance = new Performance(pSong, players);
 			performance.Begin();
 		}
 	}
@@ -216,26 +222,14 @@ class Game
 
 	void removePlayer(Player player)
 	{
-		foreach(i, p; players)
+		foreach (i, p; players)
 		{
-			if(p == player)
+			if (p == player)
 			{
 				players = players[0..i] ~ players[i+1..$];
 				break;
 			}
 		}
-	}
-
-	InputDevice getInputForDevice(MFInputDevice device, int deviceID)
-	{
-		import db.inputs.controller;
-		foreach(i; inputs)
-		{
-			Controller c = cast(Controller)i;
-			if(c && c.device == device && c.deviceId == deviceID)
-				return i;
-		}
-		return null;
 	}
 
 	void luaRegister()
@@ -303,7 +297,6 @@ class Game
 
 	SongLibrary songLibrary;
 
-	InputDevice[] inputs;
 	Player[] players;
 
 	Performance performance;
@@ -314,7 +307,7 @@ class Game
 	LuaState lua;
 
 	// singleton stuff
-	static @property Game instance() { if(_instance is null) _instance = new Game; return _instance; }
+	static @property Game instance() { if (_instance is null) _instance = new Game; return _instance; }
 
 	static extern (C) void staticInitFileSystem() nothrow
 	{
@@ -381,7 +374,7 @@ class Game
 	{
 		try
 		{
-			if(_instance.ui)
+			if (_instance.ui)
 			{
 				MFRect rect;
 				MFDisplay_GetDisplayRect(&rect);
@@ -395,7 +388,7 @@ class Game
 		}
 		finally
 		{
-			if(pChainResizeCallback)
+			if (pChainResizeCallback)
 				pChainResizeCallback();
 		}
 	}

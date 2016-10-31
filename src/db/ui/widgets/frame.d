@@ -22,26 +22,26 @@ protected:
 
 		// early out?
 		Widget[] children = this.children;
-		if(children.empty)
+		if (children.empty)
 		{
-			if(bFitWidth || bFitHeight)
+			if (bFitWidth || bFitHeight)
 			{
 				// resize the layout
 				MFVector newSize = size;
-				if(bFitWidth)
+				if (bFitWidth)
 					newSize.x = padding.x + padding.z;
-				if(bFitHeight)
+				if (bFitHeight)
 					newSize.y = padding.y + padding.w;
 				resize(newSize);
 			}
 			return;
 		}
 
-		if(bFitWidth || bFitHeight)
+		if (bFitWidth || bFitHeight)
 		{
 			// fit to largest child in each dimension
 			MFVector fit = MFVector.zero;
-			foreach(child; children)
+			foreach (child; children)
 			{
 				const(MFVector) cSize = child.sizeWithMargin;
 
@@ -51,9 +51,9 @@ protected:
 
 			// resize the layout
 			MFVector newSize = size;
-			if(bFitWidth)
+			if (bFitWidth)
 				newSize.x = fit.x;
-			if(bFitHeight)
+			if (bFitHeight)
 				newSize.y = fit.y;
 			resize(newSize);
 		}
@@ -61,14 +61,14 @@ protected:
 		MFVector cPos = MFVector(padding.x, padding.y);
 		MFVector cSize = MFVector(size.x - (padding.x + padding.z), size.y - (padding.y + padding.w));
 
-		foreach(child; children)
+		foreach (child; children)
 		{
 			MFVector cMargin = child.layoutMargin;
 			MFVector size = child.size;
 			MFVector tPos = cPos + MFVector(cMargin.x, cMargin.y);
 			MFVector tSize = cSize - MFVector(cMargin.x + cMargin.z, cMargin.y + cMargin.w);
 
-			switch(child.layoutJustification) with(Justification)
+			switch (child.layoutJustification) with(Justification)
 			{
 				case TopLeft:
 					child.position(tPos);

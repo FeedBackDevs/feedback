@@ -4,13 +4,13 @@ import fuji.fuji;
 import fuji.filesystem;
 import fuji.dbg;
 
-import db.song;
-import db.sequence;
+import db.chart;
 import db.instrument;
+import db.instrument.drums : DrumNotes, DrumNoteFlags;
 import db.formats.parsers.midifile;
 import db.formats.parsers.guitarprofile;
 import db.tools.filetypes;
-import db.songlibrary;
+import db.library;
 
 import std.string;
 import std.path;
@@ -21,46 +21,46 @@ import std.conv : to;
 // http://sourceforge.net/p/kguitar/code/HEAD/tree/trunk/kguitar/kguitar/convertgtp.cpp
 // http://sourceforge.net/p/tuxguitar/code/HEAD/tree/trunk/TuxGuitar-gtp/src/org/herac/tuxguitar/io/gtp/GP4InputStream.java#l201
 
-bool LoadGuitarPro(Track* track, DirEntry file)
+bool LoadGuitarPro(Song* song, DirEntry file)
 {
 	string path = file.directory ~ "/";
 
 	MFDebug_Log(2, "Loading song: '" ~ file.filepath ~ "'");
 
-	track._song = new Song;
-	track._song.params["source_format"] = file.filename.extension.toLower;
+	song._chart = new Chart;
+	song._chart.params["source_format"] = file.filename.extension.toLower;
 
 	// search for the music and other stuff...
 	string songName = file.filename.stripExtension.toLower;
-	foreach(f; dirEntries(path ~ "*", SpanMode.shallow))
+	foreach (f; dirEntries(path ~ "*", SpanMode.shallow))
 	{
 		string filename = f.filename.toLower;
 		string fn = filename.stripExtension;
-		if(isImageFile(filename))
+		if (isImageFile(filename))
 		{
-			if(fn[] == songName)
-				track.coverImage = f.filepath;
-			else if(fn[] == songName ~ "-bg")
-				track.background = f.filepath;
+			if (fn[] == songName)
+				song.coverImage = f.filepath;
+			else if (fn[] == songName ~ "-bg")
+				song.background = f.filepath;
 		}
-		else if(isAudioFile(filename))
+		else if (isAudioFile(filename))
 		{
-			if(fn[] == songName)
-				track.addSource().addStream(f.filepath);
-			if(fn[] == "intro")
-				track._preview = f.filepath;
+			if (fn[] == songName)
+				song.addSource().addStream(f.filepath);
+			if (fn[] == "intro")
+				song._preview = f.filepath;
 		}
-		else if(isVideoFile(filename))
+		else if (isVideoFile(filename))
 		{
-			if(fn[] == songName)
-				track.video = f.filepath;
+			if (fn[] == songName)
+				song.video = f.filepath;
 		}
 	}
 
 	GuitarProFile gpx = new GuitarProFile(file);
 //	gpx.WriteText(file.filepath.stripExtension ~ ".txt");
 
-	track._song.LoadGPx(gpx);
+	song._chart.LoadGPx(gpx);
 
 	// search for music files
 	//...
@@ -68,7 +68,7 @@ bool LoadGuitarPro(Track* track, DirEntry file)
 	return true;
 }
 
-bool LoadGPx(Song song, GuitarProFile gpx)
+bool LoadGPx(Chart song, GuitarProFile gpx)
 {
 	with(song) with(GuitarProFile)
 	{
@@ -113,9 +113,9 @@ bool LoadGPx(Song song, GuitarProFile gpx)
 
 		// parse sync
 		int tn, td;
-		foreach(i, ref m; gpx.measures)
+		foreach (i, ref m; gpx.measures)
 		{
-			if((m.has(MeasureInfo.Bits.TSNumerator) || m.has(MeasureInfo.Bits.TSDenimonator) || i == 0) && (m.tn != tn || m.td != td))
+			if ((m.has(MeasureInfo.Bits.TSNumerator) || m.has(MeasureInfo.Bits.TSDenimonator) || i == 0) && (m.tn != tn || m.td != td))
 			{
 				// time signature event...
 				ev.tick = m.tick;
@@ -125,16 +125,16 @@ bool LoadGPx(Song song, GuitarProFile gpx)
 				sync ~= ev;
 			}
 
-			foreach(ref t; gpx.tracks)
+			foreach (ref t; gpx.tracks)
 			{
 				Measure *tm = &t.measures[i];
 
-				foreach(v; 0..2)
+				foreach (v; 0..2)
 				{
 					Beat[] beats = t.beats[tm.voices[v].beat .. tm.voices[v].beat+tm.voices[v].numBeats];
-					foreach(ref b; beats)
+					foreach (ref b; beats)
 					{
-						if(b.mix && b.mix.tempo != -1)
+						if (b.mix && b.mix.tempo != -1)
 						{
 							ev.tick = b.tick;
 							ev.event = EventType.BPM;
@@ -146,33 +146,33 @@ bool LoadGPx(Song song, GuitarProFile gpx)
 			}
 		}
 
-		foreach(ref t; gpx.tracks)
+		foreach (ref t; gpx.tracks)
 		{
 			// how to identify the tracks...?
 
-			if(t.channel == 10)
+			if (t.channel == 10)
 			{
-				SongPart* part = &song.parts[Part.Drums];
+				Part* part = &song.getPart("drums");
 
-				part.part = Part.Drums;
+				part.part = "drums";
 				part.variations ~= Variation(t.name ~ "-8drums");
 				Variation *variation = &part.variations[$-1];
 
-				Sequence seq = new Sequence();
-				seq.part = part.part;
-				seq.variation = variation.name;
-				seq.difficulty = "Expert";
-				variation.difficulties ~= seq;
+				db.chart.Track trk = new db.chart.Track();
+				trk.part = part.part;
+				trk.variation = variation.name;
+				trk.difficulty = "Expert";
+				variation.difficulties ~= trk;
 
 				// parse drums
 				ptrdiff_t[STRING_MAX_NUMBER][2] lastNotes = -1;
-				foreach(mi, ref m; t.measures)
+				foreach (mi, ref m; t.measures)
 				{
-					foreach(v; 0..2)
+					foreach (v; 0..2)
 					{
-						foreach(ref b; t.beats[m.voices[v].beat .. m.voices[v].beat+m.voices[v].numBeats])
+						foreach (ref b; t.beats[m.voices[v].beat .. m.voices[v].beat+m.voices[v].numBeats])
 						{
-							if(b.has(Beat.Bits.Text))
+							if (b.has(Beat.Bits.Text))
 							{
 								ev.tick = b.tick;
 								ev.event = EventType.Event;
@@ -180,21 +180,21 @@ bool LoadGPx(Song song, GuitarProFile gpx)
 								part.events ~= ev;
 							}
 
-							foreach(s, n; b.notes)
+							foreach (s, n; b.notes)
 							{
-								if(n == null)
+								if (n == null)
 								{
 /+
-									if(lastNotes[v][s] >= 0)
+									if (lastNotes[v][s] >= 0)
 									{
-										if(seq.notes[lastNotes[v][s]].duration <= gpx.ticksPerBeat / 2)
-											seq.notes[lastNotes[v][s]].duration = 0;
+										if (trk.notes[lastNotes[v][s]].duration <= gpx.ticksPerBeat / 2)
+											trk.notes[lastNotes[v][s]].duration = 0;
 										lastNotes[v][s] = -1;
 									}
 +/
 									continue;
 								}
-								switch(n.type)
+								switch (n.type)
 								{
 									case Note.Type.None:
 										int x = 0;
@@ -258,7 +258,7 @@ bool LoadGPx(Song song, GuitarProFile gpx)
 										];
 
 										int dn = n.fret - 35;
-										if(drumMap[dn].note != -1)
+										if (drumMap[dn].note != -1)
 										{
 											ev.tick = n.tick;
 											ev.event = EventType.Note;
@@ -268,13 +268,13 @@ bool LoadGPx(Song song, GuitarProFile gpx)
 											ev.note.key = drumMap[dn].note;
 											ev.flags = drumMap[dn].flags;
 
-											seq.notes ~= ev;
-											lastNotes[v][s] = seq.notes.length-1;
+											trk.notes ~= ev;
+											lastNotes[v][s] = trk.notes.length-1;
 										}
 										break;
 									case Note.Type.Ghost:
-//										if(lastNotes[v][s] >= 0)
-//											seq.notes[lastNotes[v][s]].duration += n.duration;
+//										if (lastNotes[v][s] >= 0)
+//											trk.notes[lastNotes[v][s]].duration += n.duration;
 										break;
 									case Note.Type.Tie:
 										int x = 0;
@@ -287,14 +287,14 @@ bool LoadGPx(Song song, GuitarProFile gpx)
 					}
 				}
 
-				foreach(v; 0..2)
+				foreach (v; 0..2)
 				{
-					foreach(n; lastNotes[v])
+					foreach (n; lastNotes[v])
 					{
-						if(n >= 0)
+						if (n >= 0)
 						{
-							if(seq.notes[n].duration <= gpx.ticksPerBeat / 2)
-								seq.notes[n].duration = 0;
+							if (trk.notes[n].duration <= gpx.ticksPerBeat / 2)
+								trk.notes[n].duration = 0;
 						}
 					}
 				}

@@ -35,26 +35,26 @@ class StringEntryLogic
 	@property final const(char)[] text() const pure nothrow @nogc { return buffer.text; }
 	@property final void text(const(char)[] text)
 	{
-		if(buffer[] == text[])
+		if (buffer[] == text[])
 			return;
 
 		buffer = text.dup;
-		if(_maxLen && buffer.length > _maxLen)
+		if (_maxLen && buffer.length > _maxLen)
 			buffer = buffer[0.._maxLen];
 
 		_selectionStart = _selectionEnd = _cursorPos = cast(int)buffer.length;
 
-		if(changeCallback)
+		if (changeCallback)
 			changeCallback(buffer);
 	}
 
 	@property final const(char)[] renderText() const pure nothrow @nogc
 	{
-		if(type == StringType.Password)
+		if (type == StringType.Password)
 		{
 			static immutable asterisks = "**************************************************************************************************************";
 			size_t numChars = buffer.text.count;
-			if(numChars <= asterisks.length)
+			if (numChars <= asterisks.length)
 				return asterisks[0..numChars];
 			else
 				assert(false, "TODO: password too long, allocate a buffer to hold the asterisks...");
@@ -75,7 +75,7 @@ class StringEntryLogic
 		position = MFClamp(0, position, buffer.text.count);
 
 		_selectionEnd = _cursorPos = cast(int)position;
-		if(!bUpdateSelection)
+		if (!bUpdateSelection)
 			_selectionStart = cast(int)position;
 	}
 
@@ -119,13 +119,13 @@ class StringEntryLogic
 		version(Windows)
 		{
 /+
-			if(ctrl && MFInput_WasPressed(MFKey.C, MFInputDevice.Keyboard) && _selectionStart != _selectionEnd)
+			if (ctrl && MFInput_WasPressed(MFKey.C, MFInputDevice.Keyboard) && _selectionStart != _selectionEnd)
 			{
 				MFDisplay *pDisplay = MFDisplay_GetCurrent();
 				HWND hWnd = (HWND)MFWindow_GetSystemWindowHandle(MFDisplay_GetDisplaySettings(pDisplay)->pWindow);
 				BOOL opened = OpenClipboard(hWnd);
 
-				if(opened)
+				if (opened)
 				{
 					int selMin = MFMin(_selectionStart, _selectionEnd);
 					int selMax = MFMax(_selectionStart, _selectionEnd);
@@ -147,13 +147,13 @@ class StringEntryLogic
 					return;
 				}
 			}
-			else if(ctrl && MFInput_WasPressed(MFKey.X, MFInputDevice.Keyboard) && _selectionStart != _selectionEnd)
+			else if (ctrl && MFInput_WasPressed(MFKey.X, MFInputDevice.Keyboard) && _selectionStart != _selectionEnd)
 			{
 				MFDisplay *pDisplay = MFDisplay_GetCurrent();
 				HWND hWnd = (HWND)MFWindow_GetSystemWindowHandle(MFDisplay_GetDisplaySettings(pDisplay)->pWindow);
 				BOOL opened = OpenClipboard(hWnd);
 
-				if(opened)
+				if (opened)
 				{
 					int selMin = MFMin(_selectionStart, _selectionEnd);
 					int selMax = MFMax(_selectionStart, _selectionEnd);
@@ -177,13 +177,13 @@ class StringEntryLogic
 
 				return;
 			}
-			else if(ctrl && MFInput_WasPressed(MFKey.V, MFInputDevice.Keyboard))
+			else if (ctrl && MFInput_WasPressed(MFKey.V, MFInputDevice.Keyboard))
 			{
 				MFDisplay *pDisplay = MFDisplay_GetCurrent();
 				HWND hWnd = (HWND)MFWindow_GetSystemWindowHandle(MFDisplay_GetDisplaySettings(pDisplay)->pWindow);
 				BOOL opened = OpenClipboard(hWnd);
 
-				if(opened)
+				if (opened)
 				{
 					int selMin = MFMin(_selectionStart, _selectionEnd);
 					int selMax = MFMax(_selectionStart, _selectionEnd);
@@ -204,7 +204,7 @@ class StringEntryLogic
 
 					CloseClipboard();
 
-					if((numChars || _cursorPos != selMin) && changeCallback)
+					if ((numChars || _cursorPos != selMin) && changeCallback)
 						changeCallback(buffer);
 				}
 
@@ -214,9 +214,9 @@ class StringEntryLogic
 		}
 
 		// check for new keypresses
-		foreach(a; 0..255)
+		foreach (a; 0..255)
 		{
-			if(MFInput_WasPressed(a, MFInputDevice.Keyboard))
+			if (MFInput_WasPressed(a, MFInputDevice.Keyboard))
 			{
 				keyPressed = a;
 				_holdKey = a;
@@ -226,10 +226,10 @@ class StringEntryLogic
 		}
 
 		// handle repeat keys
-		if(_holdKey && MFInput_Read(_holdKey, MFInputDevice.Keyboard))
+		if (_holdKey && MFInput_Read(_holdKey, MFInputDevice.Keyboard))
 		{
 			_repeatDelay -= MFTimeDelta();
-			if(_repeatDelay <= 0)
+			if (_repeatDelay <= 0)
 			{
 				keyPressed = _holdKey;
 				_repeatDelay += gRepeatRate;
@@ -239,33 +239,33 @@ class StringEntryLogic
 			_holdKey = 0;
 
 		// if there was a new key press
-		if(keyPressed)
+		if (keyPressed)
 		{
-			switch(keyPressed)
+			switch (keyPressed)
 			{
 				case MFKey.Backspace:
 				case MFKey.Delete:
 				{
-					if(_selectionStart != _selectionEnd)
+					if (_selectionStart != _selectionEnd)
 					{
 						clearSelection();
 					}
 					else
 					{
-						if(keyPressed == MFKey.Backspace && _cursorPos > 0)
+						if (keyPressed == MFKey.Backspace && _cursorPos > 0)
 						{
 							buffer.remove(--_cursorPos, 1);
 							_selectionStart = _selectionEnd = _cursorPos;
 
-							if(changeCallback)
+							if (changeCallback)
 								changeCallback(buffer);
 						}
-						else if(keyPressed == MFKey.Delete && _cursorPos < buffer.length)
+						else if (keyPressed == MFKey.Delete && _cursorPos < buffer.length)
 						{
 							buffer.remove(_cursorPos, 1);
 							_selectionStart = _selectionEnd = _cursorPos;
 
-							if(changeCallback)
+							if (changeCallback)
 								changeCallback(buffer);
 						}
 					}
@@ -277,58 +277,58 @@ class StringEntryLogic
 				case MFKey.Home:
 				case MFKey.End:
 				{
-					if(ctrl)
+					if (ctrl)
 					{
-						if(keyPressed == MFKey.Left)
+						if (keyPressed == MFKey.Left)
 						{
-							while(_cursorPos && isWhite(buffer[_cursorPos-1]))
+							while (_cursorPos && isWhite(buffer[_cursorPos-1]))
 								--_cursorPos;
-							if(isAlphaNumeric(buffer[_cursorPos-1]))
+							if (isAlphaNumeric(buffer[_cursorPos-1]))
 							{
-								while(_cursorPos && isAlphaNumeric(buffer[_cursorPos-1]))
+								while (_cursorPos && isAlphaNumeric(buffer[_cursorPos-1]))
 									--_cursorPos;
 							}
-							else if(_cursorPos)
+							else if (_cursorPos)
 							{
 								--_cursorPos;
-								while(_cursorPos && buffer[_cursorPos-1] == buffer[_cursorPos])
+								while (_cursorPos && buffer[_cursorPos-1] == buffer[_cursorPos])
 									--_cursorPos;
 							}
 						}
-						else if(keyPressed == MFKey.Right)
+						else if (keyPressed == MFKey.Right)
 						{
-							while(_cursorPos < buffer.length && isWhite(buffer[_cursorPos]))
+							while (_cursorPos < buffer.length && isWhite(buffer[_cursorPos]))
 								++_cursorPos;
-							if(isAlphaNumeric(buffer[_cursorPos]))
+							if (isAlphaNumeric(buffer[_cursorPos]))
 							{
-								while(_cursorPos < buffer.length && isAlphaNumeric(buffer[_cursorPos]))
+								while (_cursorPos < buffer.length && isAlphaNumeric(buffer[_cursorPos]))
 									++_cursorPos;
 							}
-							else if(_cursorPos < buffer.length)
+							else if (_cursorPos < buffer.length)
 							{
 								++_cursorPos;
-								while(_cursorPos < buffer.length && buffer[_cursorPos] == buffer[_cursorPos-1])
+								while (_cursorPos < buffer.length && buffer[_cursorPos] == buffer[_cursorPos-1])
 									++_cursorPos;
 							}
 						}
-						else if(keyPressed == MFKey.Home)
+						else if (keyPressed == MFKey.Home)
 							_cursorPos = 0;
-						else if(keyPressed == MFKey.End)
+						else if (keyPressed == MFKey.End)
 							_cursorPos = cast(int)buffer.length;
 					}
 					else
 					{
-						if(keyPressed == MFKey.Left)
+						if (keyPressed == MFKey.Left)
 							_cursorPos = (!shift && _selectionStart != _selectionEnd ? MFMin(_selectionStart, _selectionEnd) : MFMax(_cursorPos-1, 0));
-						else if(keyPressed == MFKey.Right)
+						else if (keyPressed == MFKey.Right)
 							_cursorPos = (!shift && _selectionStart != _selectionEnd ? MFMax(_selectionStart, _selectionEnd) : MFMin(_cursorPos+1, cast(int)buffer.length));
-						else if(keyPressed == MFKey.Home)
+						else if (keyPressed == MFKey.Home)
 							_cursorPos = 0;	// TODO: if multiline, go to start of line..
-						else if(keyPressed == MFKey.End)
+						else if (keyPressed == MFKey.End)
 							_cursorPos = cast(int)buffer.length;	// TODO: if multiline, go to end of line...
 					}
 
-					if(shift)
+					if (shift)
 						_selectionEnd = _cursorPos;
 					else
 						_selectionStart = _selectionEnd = _cursorPos;
@@ -341,23 +341,23 @@ class StringEntryLogic
 					bool caps = MFInput_GetKeyboardStatusState(MFKeyboardStatusState.CapsLock);
 					int ascii = MFInput_KeyToAscii(keyPressed, shift, caps);
 
-					if(ascii && (!_maxLen || buffer.length < _maxLen-1))
+					if (ascii && (!_maxLen || buffer.length < _maxLen-1))
 					{
 						// check character exclusions
-						if(isNewline(ascii) && type != StringType.MultiLine)
+						if (isNewline(ascii) && type != StringType.MultiLine)
 							break;
-						if(ascii == '\t' && type != StringType.MultiLine)
+						if (ascii == '\t' && type != StringType.MultiLine)
 							break;
-						if(type == StringType.Numeric && !isNumber(ascii))
+						if (type == StringType.Numeric && !isNumber(ascii))
 							break;
-						if(include)
+						if (include)
 						{
-							if(!include.canFind(ascii))
+							if (!include.canFind(ascii))
 								break;
 						}
-						if(exclude)
+						if (exclude)
 						{
-							if(exclude.canFind(ascii))
+							if (exclude.canFind(ascii))
 								break;
 						}
 
@@ -370,7 +370,7 @@ class StringEntryLogic
 
 						_selectionStart = _selectionEnd = _cursorPos;
 
-						if(changeCallback)
+						if (changeCallback)
 							changeCallback(buffer);
 					}
 					break;
@@ -384,7 +384,7 @@ class StringEntryLogic
 private:
 	final void clearSelection()
 	{
-		if(_selectionStart == _selectionEnd)
+		if (_selectionStart == _selectionEnd)
 			return;
 
 		int selMin = MFMin(_selectionStart, _selectionEnd);
@@ -395,7 +395,7 @@ private:
 		_cursorPos = selMin;
 		_selectionStart = _selectionEnd = _cursorPos;
 
-		if(changeCallback)
+		if (changeCallback)
 			changeCallback(buffer);
 	}
 

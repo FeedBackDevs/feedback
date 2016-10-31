@@ -398,9 +398,7 @@ class GuitarProFile
 	MidiTrack[16][4] midiTracks;
 
 	MeasureInfo[] measures;
-	Track[] tracks;
-
-
+	GuitarProFile.Track[] tracks;
 
 private:
 	void readFile(const(ubyte)[] buffer)
@@ -413,7 +411,7 @@ private:
 		artist = buffer.readDelphiString().idup;
 		album = buffer.readDelphiString().idup;
 		composer = buffer.readDelphiString().idup;
-		if(ver >= 0x500)
+		if (ver >= 0x500)
 			buffer.readDelphiString();
 		copyright = buffer.readDelphiString().idup;
 		transcriber = buffer.readDelphiString().idup;
@@ -421,33 +419,33 @@ private:
 
 		// notice lines
 		int n = buffer.getFrontAs!int();
-		foreach(i; 0..n)
+		foreach (i; 0..n)
 		{
 			auto line = buffer.readDelphiString();
 			commments ~= i > 0 ? "\n" ~ line : line;
 		}
 
 		byte shuffleFeel;
-		if(ver < 0x500)
+		if (ver < 0x500)
 			shuffleFeel = buffer.getFront();
 
-		if(ver >= 0x400)
+		if (ver >= 0x400)
 		{
 			// Lyrics
 			int lyricTrack = buffer.getFrontAs!int();		// GREYFIX: Lyric track number start
 
-			for(int i = 0; i < LYRIC_LINES_MAX_NUMBER; i++)
+			for (int i = 0; i < LYRIC_LINES_MAX_NUMBER; i++)
 			{
 				int bar = buffer.getFrontAs!int();			// GREYFIX: Start from bar
 				auto lyric = buffer.readWordPascalString();	// GREYFIX: Lyric line
 			}
 		}
 
-		if(ver >= 0x500)
+		if (ver >= 0x500)
 		{
 			// page setup...
 			buffer.getFrontN(ver > 0x500 ? 49 : 30);
-			foreach(i; 0..11)
+			foreach (i; 0..11)
 			{
 				auto s = buffer.readDelphiString();
 			}
@@ -455,18 +453,18 @@ private:
 
 		tempo = buffer.getFrontAs!int();
 
-		if(ver > 0x500)
+		if (ver > 0x500)
 			buffer.getFront(); // unknown?
 
 		key = buffer.getFront();
 		buffer.getFrontN(3); // unknown?
 
-		if(ver >= 0x400)
+		if (ver >= 0x400)
 			octave = buffer.getFront();
 
 		readTrackDefaults(buffer);
 
-		if(ver >= 0x500)
+		if (ver >= 0x500)
 			buffer.getFrontN(42); // unknown?
 
 		int numBars = buffer.getFrontAs!int();           // Number of bars
@@ -475,14 +473,14 @@ private:
 
 		int numTracks = buffer.getFrontAs!int();         // Number of tracks
 		assert(numTracks > 0 && numTracks <= 32, "Insane number of tracks");
-		tracks = new Track[numTracks];
+		tracks = new GuitarProFile.Track[numTracks];
 
 		readBarProperties(buffer, shuffleFeel);
 		readTrackProperties(buffer);
 
 		readTabs(buffer);
 
-		if(!buffer.empty)
+		if (!buffer.empty)
 		{
 			int ex = buffer.getFrontAs!int();            // Exit code: 00 00 00 00
 			assert(ex == 0, "File should terminate with 00 00 00 00");
@@ -498,7 +496,7 @@ private:
 		const(char)[] s = buffer.readPascalString(30);
 
 		// Parse version string
-		switch(s)
+		switch (s)
 		{
 			case "FICHIER GUITARE PRO v1":		ver = 0x100; break;
 			case "FICHIER GUITARE PRO v1.01":	ver = 0x101; break;
@@ -520,7 +518,7 @@ private:
 
 	void readTrackDefaults(ref const(ubyte)[] buffer)
 	{
-		foreach(i; 0 .. 16 * 4)
+		foreach (i; 0 .. 16 * 4)
 		{
 			MidiTrack *pTrack = &midiTracks[i&3][i>>2];
 
@@ -541,52 +539,52 @@ private:
 	void readBarProperties(ref const(ubyte)[] buffer, byte shuffleFeel)
 	{
 		byte tn = 4, td = 4, ks, min;
-		foreach(i, ref m; measures)
+		foreach (i, ref m; measures)
 		{
-			if(ver >= 0x500 && i > 0)
+			if (ver >= 0x500 && i > 0)
 				buffer.getFront(); // unknown?
 
 			m.bitmask = buffer.getFront();
 
-			if(m.has(MeasureInfo.Bits.TSNumerator))
+			if (m.has(MeasureInfo.Bits.TSNumerator))
 				tn = buffer.getFront();
 
-			if(m.has(MeasureInfo.Bits.TSDenimonator))
+			if (m.has(MeasureInfo.Bits.TSDenimonator))
 				td = buffer.getFront();
 
-			if(m.has(MeasureInfo.Bits.NumRepeats))
+			if (m.has(MeasureInfo.Bits.NumRepeats))
 				m.numRepeats = buffer.getFront();
 
-			if(ver < 0x500)
+			if (ver < 0x500)
 			{
-				if(m.has(MeasureInfo.Bits.AlternativeEnding))
+				if (m.has(MeasureInfo.Bits.AlternativeEnding))
 					m.altEnding = buffer.getFront();
 			}
 
-			if(m.has(MeasureInfo.Bits.NewSection))
+			if (m.has(MeasureInfo.Bits.NewSection))
 			{
 				m.section = buffer.readDelphiString().idup;
 				m.colour = buffer.getFrontAs!int(); // color?
 			}
 
-			if(ver >= 0x500)
+			if (ver >= 0x500)
 			{
-				if(m.has(MeasureInfo.Bits.AlternativeEnding))
+				if (m.has(MeasureInfo.Bits.AlternativeEnding))
 					m.altEnding = buffer.getFront();
 			}
 
-			if(m.has(MeasureInfo.Bits.NewKeySignature))
+			if (m.has(MeasureInfo.Bits.NewKeySignature))
 			{
 				ks = buffer.getFront();		// GREYFIX: alterations_number
 				min = buffer.getFront();		// GREYFIX: minor
 			}
 
-			if(ver >= 0x500)
+			if (ver >= 0x500)
 			{
-				if(m.has(MeasureInfo.Bits.TSNumerator) || m.has(MeasureInfo.Bits.TSDenimonator))
+				if (m.has(MeasureInfo.Bits.TSNumerator) || m.has(MeasureInfo.Bits.TSDenimonator))
 					buffer.getFrontN(4); // unknown?
 
-				if(!m.has(MeasureInfo.Bits.AlternativeEnding))
+				if (!m.has(MeasureInfo.Bits.AlternativeEnding))
 					buffer.getFront();
 
 				m.shuffleFeel = buffer.getFront();
@@ -606,15 +604,15 @@ private:
 	void readTrackProperties(ref const(ubyte)[] buffer)
 	{
 		ubyte bitmask;
-		foreach(i, ref t; tracks)
+		foreach (i, ref t; tracks)
 		{
-			if(ver > 0x500)
+			if (ver > 0x500)
 			{
-				if(i == 0)
+				if (i == 0)
 					bitmask = buffer.getFront(); // note: maybe this isn't he bitmask??
 				buffer.getFront(); // unknown? (88...)
 			}
-			else if(ver == 0x500)
+			else if (ver == 0x500)
 			{
 				// what are these?
 				buffer.getFront(); // (00, FF, FF, FF, 00, 00)
@@ -633,7 +631,7 @@ private:
 			t.strings = new Track.String[numStrings];
 
 			// Parse [0..string-1] with real string tune data in reverse order
-			for(ptrdiff_t j = t.numStrings-1; j >= 0; --j)
+			for (ptrdiff_t j = t.numStrings-1; j >= 0; --j)
 			{
 				int note = buffer.getFrontAs!int();
 				assert(note < 128, "Invalid tuning");
@@ -641,7 +639,7 @@ private:
 			}
 
 			// Throw out the other useless garbage in [string..MAX-1] range
-			for(size_t j = t.numStrings; j < STRING_MAX_NUMBER; j++)
+			for (size_t j = t.numStrings; j < STRING_MAX_NUMBER; j++)
 				buffer.getFrontAs!int();
 
 			// GREYFIX: auto flag here?
@@ -653,10 +651,10 @@ private:
 			t.capo = buffer.getFrontAs!int();		// GREYFIX: Capo
 			t.colour = buffer.getFrontAs!int();		// GREYFIX: Color
 
-			if(ver >= 0x500)
+			if (ver >= 0x500)
 			{
 				buffer.getFrontN(ver > 0x500 ? 49 : 44);
-				if(ver > 0x500)
+				if (ver > 0x500)
 				{
 					buffer.readDelphiString();
 					buffer.readDelphiString();
@@ -671,20 +669,20 @@ private:
 			t.patch = midiTracks[0][i].patch;
 		}
 
-		if(ver >= 0x500)
+		if (ver >= 0x500)
 			buffer.getFrontN(ver == 0x500 ? 2 : 1); // unknown?
 	}
 
 	void readTabs(ref const(ubyte)[] buffer)
 	{
-		foreach(ref t; tracks)
+		foreach (ref t; tracks)
 			t.measures = new Measure[measures.length];
 
-		foreach(i, ref mi; measures)
+		foreach (i, ref mi; measures)
 		{
-			foreach(j, ref t; tracks)
+			foreach (j, ref t; tracks)
 			{
-				if(ver >= 0x500 && (i != 0 || j != 0))
+				if (ver >= 0x500 && (i != 0 || j != 0))
 					buffer.getFront(); // unknown? Note: Doesn't seem to be present for the very first measure
 
 				Measure* m = &t.measures[i];
@@ -698,7 +696,7 @@ private:
 	void readMeasure(ref const(ubyte)[] buffer, ref Track t, Measure* m)
 	{
 		int numVoices = ver >= 0x500 ? 2 : 1;
-		foreach(int v; 0..numVoices)
+		foreach (int v; 0..numVoices)
 		{
 			int numBeats = buffer.getFrontAs!int();
 			assert(numBeats >= 0 && numBeats <= 128, "insane number of beats");
@@ -706,7 +704,7 @@ private:
 			m.voices[v].beat = cast(uint)t.beats.length;
 			m.voices[v].numBeats = numBeats;
 
-			foreach(_; 0..numBeats)
+			foreach (_; 0..numBeats)
 				readBeat(buffer, t);
 		}
 	}
@@ -717,7 +715,7 @@ private:
 
 		b.bitmask = buffer.getFront();
 
-		if(b.has(Beat.Bits.Silent))
+		if (b.has(Beat.Bits.Silent))
 			b.pauseKind = buffer.getFrontAs!(Beat.PauseKind)(); // GREYFIX: pause_kind
 
 		// Guitar Pro 4 beat lengths are as following:
@@ -729,28 +727,28 @@ private:
 		//  3 = 1/32 => 15            0
 		b.length = buffer.getFront();
 
-		if(b.has(Beat.Bits.N_Tuplet))
+		if (b.has(Beat.Bits.N_Tuplet))
 		{
 			b.tuple = buffer.getFrontAs!int();
 			assert(b.tuple >= 3 && b.tuple <= 13, "Invalid tuple?");
 		}
 
-		if(b.has(Beat.Bits.ChordDiagram))
+		if (b.has(Beat.Bits.ChordDiagram))
 			b.chord = readChord(buffer, t.strings.length);
 
-		if(b.has(Beat.Bits.Text))
+		if (b.has(Beat.Bits.Text))
 			b.text = buffer.readDelphiString().idup;
 
-		if(b.has(Beat.Bits.Effects))
+		if (b.has(Beat.Bits.Effects))
 			b.effects = readColumnEffects(buffer);
 
-		if(b.has(Beat.Bits.MixChange))
+		if (b.has(Beat.Bits.MixChange))
 		{
 			Beat.MixChange* mix = new Beat.MixChange;
 
 			mix.patch = buffer.getFront();
 
-			if(ver >= 0x500)
+			if (ver >= 0x500)
 				buffer.getFrontN(16);
 
 			mix.volume = buffer.getFront();
@@ -760,35 +758,35 @@ private:
 			mix.phase = buffer.getFront();
 			mix.tremolo = buffer.getFront();
 
-			if(ver >= 0x500)
+			if (ver >= 0x500)
 				readDelphiString(buffer); // tempo name
 
 			mix.tempo = buffer.getFrontAs!int();
 
 			// transitions
-			if(mix.volume != -1)   mix.volumeTrans = buffer.getFront();
-			if(mix.pan != -1)      mix.panTrans = buffer.getFront();
-			if(mix.chorus != -1)   mix.chorusTrans = buffer.getFront();
-			if(mix.reverb != -1)   mix.reverbTrans = buffer.getFront();
-			if(mix.phase != -1)    mix.phaseTrans = buffer.getFront();
-			if(mix.tremolo != -1)  mix.tremoloTrans = buffer.getFront();
-			if(mix.tempo != -1)
+			if (mix.volume != -1)   mix.volumeTrans = buffer.getFront();
+			if (mix.pan != -1)      mix.panTrans = buffer.getFront();
+			if (mix.chorus != -1)   mix.chorusTrans = buffer.getFront();
+			if (mix.reverb != -1)   mix.reverbTrans = buffer.getFront();
+			if (mix.phase != -1)    mix.phaseTrans = buffer.getFront();
+			if (mix.tremolo != -1)  mix.tremoloTrans = buffer.getFront();
+			if (mix.tempo != -1)
 			{
 				mix.tempoTrans = buffer.getFront();
-				if(ver > 0x500)
+				if (ver > 0x500)
 					buffer.getFront(); // unknown?
 			}
 
-			if(ver >= 0x400)
+			if (ver >= 0x400)
 			{
 				// bitmask: what should be applied to all tracks
 				mix.maskAll = buffer.getFront();
 			}
 
-			if(ver >= 0x500)
+			if (ver >= 0x500)
 			{
 				buffer.getFront();
-				if(ver > 0x500)
+				if (ver > 0x500)
 				{
 					readDelphiString(buffer);
 					readDelphiString(buffer);
@@ -799,22 +797,22 @@ private:
 		}
 
 		int strings = buffer.getFront();
-		if(strings)
+		if (strings)
 		{
-			foreach(s; 0..t.numStrings)
+			foreach (s; 0..t.numStrings)
 			{
-				if(strings & (1 << 6-s))
+				if (strings & (1 << 6-s))
 					b.notes[t.numStrings - s - 1] = readNote(buffer);
 			}
 		}
 
-		if(ver >= 0x500)
+		if (ver >= 0x500)
 		{
 			buffer.getFront(); // unknown?
 
 			int read = buffer.getFront(); // unknown?
-			//if(read == 8 || read == 10 || read == 24)
-			if(read & 0x08)
+			//if (read == 8 || read == 10 || read == 24)
+			if (read & 0x08)
 				buffer.getFront(); // unknown?
 		}
 
@@ -826,42 +824,42 @@ private:
 		Note* n = new Note;
 		n.bitmask = buffer.getFront();
 
-		if(n.has(Note.Bits.Type))
+		if (n.has(Note.Bits.Type))
 			n.type = buffer.getFrontAs!(Note.Type)();
 
-		if(ver < 0x500)
+		if (ver < 0x500)
 		{
-			if(n.has(Note.Bits.Duration))
+			if (n.has(Note.Bits.Duration))
 			{
 				n.length = buffer.getFront();
 				n.tuple = buffer.getFront();
 			}
 		}
 
-		if(n.has(Note.Bits.Dotted))
+		if (n.has(Note.Bits.Dotted))
 		{}
 
-		if(n.has(Note.Bits.Dynamic))
+		if (n.has(Note.Bits.Dynamic))
 			n.dynamic = buffer.getFront();
 
-		if(n.has(Note.Bits.Type))
+		if (n.has(Note.Bits.Type))
 			n.fret = buffer.getFront();
 
-		if(n.has(Note.Bits.Fingering))
+		if (n.has(Note.Bits.Fingering))
 		{
 			n.left = buffer.getFront();
 			n.right = buffer.getFront();
 		}
 
-		if(ver >= 0x500)
+		if (ver >= 0x500)
 		{
-			if(n.has(Note.Bits.Duration))
+			if (n.has(Note.Bits.Duration))
 				buffer.getFrontN(8); // duration data has changed?
 
 			buffer.getFront(); // unknown?
 		}
 
-		if(n.has(Note.Bits.HasEffects))
+		if (n.has(Note.Bits.HasEffects))
 			n.effect = readNoteEffect(buffer);
 
 		return n;
@@ -874,29 +872,29 @@ private:
 		e.bitmask1 = buffer.getFront();
 		e.bitmask2 = ver >= 0x400 ? buffer.getFront() : 0;
 
-		if(e.has(NoteEffect.Bits1.Bend))
+		if (e.has(NoteEffect.Bits1.Bend))
 			e.bend = readBend(buffer);
-		if(e.has(NoteEffect.Bits1.GraceNote))
+		if (e.has(NoteEffect.Bits1.GraceNote))
 		{
 			e.graceNote.fret = buffer.getFront();
 			e.graceNote.dynamic = buffer.getFront();
 			e.graceNote.transition = buffer.getFront();
 			e.graceNote.duration = buffer.getFront();
-			if(ver >= 0x500)
+			if (ver >= 0x500)
 				e.graceNote.flags = buffer.getFront();
 		}
-		if(ver >= 0x400)
+		if (ver >= 0x400)
 		{
-			if(e.has(NoteEffect.Bits2.TremloPicking))
+			if (e.has(NoteEffect.Bits2.TremloPicking))
 				e.tremloRate = buffer.getFront();
-			if(e.has(NoteEffect.Bits2.Slide))
+			if (e.has(NoteEffect.Bits2.Slide))
 				e.slideType = buffer.getFront();
-			if(e.has(NoteEffect.Bits2.Harmonic))
+			if (e.has(NoteEffect.Bits2.Harmonic))
 			{
 				e.harmonicType = buffer.getFront();
-				if(ver >= 0x500)
+				if (ver >= 0x500)
 				{
-					switch(e.harmonicType)
+					switch (e.harmonicType)
 					{
 						case 2: buffer.getFrontN(3); break;
 						case 3: buffer.getFront(); break;
@@ -905,7 +903,7 @@ private:
 					}
 				}
 			}
-			if(e.has(NoteEffect.Bits2.Trill))
+			if (e.has(NoteEffect.Bits2.Trill))
 			{
 				e.trillFret = buffer.getFront();
 				e.trillRate = buffer.getFront();
@@ -923,7 +921,7 @@ private:
 		b.value = buffer.getFrontAs!int();
 		int n = buffer.getFrontAs!int();
 		b.points = new Bend.Point[n];
-		foreach(i; 0..n)
+		foreach (i; 0..n)
 		{
 			b.points[i].time = buffer.getFrontAs!int();
 			b.points[i].value = buffer.getFrontAs!int();
@@ -939,12 +937,12 @@ private:
 		e.bitmask1 = buffer.getFront();
 		e.bitmask2 = ver >= 0x400 ? buffer.getFront() : 0;
 
-		if(e.has(BeatEffect.Bits1.TapSlap))
+		if (e.has(BeatEffect.Bits1.TapSlap))
 		{
 			ubyte effect = buffer.getFront();
-			if(ver < 0x400)
+			if (ver < 0x400)
 			{
-				switch(effect)
+				switch (effect)
 				{
 					case 0:                    // GREYFIX: tremolo bar
 						buffer.getFrontAs!int();
@@ -965,11 +963,11 @@ private:
 			else
 				e.tapType = cast(BeatEffect.TapType)effect;
 		}
-		if(e.has(BeatEffect.Bits2.TremoloBar))
+		if (e.has(BeatEffect.Bits2.TremoloBar))
 			e.bend = readBend(buffer);
-		if(e.has(BeatEffect.Bits1.StrokeEffect))
+		if (e.has(BeatEffect.Bits1.StrokeEffect))
 		{
-			if(ver > 0x500)
+			if (ver > 0x500)
 			{
 				e.upStroke = buffer.getFront();
 				e.downStroke = buffer.getFront();
@@ -980,13 +978,13 @@ private:
 				e.upStroke = buffer.getFront();
 			}
 		}
-		if(e.has(BeatEffect.Bits2.Pickstroke))
+		if (e.has(BeatEffect.Bits2.Pickstroke))
 			e.strokeType = buffer.getFrontAs!(BeatEffect.StrokeType)();
 /+
-		if(fx_bitmask1 & 0x01)      // GREYFIX: GP3 column-wide vibrato
+		if (fx_bitmask1 & 0x01)      // GREYFIX: GP3 column-wide vibrato
 		{
 		}
-		if(fx_bitmask1 & 0x02)      // GREYFIX: GP3 column-wide wide vibrato (="tremolo" in GP3)
+		if (fx_bitmask1 & 0x02)      // GREYFIX: GP3 column-wide wide vibrato (="tremolo" in GP3)
 		{
 		}
 +/
@@ -995,19 +993,19 @@ private:
 
 	ChordDiagram* readChord(ref const(ubyte)[] buffer, size_t numStrings)
 	{
-		if(ver < 0x500)
+		if (ver < 0x500)
 		{
 			ubyte v = buffer.getFront();
-			if((v & 0x01) == 0)
+			if ((v & 0x01) == 0)
 			{
 				string name = readDelphiString(buffer).idup;
 				int firstFret = buffer.getFrontAs!int();
-				if(firstFret != 0)
+				if (firstFret != 0)
 				{
-					foreach(i; 0..6)
+					foreach (i; 0..6)
 					{
 						int fret = buffer.getFrontAs!int();
-						if(i < numStrings)
+						if (i < numStrings)
 						{
 //							chord.addFretValue(i,fret);
 						}
@@ -1020,10 +1018,10 @@ private:
 				string name = buffer.readPascalString(21).idup;
 				buffer.getFrontN(4);
 				int firstFret = buffer.getFrontAs!int();
-				foreach(i; 0..7)
+				foreach (i; 0..7)
 				{
 					int fret = buffer.getFrontAs!int();
-					if(i < numStrings)
+					if (i < numStrings)
 					{
 //						chord.addFretValue(i,fret);
 					}
@@ -1037,10 +1035,10 @@ private:
 			string name = buffer.readPascalString(21).idup;
 			buffer.getFrontN(4);
 			int firstFret = buffer.getFrontAs!int();
-			foreach(i; 0..7)
+			foreach (i; 0..7)
 			{
 				int fret = buffer.getFrontAs!int();
-				if(i < numStrings)
+				if (i < numStrings)
 				{
 //					chord.addFretValue(i,fret);
 				}
@@ -1094,26 +1092,26 @@ private:
 		int n = 4, d = 4;
 		uint offset = 0;
 
-		foreach(i, ref m; measures)
+		foreach (i, ref m; measures)
 		{
 			m.tick = offset;
 
-			if(m.has(MeasureInfo.Bits.TSNumerator))
+			if (m.has(MeasureInfo.Bits.TSNumerator))
 				n = m.tn;
-			if(m.has(MeasureInfo.Bits.TSDenimonator))
+			if (m.has(MeasureInfo.Bits.TSDenimonator))
 				d = m.td;
 			uint measureLength = n*(4*ticksPerBeat / d);
 
-			foreach(ref t; tracks)
+			foreach (ref t; tracks)
 			{
 				Measure* tm = &t.measures[i];
 
-				foreach(v; 0..2)
+				foreach (v; 0..2)
 				{
 					uint measureOffset = offset;
 
 					Beat[] beats = t.beats[tm.voices[v].beat .. tm.voices[v].beat+tm.voices[v].numBeats];
-					if(beats.length > 0)
+					if (beats.length > 0)
 					{
 						bool bHasEmptySpace = false;
 
@@ -1121,17 +1119,17 @@ private:
 						int tupleBase = 1;
 						uint tupleOffset = measureOffset;
 
-						foreach(ref b; beats)
+						foreach (ref b; beats)
 						{
 							int newTuple = b.has(Beat.Bits.N_Tuplet) ? b.tuple : 1;
-							if(tuple != newTuple)
+							if (tuple != newTuple)
 							{
 								measureOffset = tupleOffset + (measureOffset - tupleOffset)/tuple;
 
 								tuple = newTuple;
 								tupleOffset = measureOffset;
 
-								switch(tuple)
+								switch (tuple)
 								{
 									case 1: tupleBase = 1; break;
 									case 3: tupleBase = 2; break;
@@ -1151,7 +1149,7 @@ private:
 							int div = 1 << (b.length + 2);
 							uint duration = 4*ticksPerBeat / div;
 
-							if(b.has(Beat.Bits.Dotted))
+							if (b.has(Beat.Bits.Dotted))
 								duration += duration / 2;
 
 							b.tick = tupleOffset + (measureOffset - tupleOffset)/tuple;
@@ -1161,9 +1159,9 @@ private:
 
 							bHasEmptySpace |= b.has(Beat.Bits.Silent) && b.pauseKind == Beat.PauseKind.Empty;
 
-							foreach(note; b.notes) if(note)
+							foreach (note; b.notes) if (note)
 							{
-								if(note.has(Note.Bits.Duration))
+								if (note.has(Note.Bits.Duration))
 								{
 									// TODO: we might need to understand this. TuxGuitar ignores it... :/
 								}
@@ -1173,9 +1171,9 @@ private:
 							}
 						}
 
-						if(!bHasEmptySpace)
+						if (!bHasEmptySpace)
 						{
-//							if(measureOffset != offset + measureLength)
+//							if (measureOffset != offset + measureLength)
 //								assert(measureOffset == offset + measureLength, "Incorrect measure length!");
 						}
 					}
@@ -1194,7 +1192,7 @@ const(char)[] readPascalString(ref inout(ubyte)[] buffer, int maxlen)
 {
 	ubyte l = buffer.getFront();
 	auto s = buffer.getFrontN(l);
-	if(maxlen - l > 0)
+	if (maxlen - l > 0)
 		buffer.getFrontN(maxlen - l);
 	return cast(const(char)[])s;
 }

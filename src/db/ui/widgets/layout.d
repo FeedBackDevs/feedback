@@ -35,13 +35,13 @@ class Layout : Widget
 	final @property ref const(MFVector) padding() const pure nothrow @nogc { return _padding; }
 	final @property void padding(const(MFVector) padding)
 	{
-		if(_padding != padding)
+		if (_padding != padding)
 		{
 			_padding = padding;
 
 			// potentially
 			MFVector newSize = max(_size, MFVector(padding.x + padding.z, padding.y + padding.w));
-			if(newSize != _size)
+			if (newSize != _size)
 				resize(newSize);
 			else
 				arrangeChildren();
@@ -51,7 +51,7 @@ class Layout : Widget
 	final @property uint fitFlags() const pure nothrow @nogc { return _fitFlags; }
 	final @property void fitFlags(uint fitFlags)
 	{
-		if(_fitFlags != fitFlags)
+		if (_fitFlags != fitFlags)
 		{
 			_fitFlags = fitFlags;
 			arrangeChildren();
@@ -78,9 +78,9 @@ class Layout : Widget
 
 	final void removeChild(Widget child)
 	{
-		foreach(i, c; _children)
+		foreach (i, c; _children)
 		{
-			if(child is c)
+			if (child is c)
 			{
 				removeChild(i);
 				return;
@@ -102,7 +102,7 @@ class Layout : Widget
 
 	final void clearChildren()
 	{
-		foreach(child; _children)
+		foreach (child; _children)
 			child.OnLayoutChanged.unsubscribe(&onLayoutDirty);
 
 		_children = null;
@@ -114,13 +114,13 @@ class Layout : Widget
 	{
 		depth = _children.length <= depth ? cast(int)_children.length - 1 : depth;
 		depth = cast(int)_children.length - depth - 1;
-		foreach(i, c; _children)
+		foreach (i, c; _children)
 		{
-			if(child is c)
+			if (child is c)
 			{
-				if(depth < i)
+				if (depth < i)
 					_children = _children[0..depth] ~ child ~ _children[depth..i] ~ _children[i+1..$];
-				else if(depth > i)
+				else if (depth > i)
 					_children = _children[0..i] ~ _children[i+1..depth] ~ child ~ _children[depth..$];
 				return depth;
 			}
@@ -130,9 +130,9 @@ class Layout : Widget
 
 	final int getDepth(const(Widget) child) const pure nothrow @nogc
 	{
-		foreach(int i, c; _children)
+		foreach (int i, c; _children)
 		{
-			if(c is child)
+			if (c is child)
 				return cast(int)_children.length - i - 1;
 		}
 		return -1;
@@ -150,15 +150,15 @@ class Layout : Widget
 
 	final int stackUnder(Widget child, Widget under)
 	{
-		if(child is under)
+		if (child is under)
 			return getDepth(child);
 
 		int other = -1;
-		foreach(int i, c; _children)
+		foreach (int i, c; _children)
 		{
-			if(c is child)
+			if (c is child)
 			{
-				if(other == -1)
+				if (other == -1)
 					other = i;
 				else
 				{
@@ -166,9 +166,9 @@ class Layout : Widget
 					return other + 1;
 				}
 			}
-			else if(c is under)
+			else if (c is under)
 			{
-				if(other == -1)
+				if (other == -1)
 					other = i;
 				else
 				{
@@ -187,7 +187,7 @@ class Layout : Widget
 
 	override void setProperty(const(char)[] property, const(char)[] value)
 	{
-		switch(property.toLower)
+		switch (property.toLower)
 		{
 			case "padding":
 				padding = getVectorFromString(value); break;
@@ -200,7 +200,7 @@ class Layout : Widget
 
 	override string getProperty(const(char)[] property)
 	{
-		if(!property.icmp("layout_flags"))
+		if (!property.icmp("layout_flags"))
 			return getBitfieldFromValue!FitFlags(_fitFlags);
 		return super.getProperty(property);
 	}

@@ -22,19 +22,19 @@ class Theme
 
 	static Theme load(string theme)
 	{
-		if(theme !in themes)
+		if (theme !in themes)
 		{
 			MFDebug_Warn(2, "Theme not present: " ~ theme);
 			return null;
 		}
 
-		if(themes[theme].theme)
+		if (themes[theme].theme)
 			return themes[theme].theme;
 
 		mountTheme(theme);
 
 		LayoutDescriptor desc = new LayoutDescriptor("theme.xml");
-		if(!desc)
+		if (!desc)
 		{
 			MFDebug_Warn(2, "Couldn't load theme.xml".ptr);
 			return null;
@@ -43,7 +43,7 @@ class Theme
 		Theme t = new Theme;
 
 		t.ui = desc.spawn();
-		if(!t.ui)
+		if (!t.ui)
 		{
 			MFDebug_Warn(2, "Couldn't spawn theme!".ptr);
 			return null;
@@ -59,22 +59,22 @@ class Theme
 private:
 	static void scanForThemes()
 	{
-		foreach(entry; dirEntries("system:themes/*", SpanMode.shallow))
+		foreach (entry; dirEntries("system:themes/*", SpanMode.shallow))
 		{
 			string name = entry.filename;
-			if(name.endsWith(".zip"))
+			if (name.endsWith(".zip"))
 			{
 				name = name[0..$-4];
 			}
-			else if(entry.attributes & (MFFileAttributes.Directory|MFFileAttributes.SymLink))
+			else if (entry.attributes & (MFFileAttributes.Directory|MFFileAttributes.SymLink))
 			{
-				if(!MFFileSystem_Exists(entry.filepath ~ "/theme.xml"))
+				if (!MFFileSystem_Exists(entry.filepath ~ "/theme.xml"))
 					continue;
 			}
 			else
 				continue;
 
-			if(name in themes)
+			if (name in themes)
 			{
 				MFDebug_Warn(2, "Theme already present: " ~ name);
 				continue;
@@ -88,10 +88,10 @@ private:
 	{
 		LocalTheme* t = &themes[theme];
 
-		if(t.isZip)
+		if (t.isZip)
 		{
 			MFFile* pFile = fuji.filesystem.MFFileSystem_Open(t.path);
-			if(!pFile)
+			if (!pFile)
 			{
 				MFDebug_Warn(2, "Couldn't open theme: " ~ t.path);
 				return;

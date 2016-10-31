@@ -1,7 +1,7 @@
 module db.ui.inputmanager;
 
 import db.tools.event;
-import db.player;
+import db.game.player;
 
 import fuji.fuji;
 import fuji.input;
@@ -129,9 +129,9 @@ public:
 
 	InputSource* findSource(MFInputDevice device, int deviceID = 0)
 	{
-		foreach(a; 0..numDevices)
+		foreach (a; 0..numDevices)
 		{
-			if(sources[a].device == device && sources[a].deviceID == deviceID)
+			if (sources[a].device == device && sources[a].deviceID == deviceID)
 				return &sources[a];
 		}
 		return null;
@@ -146,21 +146,21 @@ public:
 	void update()
 	{
 		// search for new events
-		foreach(a; 0..MaxSources)
+		foreach (a; 0..MaxSources)
 		{
-			if(sources[a].sourceID == -1)
+			if (sources[a].sourceID == -1)
 				continue;
 
 			MFInputDevice device = sources[a].device;
 			int deviceID = sources[a].deviceID;
 
-			if(device == MFInputDevice.Mouse)
+			if (device == MFInputDevice.Mouse)
 			{
-				if(mouseContacts[deviceID] == -1 && MFInput_IsReady(device, deviceID))
+				if (mouseContacts[deviceID] == -1 && MFInput_IsReady(device, deviceID))
 				{
-					foreach(c; 0..MaxContacts)
+					foreach (c; 0..MaxContacts)
 					{
-						if(!bCurrentContacts[c])
+						if (!bCurrentContacts[c])
 						{
 							bCurrentContacts[c] = true;
 							mouseContacts[deviceID] = c;
@@ -176,17 +176,17 @@ public:
 					}
 				}
 
-				if(MFDisplay_HasFocus())
+				if (MFDisplay_HasFocus())
 				{
-					foreach(int b; 0..MFMouseButton.MaxButtons)
+					foreach (int b; 0..MFMouseButton.MaxButtons)
 					{
-						if(mouseButtonContacts[deviceID][b] == -1)
+						if (mouseButtonContacts[deviceID][b] == -1)
 						{
-							if(MFInput_Read(MFMouseButton.LeftButton + b, device, deviceID))
+							if (MFInput_Read(MFMouseButton.LeftButton + b, device, deviceID))
 							{
-								foreach(c; 0..MaxContacts)
+								foreach (c; 0..MaxContacts)
 								{
-									if(!bCurrentContacts[c])
+									if (!bCurrentContacts[c])
 									{
 										bCurrentContacts[c] = true;
 										mouseButtonContacts[deviceID][b] = c;
@@ -211,7 +211,7 @@ public:
 					}
 /+
 					float wheel = MFInput_Read(MFMouseButton.Wheel, device, deviceID);
-					if(wheel)
+					if (wheel)
 					{
 						// we'll simulate a pinch event on the mouses hover contact
 						EventInfo info;
@@ -227,17 +227,17 @@ public:
 				}
 			}
 
-			if(device == MFInputDevice.TouchPanel)
+			if (device == MFInputDevice.TouchPanel)
 			{
 				MFTouchPanelState* pState = MFInput_GetContactInfo(deviceID);
 
-				foreach(b; 0..MaxContacts)
+				foreach (b; 0..MaxContacts)
 				{
-					if(b < pState.numContacts && touchContacts[b] == -1 && pState.contacts[b].phase < 3)
+					if (b < pState.numContacts && touchContacts[b] == -1 && pState.contacts[b].phase < 3)
 					{
-						for(int c=0; c<MaxContacts; ++c)
+						for (int c=0; c<MaxContacts; ++c)
 						{
-							if(!bCurrentContacts[c])
+							if (!bCurrentContacts[c])
 							{
 								bCurrentContacts[c] = true;
 								touchContacts[b] = c;
@@ -260,11 +260,11 @@ public:
 							}
 						}
 					}
-					else if(touchContacts[b] != -1 && (b >= pState.numContacts || pState.contacts[b].phase >= 3))
+					else if (touchContacts[b] != -1 && (b >= pState.numContacts || pState.contacts[b].phase >= 3))
 					{
 						int c = touchContacts[b];
 
-						if(!contacts[c].bDrag)
+						if (!contacts[c].bDrag)
 						{
 							// event classifies as a tap
 							EventInfo info;
@@ -293,13 +293,13 @@ public:
 				}
 			}
 
-			if(MFDisplay_HasFocus())
+			if (MFDisplay_HasFocus())
 			{
-				if(device == MFInputDevice.Keyboard)
+				if (device == MFInputDevice.Keyboard)
 				{
-					foreach(int b; 0..MFKey.Max)
+					foreach (int b; 0..MFKey.Max)
 					{
-						if(MFInput_WasPressed(b, device, deviceID))
+						if (MFInput_WasPressed(b, device, deviceID))
 						{
 							EventInfo info;
 							initButtonEvent(info, EventType.ButtonDown, b, a);
@@ -309,7 +309,7 @@ public:
 //							info.ev = IE_ButtonTriggered;
 //							OnInputEvent(*this, info);
 						}
-						else if(MFInput_WasReleased(b, device, deviceID))
+						else if (MFInput_WasReleased(b, device, deviceID))
 						{
 							EventInfo info;
 							initButtonEvent(info, EventType.ButtonUp, b, a);
@@ -317,17 +317,17 @@ public:
 						}
 					}
 				}
-				else if(device == MFInputDevice.Gamepad)
+				else if (device == MFInputDevice.Gamepad)
 				{
-					foreach(int b; 0..MFGamepadButton.Max)
+					foreach (int b; 0..MFGamepadButton.Max)
 					{
-						if(b >= MFGamepadButton.Axis_LX && b <= MFGamepadButton.Axis_RY)
+						if (b >= MFGamepadButton.Axis_LX && b <= MFGamepadButton.Axis_RY)
 						{
 							// handle axiis discreetly
 							float pX, pY;
 							float x = MFInput_Read(MFGamepadButton.Axis_LX, device, deviceID, &pX);
 							float y = MFInput_Read(MFGamepadButton.Axis_LY, device, deviceID, &pY);
-							if(x != pX || y != pY)
+							if (x != pX || y != pY)
 							{
 								EventInfo info;
 								initAxisEvent(info, x, y, 0, a);
@@ -336,14 +336,14 @@ public:
 
 							x = MFInput_Read(MFGamepadButton.Axis_RX, device, deviceID, &pX);
 							y = MFInput_Read(MFGamepadButton.Axis_RY, device, deviceID, &pY);
-							if(x != pX || y != pY)
+							if (x != pX || y != pY)
 							{
 								EventInfo info;
 								initAxisEvent(info, x, y, 1, a);
 								OnInputEvent(this, &info);
 							}
 						}
-						else if(MFInput_WasPressed(b, device, deviceID))
+						else if (MFInput_WasPressed(b, device, deviceID))
 						{
 							EventInfo info;
 							initButtonEvent(info, EventType.ButtonDown, b, a);
@@ -353,7 +353,7 @@ public:
 //							info.ev = IE_ButtonTriggered;
 //							OnInputEvent(*this, info);
 						}
-						else if(MFInput_WasReleased(b, device, deviceID))
+						else if (MFInput_WasReleased(b, device, deviceID))
 						{
 							EventInfo info;
 							initButtonEvent(info, EventType.ButtonUp, b, a);
@@ -373,32 +373,32 @@ public:
 		Moved[16] moved;
 		int numMoved = 0;
 
-		foreach(a; 0..MaxContacts)
+		foreach (a; 0..MaxContacts)
 		{
-			if(!bCurrentContacts[a])
+			if (!bCurrentContacts[a])
 				continue;
 
 			InputSource* pContactSource = contacts[a].pSource;
 			MFInputDevice device = pContactSource.device;
 			int deviceID = pContactSource.deviceID;
 
-			if(device != MFInputDevice.TouchPanel)
+			if (device != MFInputDevice.TouchPanel)
 			{
-				if(!MFInput_IsReady(device, deviceID))
+				if (!MFInput_IsReady(device, deviceID))
 				{
 					bCurrentContacts[a] = false;
 
-					if(device == MFInputDevice.Mouse)
+					if (device == MFInputDevice.Mouse)
 						mouseContacts[deviceID] = -1;
-					else if(device == MFInputDevice.TouchPanel)
+					else if (device == MFInputDevice.TouchPanel)
 						touchContacts[contacts[a].buttonID] = -1;
 				}
 
-				if(device == MFInputDevice.Mouse)
+				if (device == MFInputDevice.Mouse)
 				{
 					MFVector pos = correctPosition(MFInput_Read(MFMouseButton.XPos, device, deviceID), MFInput_Read(MFMouseButton.YPos, device, deviceID));
 
-					if(pos.x != contacts[a].x || pos.y != contacts[a].y)
+					if (pos.x != contacts[a].x || pos.y != contacts[a].y)
 					{
 						EventInfo info;
 						initEvent(info, EventType.Hover, a);
@@ -409,11 +409,11 @@ public:
 
 						OnInputEvent(this, &info);
 
-						if(!contacts[a].bDrag)
+						if (!contacts[a].bDrag)
 						{
 							float distX = pos.x - contacts[a].downX;
 							float distY = pos.y - contacts[a].downY;
-							if(sqrt(distX*distX + distY*distY) >= dragThreshold)
+							if (sqrt(distX*distX + distY*distY) >= dragThreshold)
 							{
 								contacts[a].bDrag = true;
 
@@ -423,7 +423,7 @@ public:
 							}
 						}
 
-						if(contacts[a].bDrag && contacts[a].bState)
+						if (contacts[a].bDrag && contacts[a].bState)
 						{
 							// send the drag event
 							info.ev = EventType.Drag;
@@ -438,9 +438,9 @@ public:
 					}
 				}
 
-				if(contacts[a].bState)
+				if (contacts[a].bState)
 				{
-					if(!MFInput_Read(contacts[a].buttonID, device, deviceID))
+					if (!MFInput_Read(contacts[a].buttonID, device, deviceID))
 					{
 						// send the up event
 						EventInfo info;
@@ -453,7 +453,7 @@ public:
 
 						OnInputEvent(this, &info);
 
-						if(!contacts[a].bDrag)
+						if (!contacts[a].bDrag)
 						{
 							// event classifies as a tap
 							initEvent(info, EventType.Tap, a);
@@ -467,7 +467,7 @@ public:
 						bCurrentContacts[a] = false;
 
 						// if it was a mouse, release the button to we can sense it again
-						if(device == MFInputDevice.Mouse)
+						if (device == MFInputDevice.Mouse)
 							mouseButtonContacts[deviceID][contacts[a].buttonID - MFMouseButton.LeftButton] = -1;
 					}
 					else
@@ -480,7 +480,7 @@ public:
 			{
 				MFVector pos = correctPosition(MFInput_Read(MFTouch_XPos(contacts[a].buttonID), MFInputDevice.TouchPanel), MFInput_Read(MFTouch_YPos(contacts[a].buttonID), MFInputDevice.TouchPanel));
 
-				if(pos.x != contacts[a].x || pos.y != contacts[a].y)
+				if (pos.x != contacts[a].x || pos.y != contacts[a].y)
 				{
 					EventInfo info;
 					initEvent(info, EventType.Hover, a);
@@ -493,7 +493,7 @@ public:
 
 					float distX = pos.x - contacts[a].downX;
 					float distY = pos.y - contacts[a].downY;
-					if(!contacts[a].bDrag && sqrt(distX*distX + distY*distY) >= dragThreshold)
+					if (!contacts[a].bDrag && sqrt(distX*distX + distY*distY) >= dragThreshold)
 					{
 						contacts[a].bDrag = true;
 
@@ -502,7 +502,7 @@ public:
 						info.hover.deltaY = pos.y - contacts[a].downY;
 					}
 
-					if(contacts[a].bDrag && contacts[a].bState)
+					if (contacts[a].bDrag && contacts[a].bState)
 					{
 						// send the drag event
 						info.ev = EventType.Drag;
@@ -523,15 +523,15 @@ public:
 			}
 		}
 
-		if(numMoved > 1)
+		if (numMoved > 1)
 		{
 			// calculate rotation and zoom for each pair of contacts
-			foreach(a; 0..numMoved)
+			foreach (a; 0..numMoved)
 			{
-				foreach(b; a+1..numMoved)
+				foreach (b; a+1..numMoved)
 				{
 					// only compare contacts from the same input source
-					if(contacts[moved[a].contact].pSource != contacts[moved[b].contact].pSource)
+					if (contacts[moved[a].contact].pSource != contacts[moved[b].contact].pSource)
 						continue;
 
 					MFVector center;
@@ -614,7 +614,7 @@ protected:
 
 		// scan for mouse devices
 		int count = MFInput_GetNumPointers();
-		for(int a=0; a < count && numDevices < MaxSources; ++a)
+		for (int a=0; a < count && numDevices < MaxSources; ++a)
 		{
 			InputSource* source = &sources[numDevices];
 
@@ -626,7 +626,7 @@ protected:
 		}
 
 		count = MFInput_GetNumKeyboards();
-		for(int a=0; a < count && numDevices < MaxSources; ++a)
+		for (int a=0; a < count && numDevices < MaxSources; ++a)
 		{
 			InputSource* source = &sources[numDevices];
 
@@ -638,7 +638,7 @@ protected:
 		}
 
 		count = MFInput_GetNumGamepads();
-		for(int a=0; a < count && numDevices < MaxSources; ++a)
+		for (int a=0; a < count && numDevices < MaxSources; ++a)
 		{
 			InputSource* source = &sources[numDevices];
 
@@ -650,7 +650,7 @@ protected:
 		}
 
 		count = MFInput_GetNumTouchPanels();
-		for(int a=0; a < count && numDevices < MaxSources; ++a)
+		for (int a=0; a < count && numDevices < MaxSources; ++a)
 		{
 			InputSource* source = &sources[numDevices];
 
@@ -666,7 +666,7 @@ protected:
 	{
 		assert(MFDisplay_GetDisplayOrientation() == MFDisplayOrientation.Normal, "Support display rotation!");
 
-		if(MFDisplay_GetDisplayOrientation() == MFDisplayOrientation.Normal)
+		if (MFDisplay_GetDisplayOrientation() == MFDisplayOrientation.Normal)
 		{
 			return MFVector(x, y);
 		}
@@ -687,7 +687,7 @@ protected:
 		info.buttonID = contacts[contact].buttonID;
 
 		// the mouse buttons are stored according to the MFInput enum values
-		if(info.buttonID != -1 && info.pSource.device == MFInputDevice.Mouse)
+		if (info.buttonID != -1 && info.pSource.device == MFInputDevice.Mouse)
 			info.buttonID -= MFMouseButton.LeftButton;
 	}
 

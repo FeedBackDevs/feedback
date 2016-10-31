@@ -45,14 +45,14 @@ function newplayer(source)
 	-- if the player is already bound, don't make a new one
 	-- TODO: doesn't work, since pointers can't be compared to nil (pointer and nil are different types)
 	if source.player then
-		print("alrady exists")
+		print("already exists")
 		return
 	end
 
 	-- create the player
 	for i = 1, 8 do
 		if theme.playerui[i].data.player == nil then
-			local player = Player(source)
+			local player = Player(source, nil)
 
 			print("enter player " .. i)
 			player.data.ui = theme.playerui[i]

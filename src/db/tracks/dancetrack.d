@@ -5,14 +5,13 @@ import fuji.materials.standard;
 
 import db.i.notetrack;
 import db.i.scorekeeper;
-import db.i.inputdevice;
+import db.inputs.inputdevice;
 import db.i.syncsource;
 import db.instrument;
-import db.performance;
+import db.game.performance;
 import db.renderer;
-import db.song;
-import db.songlibrary;
-import db.sequence;
+import db.library;
+import db.chart;
 
 import core.stdc.math;
 import std.string;
@@ -24,9 +23,9 @@ class DanceTrack : NoteTrack
 	{
 		super(performer);
 
-		Track* t = performer.performance.track;
-		Song song = t.song;
-		this.song = song;
+		Song* t = performer.performance.song;
+		Chart chart = t.chart;
+		this.chart = chart;
 
 		string fb = t.fretboard ? t.fretboard : "track0";
 		track = Material(fb);
@@ -41,7 +40,7 @@ class DanceTrack : NoteTrack
 		edge = Material("edge");
 		edge.parameters.zread = false;
 
-		switch(performer.sequence.variation)
+		switch (performer.sequence.variation)
 		{
 			case "dance-single":	numLanes = 4;  laneMap = [ 0,1,2,3,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1 ];	break;
 			case "dance-double":	numLanes = 8;  laneMap = [ 0,1,2,3,-1,-1,-1,-1,-1,-1,-1,-1,-1,4,5,6,7,-1,-1,-1,-1,-1,-1,-1 ];	break;
@@ -57,9 +56,9 @@ class DanceTrack : NoteTrack
 			default: break;
 		}
 
-//			__gshared immutable int[5] mapEz2Single		= [ UpLeft,LeftHand,Down,RightHand,UpRight ];
-//			__gshared immutable int[10] mapEz2Double	= [ UpLeft,LeftHand,Down,RightHand,UpRight,UpLeft2,LeftHand2,Down2,RightHand2,UpRight2 ];
-//			__gshared immutable int[7] mapEz2Real		= [ UpLeft,LeftHandBelow,LeftHand,Down,RightHand,RightHandBelow,UpRight ];
+//		__gshared immutable int[5] mapEz2Single		= [ UpLeft,LeftHand,Down,RightHand,UpRight ];
+//		__gshared immutable int[10] mapEz2Double	= [ UpLeft,LeftHand,Down,RightHand,UpRight,UpLeft2,LeftHand2,Down2,RightHand2,UpRight2 ];
+//		__gshared immutable int[7] mapEz2Real		= [ UpLeft,LeftHandBelow,LeftHand,Down,RightHand,RightHandBelow,UpRight ];
 
 
 		// we could remap the lanes from effects and options if we wanted to
@@ -71,9 +70,9 @@ class DanceTrack : NoteTrack
 		return Orientation.Tall;
 	}
 
-	override @property InstrumentType instrumentType()
+	override @property string instrumentType()
 	{
-		return InstrumentType.Dance;
+		return "dance";
 	}
 
 	override @property float laneWidth()
@@ -132,7 +131,7 @@ class DanceTrack : NoteTrack
 		float textureOffset = fmodf(scrollOffset, trackRepeat);
 
 		int a;
-		for(a=start; a<=end; a+=4)
+		for (a=start; a<=end; a+=4)
 		{
 			float z = cast(float)a;
 			MFSetTexCoord1(1.0f, 1.0f - (z+textureOffset) / trackRepeat);
@@ -166,9 +165,9 @@ class DanceTrack : NoteTrack
 		MFBegin(10 + 6*(numLanes-1));
 
 		MFSetColour(0.0f, 0.0f, 0.0f, 0.3f);
-		for(int col=1; col<numLanes; col++)
+		for (int col=1; col<numLanes; col++)
 		{
-			if(col > 1)
+			if (col > 1)
 				MFSetPosition(-halfFB + columnWidth*cast(float)col - 0.02f, 0.0f, cast(float)end);
 
 			MFSetTexCoord1(0,0);
@@ -214,25 +213,25 @@ class DanceTrack : NoteTrack
 		bar.setCurrent();
 		MFPrimitive(PrimType.TriStrip, 0);
 
-		int bottomTick = song.CalculateTickAtTime(bottomTime);
-		int res = song.resolution;
+		int bottomTick = chart.CalculateTickAtTime(bottomTime);
+		int res = chart.resolution;
 		int ticks = bHalfFrets ? res/2 : res;
 		int fretBeat = bottomTick + ticks - 1;
 		fretBeat -= fretBeat % ticks;
-		long fretTime = song.CalculateTimeOfTick(fretBeat);
+		long fretTime = chart.CalculateTimeOfTick(fretBeat);
 
-		while(fretTime < topTime)
+		while (fretTime < topTime)
 		{
 			bool halfBeat = (fretBeat % res) != 0;
 			bool bar = false;
 
-			if(!halfBeat)
+			if (!halfBeat)
 			{
-				ptrdiff_t lastTS = song.sync.GetMostRecentEvent(fretBeat, EventType.TimeSignature);
+				ptrdiff_t lastTS = chart.sync.GetMostRecentEvent(fretBeat, EventType.TimeSignature);
 
-				if(lastTS != -1)
-					bar = ((fretBeat - song.sync[lastTS].tick) % (song.sync[lastTS].ts.numerator*res)) == 0;
-				else if(fretBeat == 0)
+				if (lastTS != -1)
+					bar = ((fretBeat - chart.sync[lastTS].tick) % (chart.sync[lastTS].ts.numerator*res)) == 0;
+				else if (fretBeat == 0)
 					bar = true;
 			}
 
@@ -241,7 +240,7 @@ class DanceTrack : NoteTrack
 
 			float position = (fretTime - offset)*scrollSpeed * (1.0f/1_000_000.0f);
 
-			if(!halfBeat)
+			if (!halfBeat)
 				MFSetColourV(MFVector.white);
 			else
 			{
@@ -260,25 +259,25 @@ class DanceTrack : NoteTrack
 			MFEnd();
 
 			fretBeat += ticks;
-			fretTime = song.CalculateTimeOfTick(fretBeat);
+			fretTime = chart.CalculateTimeOfTick(fretBeat);
 		}
 
 		// draw the notes
 		auto notes = performer.sequence.notes.BetweenTimes(bottomTime, topTime);
 
-		foreach(ref e; notes)
+		foreach (ref e; notes)
 		{
-			if(e.event != EventType.Note)
+			if (e.event != EventType.Note)
 				continue;
 
 			// if it was hit, we don't need to render it
-			if(performer.scoreKeeper.WasHit(&e))
+			if (performer.scoreKeeper.WasHit(&e))
 				continue;
 
 			int key = laneMap[e.note.key];
 
 			// HACK: don't render notes for which we have no lanes!
-			if(key == -1)
+			if (key == -1)
 				continue;
 
 			MFVector pos;
@@ -289,7 +288,7 @@ class DanceTrack : NoteTrack
 			noteDepth = columnWidth*0.3f;
 			noteHeight = columnWidth*0.2f;
 
-			if(e.duration > 0)
+			if (e.duration > 0)
 			{
 				MFVector end = GetPosForTick(offset, e.tick + e.duration, RelativePosition.Center);
 
@@ -327,10 +326,10 @@ class DanceTrack : NoteTrack
 		MFRect rect = MFRect(0, 0, 1920, 1080);
 		MFView_SetOrtho(&rect);
 
-		auto songEvents = song.events.BetweenTimes(bottomTime, topTime);
-		foreach(ref e; songEvents)
+		auto songEvents = chart.events.BetweenTimes(bottomTime, topTime);
+		foreach (ref e; songEvents)
 		{
-			if(e.event != EventType.Event)
+			if (e.event != EventType.Event)
 				continue;
 
 			MFVector pos = GetPosForTime(offset, e.time, RelativePosition.Right);
@@ -341,9 +340,9 @@ class DanceTrack : NoteTrack
 		}
 
 		auto trackEvents = performer.sequence.notes.BetweenTimes(bottomTime, topTime);
-		foreach(ref e; trackEvents)
+		foreach (ref e; trackEvents)
 		{
-			if(e.event != EventType.Event)
+			if (e.event != EventType.Event)
 				continue;
 
 			MFVector pos = GetPosForTime(offset, e.time, RelativePosition.Left);
@@ -353,9 +352,9 @@ class DanceTrack : NoteTrack
 			MFFont_DrawTextAnchored(MFFont_GetDebugFont(), e.text.toStringz, r, MFFontJustify.Bottom_Right, 1920.0f, 30.0f, MFVector.white);
 		}
 
-		int tick = song.CalculateTickAtTime(offset);
+		int tick = chart.CalculateTickAtTime(offset);
 		MFFont_DrawText2(null, 1920 - 200, 10, 20, MFVector.yellow, ("Time: " ~ to!string(offset/1_000_000.0)).toStringz);
-		MFFont_DrawText2(null, 1920 - 200, 30, 20, MFVector.orange, ("Offset: " ~ to!string(tick/cast(double)song.resolution)).toStringz);
+		MFFont_DrawText2(null, 1920 - 200, 30, 20, MFVector.orange, ("Offset: " ~ to!string(tick/cast(double)chart.resolution)).toStringz);
 
 		MFView_Pop();
 	}
@@ -373,7 +372,7 @@ class DanceTrack : NoteTrack
 
 	override MFVector GetPosForTick(long offset, int tick, RelativePosition pos)
 	{
-		return GetPosForTime(offset, song.CalculateTimeOfTick(tick), pos);
+		return GetPosForTime(offset, chart.CalculateTimeOfTick(tick), pos);
 	}
 
 	override MFVector GetPosForTime(long offset, long time, RelativePosition pos)
@@ -386,25 +385,25 @@ class DanceTrack : NoteTrack
 
 	override void GetVisibleRange(long offset, int* pStartTick, int* pEndTick, long* pStartTime, long* pEndTime)
 	{
-		if(pStartTime || pStartTick)
+		if (pStartTime || pStartTick)
 		{
 			long startTime = offset + cast(long)start*1_000_000/scrollSpeed;
-			if(pStartTime)
+			if (pStartTime)
 				*pStartTime = startTime;
-			if(pStartTick)
-				*pStartTick = song.CalculateTickAtTime(startTime);
+			if (pStartTick)
+				*pStartTick = chart.CalculateTickAtTime(startTime);
 		}
-		if(pEndTime || pEndTick)
+		if (pEndTime || pEndTick)
 		{
 			long endTime = offset + cast(long)end*1_000_000/scrollSpeed;
-			if(pEndTime)
+			if (pEndTime)
 				*pEndTime = endTime;
-			if(pEndTick)
-				*pEndTick = song.CalculateTickAtTime(endTime);
+			if (pEndTick)
+				*pEndTick = chart.CalculateTickAtTime(endTime);
 		}
 	}
 
-	Song song;
+	Chart chart;
 
 	Material track;
 	Material bar;
@@ -413,7 +412,7 @@ class DanceTrack : NoteTrack
 private:
 	float GetX(RelativePosition pos)
 	{
-		switch(pos) with(RelativePosition)
+		switch (pos) with(RelativePosition)
 		{
 			case Center:
 				return 0;

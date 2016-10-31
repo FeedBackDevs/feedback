@@ -2,9 +2,10 @@ module db.scorekeepers.guitar;
 
 import db.tools.log;
 import db.i.scorekeeper;
-import db.i.inputdevice;
-import db.sequence;
+import db.inputs.inputdevice;
+import db.chart.track;
 import db.instrument;
+import db.instrument.guitarcontroller : GuitarInput;
 
 import std.signals;
 import std.algorithm;
@@ -27,9 +28,9 @@ struct GuitarNote
 
 class GuitarScoreKeeper : ScoreKeeper
 {
-	this(Sequence sequence, InputDevice input)
+	this(Track sequence, Instrument instrument)
 	{
-		super(sequence, input);
+		super(sequence, instrument);
 
 		numNotes = cast(int)sequence.notes.count!(a => a.event == EventType.Note);
 		notes = new GuitarNote[numNotes];
@@ -37,7 +38,7 @@ class GuitarScoreKeeper : ScoreKeeper
 		GuitarNote* pGuitarNote;
 
 		int i;
-		foreach(ref n; sequence.notes.filter!(a => a.event == EventType.Note))
+		foreach (ref n; sequence.notes.filter!(a => a.event == EventType.Note))
 		{
 			pGuitarNote = &notes[i++];
 
@@ -49,27 +50,27 @@ class GuitarScoreKeeper : ScoreKeeper
 	private GuitarNote[] GetNext()
 	{
 		size_t end = offset;
-		while(notes.length > end && notes[end].time == notes[offset].time)
+		while (notes.length > end && notes[end].time == notes[offset].time)
 			++end;
 		return notes[offset..end];
 	}
 
 	override void Update()
 	{
-		inputDevice.Update();
+		instrument.Update();
 
 		long tolerance = window*1000 / 2;
 
 		GuitarNote[] expecting = null;//GetNext();
-		if(expecting)
+		if (expecting)
 		{
-			foreach(ref e; inputDevice.events)
+			foreach (ref e; instrument.events)
 			{
-				if(e.event == InputEventType.On && (e.key >= GuitarInput.Green && e.key <= GuitarInput.Orange))
+				if (e.event == InputEventType.On && (e.key >= GuitarInput.Green && e.key <= GuitarInput.Orange))
 					keyDown.emit(e.key);
-				else if(e.event == InputEventType.Off && (e.key >= GuitarInput.Green && e.key <= GuitarInput.Orange))
+				else if (e.event == InputEventType.Off && (e.key >= GuitarInput.Green && e.key <= GuitarInput.Orange))
 					keyUp.emit(e.key);
-				else if(e.key == GuitarInput.Whammy)
+				else if (e.key == GuitarInput.Whammy)
 					whammy.emit(e.velocity);
 
 				// consider next note
@@ -84,7 +85,7 @@ class GuitarScoreKeeper : ScoreKeeper
 
 		}
 
-		inputDevice.Clear();
+		instrument.Clear();
 	}
 
 	override bool WasHit(Event* pEvent)

@@ -1,22 +1,22 @@
 module db.i.scorekeeper;
 
-import db.i.inputdevice;
+import db.instrument : Instrument;
 import db.i.syncsource;
-import db.sequence;
+import db.chart.track;
 
 import std.signals;
 
 abstract class ScoreKeeper
 {
-	this(Sequence sequence, InputDevice input)
+	this(Track track, Instrument instrument)
 	{
-		this.sequence = sequence;
-		this.inputDevice = input;
+		this.track = track;
+		this.instrument = instrument;
 	}
 
 	void Begin(SyncSource sync)
 	{
-		inputDevice.Begin(sync);
+		instrument.Begin(sync);
 	}
 
 	void Update();
@@ -26,14 +26,15 @@ abstract class ScoreKeeper
 	@property long averageError() { return numErrorSamples ? cumulativeError / numErrorSamples : 0; }
 	@property int hitPercentage() { return numNotes ? numHits*100 / numNotes : 0; }
 
-	Sequence sequence;
-	InputDevice inputDevice;
+	Track track;
+	Instrument instrument;
 
 	int numNotes;
 	int numHits;
 
 	int score;
 	int combo;
+	int longestCombo;
 	int multiplier = 1;
 
 	float starPower;

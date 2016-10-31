@@ -2,11 +2,12 @@ module db.scorekeepers.drums;
 
 import db.tools.log;
 import db.i.scorekeeper;
-import db.i.inputdevice;
-import db.sequence;
+import db.inputs.inputdevice;
+import db.chart.track;
 import db.instrument;
+import db.instrument.drums : DrumNotes, DrumInput;
 import db.game;
-import db.song;
+import db.chart;
 
 import std.signals;
 import std.algorithm;
@@ -28,12 +29,12 @@ struct DrumNote
 	bool bHit;
 }
 
-Sequence FabricateSequence(Song song, string type, Sequence from)
+Track fabricateTrack(Chart song, string type, Track from)
 {
 	int sourceDrums = from.variation[$-6] - '0';
 	int targetDrums = type[1] - '0';
 
-	Sequence s = new Sequence;
+	Track s = new Track;
 	s.part = from.part;
 	s.variation = from.variation;
 	s.difficulty = from.difficulty;
@@ -50,32 +51,32 @@ Sequence FabricateSequence(Song song, string type, Sequence from)
 	int lastCymbal = DrumNotes.Hat;
 
 	s.notes = new Event[from.notes.length];
-	foreach(i, ref ev; from.notes)
+	foreach (i, ref ev; from.notes)
 	{
 		s.notes[i] = ev;
 		Event* pEv = &s.notes[i];
 
-//		if(0)
-		if(pEv.event == EventType.Note)
+//		if (0)
+		if (pEv.event == EventType.Note)
 		{
 			int key = pEv.note.key;
 
-			if(targetDrums == 6 || (targetDrums == 5 && sourceDrums != 4))
+			if (targetDrums == 6 || (targetDrums == 5 && sourceDrums != 4))
 			{
-				if(bOrangeIsCrash)
+				if (bOrangeIsCrash)
 				{
 					// cymbal -> ride
 					// ride -> hat/ride
 
-					if(key == DrumNotes.Crash)
+					if (key == DrumNotes.Crash)
 						pEv.note.key = DrumNotes.Ride;
 
 					// crash may be assigned either hat or ride depending what was played recently
-					if(key == DrumNotes.Ride)
+					if (key == DrumNotes.Ride)
 						pEv.note.key = (lastCymbal == DrumNotes.Hat) ? DrumNotes.Ride : DrumNotes.Hat;
 
 					// we need to remember the last cymbal played
-					if(key == DrumNotes.Hat || key == DrumNotes.Crash)
+					if (key == DrumNotes.Hat || key == DrumNotes.Crash)
 						lastCymbal = key;
 				}
 				else
@@ -83,21 +84,21 @@ Sequence FabricateSequence(Song song, string type, Sequence from)
 					// cymbal -> hat/ride
 
 					// crash may be assigned either hat or ride depending what was played recently
-					if(key == DrumNotes.Crash)
+					if (key == DrumNotes.Crash)
 						pEv.note.key = (lastCymbal == DrumNotes.Hat) ? DrumNotes.Ride : DrumNotes.Hat;
 
 					// we need to remember the last cymbal played
-					if(key == DrumNotes.Hat || key == DrumNotes.Ride)
+					if (key == DrumNotes.Hat || key == DrumNotes.Ride)
 						lastCymbal = key;
 				}
 			}
 
-			if(targetDrums == 5)
+			if (targetDrums == 5)
 			{
-				if(sourceDrums == 4)
+				if (sourceDrums == 4)
 				{
 					// tom1 -> hat
-					if(key == DrumNotes.Tom1)
+					if (key == DrumNotes.Tom1)
 						pEv.note.key = DrumNotes.Hat;
 				}
 				else
@@ -106,29 +107,29 @@ Sequence FabricateSequence(Song song, string type, Sequence from)
 					// tom2 -> blue/green
 
 					// yellow toms are always blue, and blue may be promoted to green if there are yellow toms recently
-					if(key == DrumNotes.Tom1)
+					if (key == DrumNotes.Tom1)
 						pEv.note.key = DrumNotes.Tom2;
-					else if(key == DrumNotes.Tom2)
+					else if (key == DrumNotes.Tom2)
 						pEv.note.key = (lastTom == DrumNotes.Tom3) ? DrumNotes.Tom2 : DrumNotes.Tom3;
 
-					if(key == DrumNotes.Tom1 || key == DrumNotes.Tom3)
+					if (key == DrumNotes.Tom1 || key == DrumNotes.Tom3)
 						lastTom = key;
 				}
 			}
 
-			if(targetDrums < 8)
+			if (targetDrums < 8)
 			{
-				if(key == DrumNotes.Hat)
+				if (key == DrumNotes.Hat)
 					pEv.note.key = DrumNotes.Crash;
 			}
 
-			if(targetDrums == 4)
+			if (targetDrums == 4)
 			{
 				// if the source has only 2 cymbals, we need to know where to put the ride
-				if(sourceDrums == 5 || sourceDrums == 6)
+				if (sourceDrums == 5 || sourceDrums == 6)
 				{
 					// ride -> bFallbackBlue ? tom2 : tom3
-					if(key == DrumNotes.Ride)
+					if (key == DrumNotes.Ride)
 						pEv.note.key = bFallbackBlue ? DrumNotes.Tom2 : DrumNotes.Tom3;
 				}
 				else
@@ -136,7 +137,7 @@ Sequence FabricateSequence(Song song, string type, Sequence from)
 					// hat -> tom1
 					// crash/splash -> tom2
 					// ride -> tom3
-					switch(key)
+					switch (key)
 					{
 						case DrumNotes.Hat: pEv.note.key = DrumNotes.Tom1; break;
 						case DrumNotes.Crash: pEv.note.key = DrumNotes.Tom2; break;
@@ -156,15 +157,15 @@ Sequence FabricateSequence(Song song, string type, Sequence from)
 
 class DrumsScoreKeeper : ScoreKeeper
 {
-	this(Sequence sequence, InputDevice input)
+	this(Track sequence, Instrument instrument)
 	{
-		super(sequence, input);
+		super(sequence, instrument);
 
 		numNotes = cast(int)sequence.notes.count!(a => a.event == EventType.Note);
 		notes = new DrumNote[numNotes];
 
 		int i;
-		foreach(ref n; sequence.notes.filter!(a => a.event == EventType.Note))
+		foreach (ref n; sequence.notes.filter!(a => a.event == EventType.Note))
 		{
 			DrumNote* pDrumNote = &notes[i++];
 
@@ -176,7 +177,7 @@ class DrumsScoreKeeper : ScoreKeeper
 	private DrumNote[] GetNext()
 	{
 		size_t end = offset;
-		while(notes.length > end && notes[end].time == notes[offset].time)
+		while (notes.length > end && notes[end].time == notes[offset].time)
 			++end;
 		return notes[offset..end];
 	}
@@ -184,18 +185,18 @@ class DrumsScoreKeeper : ScoreKeeper
 	override void Update()
 	{
 		long audioLatency = Game.instance.settings.audioLatency*1_000;
-		long time = inputDevice.inputTime - audioLatency;
+		long time = instrument.inputTime - audioLatency;
 
-		inputDevice.Update();
+		instrument.Update();
 
 		long tolerance = window*1000 / 2;
 
 		// check for missed notes?
-		while(offset < notes.length)
+		while (offset < notes.length)
 		{
-			if(notes[offset].bHit)
+			if (notes[offset].bHit)
 				++offset;
-			else if(time > notes[offset].time + tolerance)
+			else if (time > notes[offset].time + tolerance)
 			{
 //				WriteLog(format("%6d missed: %d", notes[offset].time/1000, notes[offset].key), MFVector(1,1,1,1));
 
@@ -204,7 +205,7 @@ class DrumsScoreKeeper : ScoreKeeper
 				multiplier = 1;
 
 				noteMiss.emit(notes[offset].key);
-				if(oldCombo > 1)
+				if (oldCombo > 1)
 					lostCombo.emit();
 
 				++offset;
@@ -213,12 +214,12 @@ class DrumsScoreKeeper : ScoreKeeper
 				break;
 		}
 
-		foreach(ref e; inputDevice.events)
+		foreach (ref e; instrument.events)
 		{
-			if(e.key == DrumInput.HatPedal)
+			if (e.key == DrumInput.HatPedal)
 				hatPos.emit(e.velocity == 0);
 
-			if(e.event != InputEventType.On)
+			if (e.event != InputEventType.On)
 				continue;
 
 			// adjust timestamp to compensate for audio latency
@@ -232,16 +233,16 @@ class DrumsScoreKeeper : ScoreKeeper
 			int note = e.key;
 
 			// hat pedal down events trigger a hat hit
-			if(e.key == DrumInput.HatPedal && e.event == InputEventType.On)
+			if (e.key == DrumInput.HatPedal && e.event == InputEventType.On)
 				note = DrumInput.Cymbal1;
 
 			bool bDidHit = false;
-			for(size_t i = offset; i < notes.length && timestamp >= notes[i].time - tolerance; ++i)
+			for (size_t i = offset; i < notes.length && timestamp >= notes[i].time - tolerance; ++i)
 			{
-				if(notes[i].bHit)
+				if (notes[i].bHit)
 					continue;
 
-				if(notes[i].key == note)
+				if (notes[i].key == note)
 				{
 					long error = timestamp - notes[i].time;
 					cumulativeError += error;
@@ -254,10 +255,11 @@ class DrumsScoreKeeper : ScoreKeeper
 					// update counters
 					++numHits;
 					++combo;
+					longestCombo = max(combo, longestCombo);
 
 					int oldMultiplier = multiplier;
 					multiplier = min(1 + combo/10, 4);
-					if(bStarPowerActive)
+					if (bStarPowerActive)
 						multiplier *= 2;
 
 					// score note
@@ -265,16 +267,16 @@ class DrumsScoreKeeper : ScoreKeeper
 
 					// emit sognals
 					noteHit.emit(note, error);
-					if(multiplier > oldMultiplier)
+					if (multiplier > oldMultiplier)
 						multiplierIncrease.emit();
 
 					bDidHit = true;
-					if(i == offset)
+					if (i == offset)
 						++offset;
 					break;
 				}
 			}
-			if(!bDidHit)
+			if (!bDidHit)
 			{
 				WriteLog(format("%6d bad: %d (%g)", timestamp/1000, note, e.velocity), MFVector(1,1,1,1));
 
@@ -283,12 +285,12 @@ class DrumsScoreKeeper : ScoreKeeper
 				multiplier = 1;
 
 				badNote.emit(note);
-				if(oldCombo > 1)
+				if (oldCombo > 1)
 					lostCombo.emit();
 			}
 		}
 
-		inputDevice.Clear();
+		instrument.Clear();
 	}
 
 	override bool WasHit(Event* pEvent)

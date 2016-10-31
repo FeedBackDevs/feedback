@@ -21,7 +21,7 @@ class Label : Widget
 		_font = Font.debugFont;
 		_textHeight = _font.height;
 
-		if(bAutoHeight)
+		if (bAutoHeight)
 			updateHeight(_textHeight);
 	}
 
@@ -67,7 +67,7 @@ class Label : Widget
 
 	override void setProperty(const(char)[] property, const(char)[] value)
 	{
-		switch(property.toLower)
+		switch (property.toLower)
 		{
 			case "text":
 				text = value; break;
@@ -79,7 +79,7 @@ class Label : Widget
 				shadowDepth = to!float(value); break;
 			case "font":
 				_font = Font(value);
-				if(bAutoTextHeight)
+				if (bAutoTextHeight)
 					textHeight = _font.height;
 				adjustSize();
 				break;
@@ -92,12 +92,12 @@ class Label : Widget
 
 	override string getProperty(const(char)[] property)
 	{
-		switch(property.toLower)
+		switch (property.toLower)
 		{
 			case "text":
 				return text;
 			case "font":
-				if(_fontName)
+				if (_fontName)
 					return _fontName;
 //				return _font.name.idup;
 				return null;
@@ -124,11 +124,11 @@ protected:
 
 	final void adjustSize()
 	{
-		if(bAutoWidth || bAutoHeight)
+		if (bAutoWidth || bAutoHeight)
 		{
 			MFVector newSize = size;
 
-			if(_text.length > 0)
+			if (_text.length > 0)
 			{
 				auto t = Stringz!(256)(_text);
 
@@ -136,16 +136,16 @@ protected:
 				float height;
 				float width = MFFont_GetStringWidth(_font.handle, t, _textHeight, bAutoWidth ? 0 : _size.x, -1, &height);
 
-				if(bAutoWidth)
+				if (bAutoWidth)
 					newSize.x = width;
-				if(bAutoHeight)
+				if (bAutoHeight)
 					newSize.y = height;
 			}
 			else
 			{
-				if(bAutoWidth)
+				if (bAutoWidth)
 					newSize.x = 0;
-				if(bAutoHeight)
+				if (bAutoHeight)
 					newSize.y = _textHeight;
 			}
 
@@ -157,11 +157,11 @@ protected:
 	{
 		super.render();
 
-		if(_text.length > 0)
+		if (_text.length > 0)
 		{
 			auto t = Stringz!(256)(_text);
 
-			if(_shadowDepth > 0)
+			if (_shadowDepth > 0)
 			{
 				MFVector sd = MFVector(_shadowDepth, _shadowDepth);
 				MFFont_DrawTextJustified(_font.handle, t.cstr, sd, _size.x, _size.y, _textJustification, _textHeight, MFVector.black, -1, transform);

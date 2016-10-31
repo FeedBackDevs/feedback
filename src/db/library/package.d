@@ -1,5 +1,6 @@
-module db.songlibrary;
+module db.library;
 
+// TODO: remove like, all these imports!
 import fuji.dbg;
 import fuji.heap;
 import fuji.filesystem;
@@ -7,8 +8,8 @@ import fuji.system;
 import fuji.sound;
 import fuji.material;
 
-public import db.song;
-import db.sequence;
+public import db.chart : Chart;
+
 import db.formats.ghrbmidi;
 import db.formats.rawmidi;
 import db.formats.gtp;
@@ -55,65 +56,65 @@ enum Streams
 }
 
 
-struct Track
+struct Song
 {
-	@property Song song()
+	@property Chart chart()
 	{
-		if(!_song)
-			_song = new Song(localChart);
+		if (!_chart)
+			_chart = new Chart(localChart);
 
-		return _song;
+		return _chart;
 	}
 
 	@property string preview() { return _preview; }
 	@property string cover() { return coverImage; }
 
-	@property string path() { return song.songPath; }
+	@property string path() { return chart.songPath; }
 
-	@property string id() { return song.id; }
-	@property string name() { return song.name; }
-	@property string variant() { return song.variant; }
-	@property string subtitle() { return song.subtitle; }
-	@property string artist() { return song.artist; }
-	@property string album() { return song.album; }
-	@property string year() { return song.year; }
-	@property string packageName() { return song.packageName; }
-	@property string charterName() { return song.charterName; }
+	@property string id() { return chart.id; }
+	@property string name() { return chart.name; }
+	@property string variant() { return chart.variant; }
+	@property string subtitle() { return chart.subtitle; }
+	@property string artist() { return chart.artist; }
+	@property string album() { return chart.album; }
+	@property string year() { return chart.year; }
+	@property string packageName() { return chart.packageName; }
+	@property string charterName() { return chart.charterName; }
 
 	// TODO: tags should be split into an array
 //	@property string tags() { return song.tags; }
-	@property string genre() { return song.genre; }
-	@property string mediaType() { return song.mediaType; }
+	@property string genre() { return chart.genre; }
+	@property string mediaType() { return chart.mediaType; }
 
 	// TODO: is AA
 //	@property string params() { return song.params; }
 
-	@property int resolution() { return song.resolution; }
-	@property long startOffset() { return song.startOffset; }
+	@property int resolution() { return chart.resolution; }
+	@property long startOffset() { return chart.startOffset; }
 
 
 	// TODO: add something to fetch information about the streams...
 
 	void pause(bool bPause)
 	{
-		foreach(s; streams)
-			if(s)
+		foreach (s; streams)
+			if (s)
 				MFSound_PauseStream(s, bPause);
 	}
 
 	void seek(float offsetInSeconds)
 	{
-		foreach(s; streams)
-			if(s)
+		foreach (s; streams)
+			if (s)
 				MFSound_SeekStream(s, offsetInSeconds);
 	}
 
-	void setVolume(Part part, float volume)
+	void setVolume(string part, float volume)
 	{
 		// TODO: figure how parts map to playing streams
 	}
 
-	void setPan(Part part, float pan)
+	void setPan(string part, float pan)
 	{
 		// TODO: figure how parts map to playing streams
 	}
@@ -149,7 +150,7 @@ struct Track
 	Source[] sources;
 
 	// runtime data
-	Song _song;
+	Chart _chart;
 
 	MFAudioStream*[Streams.Count] streams;
 	MFVoice*[Streams.Count] voices;
@@ -172,7 +173,7 @@ struct Track
 
 	void prepare()
 	{
-		song.prepare();
+		chart.prepare();
 
 		// load audio streams...
 
@@ -182,7 +183,7 @@ struct Track
 		Source* source = &sources[0];
 
 		// prepare the music streams
-		foreach(ref s; source.streams)
+		foreach (ref s; source.streams)
 		{
 			streams[s.type] = MFSound_CreateStream(s.stream.toStringz, MFAudioStreamFlags.QueryLength | MFAudioStreamFlags.AllowSeeking);
 			MFSound_PlayStream(streams[s.type], MFPlayFlags.BeginPaused);
@@ -192,19 +193,19 @@ struct Track
 		}
 
 		// load data...
-		if(coverImage)
+		if (coverImage)
 			_cover = Material(coverImage);
-		if(background)
+		if (background)
 			_background = Material(background);
-		if(fretboard)
+		if (fretboard)
 			_fretboard = Material(fretboard);
 	}
 
 	void release()
 	{
-		foreach(ref s; streams)
+		foreach (ref s; streams)
 		{
-			if(s)
+			if (s)
 			{
 				MFSound_DestroyStream(s);
 				s = null;
@@ -229,7 +230,7 @@ class SongLibrary
 		try
 		{
 			string file = MFFileSystem_LoadText(filename).assumeUnique;
-			if(!file)
+			if (!file)
 				return;
 
 			// parse xml
@@ -237,25 +238,25 @@ class SongLibrary
 
 			xml.onEndTag["lastScan"] = (in Element e) { lastScan.ticks		= to!ulong(e.text()); };
 
-			xml.onStartTag["tracks"] = (ElementParser xml)
+			xml.onStartTag["songs"] = (ElementParser xml)
 			{
-				xml.onStartTag["track"] = (ElementParser xml)
+				xml.onStartTag["song"] = (ElementParser xml)
 				{
-					Track track;
+					Song song;
 					string id = xml.tag.attr["id"];
 
-					xml.onEndTag["localChart"]	= (in Element e) { track.localChart		= e.text(); };
-					xml.onEndTag["preview"]		= (in Element e) { track._preview		= e.text(); };
-					xml.onEndTag["video"]		= (in Element e) { track.video			= e.text(); };
-					xml.onEndTag["cover"]		= (in Element e) { track.coverImage		= e.text(); };
-					xml.onEndTag["background"]	= (in Element e) { track.background		= e.text(); };
-					xml.onEndTag["fretboard"]	= (in Element e) { track.fretboard		= e.text(); };
+					xml.onEndTag["localChart"]	= (in Element e) { song.localChart		= e.text(); };
+					xml.onEndTag["preview"]		= (in Element e) { song._preview		= e.text(); };
+					xml.onEndTag["video"]		= (in Element e) { song.video			= e.text(); };
+					xml.onEndTag["cover"]		= (in Element e) { song.coverImage		= e.text(); };
+					xml.onEndTag["background"]	= (in Element e) { song.background		= e.text(); };
+					xml.onEndTag["fretboard"]	= (in Element e) { song.fretboard		= e.text(); };
 
 					xml.onStartTag["sources"] = (ElementParser xml)
 					{
 						xml.onStartTag["source"] = (ElementParser xml)
 						{
-							Track.Source* src = track.addSource();
+							Song.Source* src = song.addSource();
 							xml.onEndTag["stream"]	= (in Element e)
 							{
 								src.addStream(e.text(), getEnumValue!Streams(e.tag.attr["type"]));
@@ -266,7 +267,7 @@ class SongLibrary
 					};
 					xml.parse();
 
-					library[id] = track;
+					library[id] = song;
 				};
 				xml.parse();
 			};
@@ -284,37 +285,37 @@ class SongLibrary
 
 		doc ~= new Element("lastScan", to!string(lastScan.ticks));
 
-		auto tracks = new Element("tracks");
-		foreach(id, ref track; library)
+		auto songs = new Element("songs");
+		foreach (id, ref song; library)
 		{
-			auto t = new Element("track");
-			t.tag.attr["id"] = id;
+			auto s = new Element("song");
+			s.tag.attr["id"] = id;
 
-			if(track.localChart)	t ~= new Element("localChart", track.localChart);
+			if (song.localChart)	s ~= new Element("localChart", song.localChart);
 
-			if(track._preview)		t ~= new Element("preview", track._preview);
-			if(track.video)			t ~= new Element("video", track.video);
+			if (song._preview)	s ~= new Element("preview", song._preview);
+			if (song.video)		s ~= new Element("video", song.video);
 
-			if(track.coverImage)	t ~= new Element("cover", track.coverImage);
-			if(track.background)	t ~= new Element("background", track.background);
-			if(track.fretboard)		t ~= new Element("fretboard", track.fretboard);
+			if (song.coverImage)	s ~= new Element("cover", song.coverImage);
+			if (song.background)	s ~= new Element("background", song.background);
+			if (song.fretboard)	s ~= new Element("fretboard", song.fretboard);
 
 			auto srcs = new Element("sources");
-			foreach(ref s; track.sources)
+			foreach (ref src; song.sources)
 			{
-				auto src = new Element("source");
-				foreach(ref stream; s.streams)
+				auto source = new Element("source");
+				foreach (ref stream; src.streams)
 				{
 					auto str = new Element("stream", stream.stream);
 					str.tag.attr["type"] = getEnumFromValue(stream.type);
-					src ~= str;
+					source ~= str;
 				}
-				srcs ~= src;
+				srcs ~= source;
 			}
-			t ~= srcs;
-			tracks ~= t;
+			s ~= srcs;
+			songs ~= s;
 		}
-		doc ~= tracks;
+		doc ~= songs;
 
 		string xml = join(doc.pretty(2),"\n");
 		MFFileSystem_SaveText("system:cache/library.xml", xml);
@@ -331,7 +332,7 @@ class SongLibrary
 		save();
 	}
 
-	Track* find(const(char)[] name)
+	Song* find(const(char)[] name)
 	{
 		return name in library;
 	}
@@ -343,7 +344,7 @@ class SongLibrary
 
 private:
 	// local database
-	Track[string] library;
+	Song[string] library;
 
 	MFFileTime lastScan;
 
@@ -353,64 +354,64 @@ private:
 
 		// first we'll do a pass recursing into directories, and trying to load .chart files
 		// this is because other format songs that were converted will have had a .chart file saved which we prefer to load
-		foreach(e; dirEntries(searchPattern, SpanMode.shallow))
+		foreach (e; dirEntries(searchPattern, SpanMode.shallow))
 		{
-			if(e.attributes & (MFFileAttributes.Directory | MFFileAttributes.SymLink))
+			if (e.attributes & (MFFileAttributes.Directory | MFFileAttributes.SymLink))
 			{
 				scanPath(e.filepath ~ "/");
 			}
-			else if(e.filename.extension.icmp(".chart") == 0 && e.writeTime > lastScan)
+			else if (e.filename.extension.icmp(".chart") == 0 && e.writeTime > lastScan)
 			{
-				Track track;
-				track._song = new Song(e.filepath);
+				Song song;
+				song._chart = new Chart(e.filepath);
 
 				// search for the music and other stuff...
 				string songName = e.filename.stripExtension.toLower;
-				foreach(f; dirEntries(e.directory ~ "/*", SpanMode.shallow))
+				foreach (f; dirEntries(e.directory ~ "/*", SpanMode.shallow))
 				{
 					string filename = f.filename.toLower;
 					string fn = filename.stripExtension;
-					if(isImageFile(filename))
+					if (isImageFile(filename))
 					{
-						if(fn[] == songName)
-							track.coverImage = f.filename;
-						else if(fn[] == songName ~ "-bg")
-							track.background = f.filename;
+						if (fn[] == songName)
+							song.coverImage = f.filename;
+						else if (fn[] == songName ~ "-bg")
+							song.background = f.filename;
 					}
-					else if(isAudioFile(filename))
+					else if (isAudioFile(filename))
 					{
-						if(fn[] == songName)
-							track.addSource().addStream(f.filename);
-						if(fn[] == songName ~ "-intro")
-							track._preview = f.filename;
+						if (fn[] == songName)
+							song.addSource().addStream(f.filename);
+						if (fn[] == songName ~ "-intro")
+							song._preview = f.filename;
 					}
-					else if(isVideoFile(filename))
+					else if (isVideoFile(filename))
 					{
-						if(fn[] == songName)
-							track.video = f.filename;
+						if (fn[] == songName)
+							song.video = f.filename;
 					}
 				}
 
-				library[track._song.id] = track;
+				library[song._chart.id] = song;
 			}
 		}
 
 		// search for other formats and try and load + convert them
-		foreach(file; dirEntries(searchPattern, SpanMode.shallow).filter!(e => !(e.attributes & (MFFileAttributes.Directory | MFFileAttributes.SymLink)) && e.writeTime > lastScan))
+		foreach (file; dirEntries(searchPattern, SpanMode.shallow).filter!(e => !(e.attributes & (MFFileAttributes.Directory | MFFileAttributes.SymLink)) && e.writeTime > lastScan))
 		{
 			try
 			{
 				string dir = file.directory ~ "/";
 
-				Track track;
+				Song song;
 				bool addTrack;
 
-				if(file.filename.icmp("song.ini") == 0)
+				if (file.filename.icmp("song.ini") == 0)
 				{
-					if(LoadGHRBMidi(&track, file))
+					if (LoadGHRBMidi(&song, file))
 						addTrack = true;
 				}
-				else switch(file.filename.extension.toLower)
+				else switch (file.filename.extension.toLower)
 				{
 					case ".chart":
 					{
@@ -423,21 +424,21 @@ private:
 					case ".sm":
 					{
 						// stepmania step file
-						if(LoadSM(&track, file))
+						if (LoadSM(&song, file))
 							addTrack = true;
 						break;
 					}
 					case ".ksf":
 					{
 						// kick is up step file (5-panel 'pump it up' steps)
-						if(LoadKSF(&track, file, this))
+						if (LoadKSF(&song, file, this))
 							addTrack = true;
 						break;
 					}
 					case ".dwi":
 					{
 						// danci with intensity step file
-						if(LoadDWI(&track, file))
+						if (LoadDWI(&song, file))
 							addTrack = true;
 						break;
 					}
@@ -445,7 +446,7 @@ private:
 					case ".bms":
 					{
 						// beatmania keys
-//						if(LoadBMS(file))
+//						if (LoadBMS(file))
 //							addTrack = true;
 						break;
 					}
@@ -455,30 +456,30 @@ private:
 					case ".gp5":
 					case ".gpx":
 					{
-						if(LoadGuitarPro(&track, file))
+						if (LoadGuitarPro(&song, file))
 							addTrack = true;
 						break;
 					}
 					case ".mid":
 					{
-						if(file.filename.icmp("notes.mid") == 0)
+						if (file.filename.icmp("notes.mid") == 0)
 							break;
 						// raw midi file
-						if(LoadRawMidi(&track, file))
+						if (LoadRawMidi(&song, file))
 							addTrack = true;
 						break;
 					}
 					default:
 				}
 
-				if(addTrack)
+				if (addTrack)
 				{
 					// write out a .chart for the converted song
-					track._song.saveChart(dir);
-					track.localChart = track._song.songPath;
+					song._chart.saveChart(dir);
+					song.localChart = song._chart.songPath;
 
-					if(track._song.id !in library)
-						library[track._song.id] = track;
+					if (song._chart.id !in library)
+						library[song._chart.id] = song;
 				}
 			}
 			catch(Exception e)
@@ -497,9 +498,9 @@ string archiveName(string artist, string song, string suffix = null)
 		dchar prev;
 		bool filter(dchar c)
 		{
-			if(c == '(' || c == '[')
+			if (c == '(' || c == '[')
 				++depth;
-			if(c == ')' || c == ']')
+			if (c == ')' || c == ']')
 			{
 				--depth;
 				return false;

@@ -3,48 +3,65 @@ module db.inputs.midi;
 import fuji.midi;
 
 import db.tools.log;
-import db.i.inputdevice;
+import db.inputs.inputdevice;
 import db.i.syncsource;
 import db.instrument;
-import db.sequence;
+import db.chart.track : Track;
 import db.game;
+import db.scorekeepers.drums;
+
+import fuji.fuji : MFBit;
+import fuji.device;
+import fuji.dbg;
 
 class Midi : InputDevice
 {
-	this(int midiDeviceId)
+	this(MidiInputDevice input, MidiOutputDevice output, ubyte deviceId, const(MFMidiEvent)* identityResponse)
 	{
-		deviceId = midiDeviceId;
+		device = input;
+		outputDevice = output;
+		this.deviceId = deviceId;
 
-		pMidiInput = MFMidi_OpenInput(midiDeviceId, true);
+		if (identityResponse)
+		{
+			vendor = identityResponse.generalInformation.identityReply.vendor;
+			family = identityResponse.generalInformation.identityReply.family;
+			member = identityResponse.generalInformation.identityReply.member;
+			major = identityResponse.generalInformation.identityReply.major;
+			minor = identityResponse.generalInformation.identityReply.minor;
+		}
 
-		// input is either drums, keyboard, or guitar (via guitar->midi converter)
-		// this needs to be configured; midi triggers mapped to inputs
-
-		// HACK: assume keyboard for now?
-		instrumentType = InstrumentType.Keyboard;
-		supportedParts = [ Part.Keys, Part.ProKeys ];
+		if (input.name)
+			deviceName = input.name.idup;
+		else
+			deviceName = input.id.idup;
 	}
 
-	~this()
+	override @property const(char)[] name() const
 	{
-		MFMidi_CloseInput(pMidiInput);
+		return deviceName;
 	}
 
-	override @property long inputTime()
+	override @property long inputTime() const
 	{
 		return Game.instance.performance.time - (deviceLatency + Game.instance.settings.midiLatency)*1_000;
+	}
+
+	void setDeviceName(string name)
+	{
+		deviceName = name;
 	}
 
 	override void Begin(SyncSource sync)
 	{
 		super.Begin(sync);
 
-		MFMidi_Start(pMidiInput);
+//		device.start(); // always running...
 	}
 
 	override void End()
 	{
-		MFMidi_Stop(pMidiInput);
+//		device.stop(); // always running...
 	}
 
 	override void Update()
@@ -52,18 +69,20 @@ class Midi : InputDevice
 		// read midi stream, populate events
 		MFMidiEvent[64] buffer;
 		MFMidiEvent[] events;
-		while((events = MFMidi_GetEvents(pMidiInput, buffer[])) != null)
+		do
 		{
-			foreach(ref e; events)
+			events = device.getEvents(buffer[]);
+
+			foreach (ref e; events)
 			{
 				// we only care about trigger events...
-				if(e.command >= 0x80 || e.command <= 0xA0)
+				if (e.ev <= MFMidiEventType.NoteAftertouch)
 				{
 					InputEvent ie;
 					ie.timestamp = cast(long)e.timestamp * 1_000 - (deviceLatency + Game.instance.settings.midiLatency)*1_000; // feedback times are microseconds
-					ie.event = (e.command == 0x80 || (e.command == 0x90 && e.data1 == 0)) ? InputEventType.Off : (e.command == 0x90 ? InputEventType.On : InputEventType.Change);
-					ie.key = e.data0;
-					ie.velocity = e.data1 * (1 / 127.0f);
+					ie.event = (e.ev == MFMidiEventType.NoteOff || (e.ev == MFMidiEventType.NoteOn && e.noteOn.velocity == 0)) ? InputEventType.Off : (e.ev == MFMidiEventType.NoteOn ? InputEventType.On : InputEventType.Change);
+					ie.key = e.noteOn.note;
+					ie.velocity = e.noteOn.velocity * (1 / 127.0f);
 
 					// TODO: we probably want to apply some map to 'note' for the configured instrument type
 					//...
@@ -72,18 +91,17 @@ class Midi : InputDevice
 				}
 			}
 		}
+		while (events.length == buffer.length);
 	}
 
-	MFMidiInput* pMidiInput;
-	int deviceId;
-}
+	const uint vendor;
+	const ushort family, member;
+	const ushort major, minor;
 
-Midi[] detectMidiDevices()
-{
-	Midi[] devices;
+private:
+	MidiInputDevice device;
+	MidiOutputDevice outputDevice;
+	ubyte deviceId;
 
-	foreach(i; 0..MFMidi_GetNumDevices())
-		devices ~= new Midi(i);
-
-	return devices;
+	string deviceName;
 }

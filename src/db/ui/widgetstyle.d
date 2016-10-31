@@ -14,7 +14,7 @@ struct WidgetStyle
 	static bool loadStylesFromXML(const(char)[] filename)
 	{
 		string file = MFFileSystem_LoadText(filename).assumeUnique;
-		if(!file)
+		if (!file)
 			return false;
 
 		try
@@ -50,7 +50,7 @@ struct WidgetStyle
 				};
 				xml.onEndTag["Properties"] = (in Element e)
 				{
-					foreach(a; e.tag.attr)
+					foreach (a; e.tag.attr)
 					{
 						a;
 /*
@@ -86,16 +86,16 @@ struct WidgetStyle
 
 	void apply(Widget widget)
 	{
-		if(!parent.length)
+		if (!parent.length)
 		{
 			// apply parent properties
 			WidgetStyle* pStyle = findStyle(parent);
-			if(pStyle)
+			if (pStyle)
 				pStyle.apply(widget);
 		}
 
 		// apply properties
-		foreach(ref p; properties)
+		foreach (ref p; properties)
 			widget.setProperty(p.property, p.value);
 	}
 
