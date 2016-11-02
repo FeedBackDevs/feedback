@@ -360,7 +360,7 @@ private:
 			{
 				scanPath(e.filepath ~ "/");
 			}
-			else if (e.filename.extension.icmp(".chart") == 0 && e.writeTime > lastScan)
+			else if (e.filename.extension.icmp(".chart") == 0 && (e.writeTime > lastScan || e.createTime > lastScan))
 			{
 				Song song;
 				song._chart = new Chart(e.filepath);
@@ -397,7 +397,7 @@ private:
 		}
 
 		// search for other formats and try and load + convert them
-		foreach (file; dirEntries(searchPattern, SpanMode.shallow).filter!(e => !(e.attributes & (MFFileAttributes.Directory | MFFileAttributes.SymLink)) && e.writeTime > lastScan))
+		foreach (file; dirEntries(searchPattern, SpanMode.shallow).filter!(e => !(e.attributes & (MFFileAttributes.Directory | MFFileAttributes.SymLink)) && (e.writeTime > lastScan || e.createTime > lastScan)))
 		{
 			try
 			{

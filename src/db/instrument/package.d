@@ -2,6 +2,7 @@ module db.instrument;
 
 import db.i.syncsource;
 import db.inputs.inputdevice;
+import db.lua : noscript;
 
 import fuji.dbg : debugLog;
 
@@ -11,10 +12,28 @@ struct InstrumentDesc
 	string[] parts;
 	string scopeKeeper;
 
+	Instrument function(InputDevice device, uint features) createInstrument;
 	Instrument function(InputDevice device) autoDetectInstrument;
 }
 
-class Instrument
+enum InputEventType
+{
+	On,
+	Off,
+	Change,
+}
+
+struct InputEvent
+{
+	long timestamp;
+
+	InputEventType event;
+
+	int key;			// some id for the note, or a midi pitch value
+	float velocity;		// velocity or amplitude. 0 on note up events
+}
+
+abstract class Instrument
 {
 	this(const InstrumentDesc* desc, InputDevice device, uint features)
 	{
@@ -30,11 +49,21 @@ class Instrument
 
 	@property long inputTime() const { return device.inputTime; }
 
-	@property InputEvent[] events() { return device.events; }
+	@property InputEvent[] events() { return stream; }
+
+@noscript:
 
 	void Clear(long until = -1)
 	{
-		device.Clear(until);
+		import std.range : empty, popFront;
+
+		if (until == -1)
+			stream = null;
+		else
+		{
+			while (!stream.empty && stream[0].timestamp < until)
+				stream.popFront();
+		}
 	}
 
 	void Update()
@@ -50,6 +79,10 @@ class Instrument
 	{
 		device.End();
 	}
+
+protected:
+
+	InputEvent[] stream;
 }
 
 void registerInstrumentType(ref const(InstrumentDesc) desc)

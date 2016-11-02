@@ -1,5 +1,6 @@
 module db.instrument.dance;
 
+import db.inputs.inputdevice;
 import db.instrument;
 
 enum TypeName = "dance";
@@ -53,15 +54,34 @@ enum DanceFlags
 	Sound,	// sound index should be found in the top byte
 }
 
+class Dance : Instrument
+{
+	this(InputDevice device, uint features)
+	{
+		super(&descriptor, device, features);
+	}
+
+	override @property InputEvent[] events()
+	{
+		assert("!!");
+		return null;
+	}
+}
+
 
 package:
 
 void registerType()
 {
-	registerInstrumentType(desc);
+	registerInstrumentType(descriptor);
 }
 
 
 private:
 
-immutable InstrumentDesc desc = InstrumentDesc(TypeName, Parts, ScoreKeeper);
+Instrument createInstrument(InputDevice device, uint features)
+{
+	return new Dance(device, features);
+}
+
+immutable InstrumentDesc descriptor = InstrumentDesc(TypeName, Parts, ScoreKeeper, &createInstrument);

@@ -45,6 +45,15 @@ class Chart
 
 			// parse xml
 			auto xml = new DocumentParser(file);
+			if(!xml.tag)
+			{
+				parseChart1_0(file);
+				return;
+			}
+
+			if (xml.tag.name[] != "chart")
+				throw new Exception("Not a .chart file!");
+			int chartVer = cast(int)(xml.tag.attr["version"].to!float*100);
 
 			xml.onEndTag["id"]				= (in Element e) { id			= e.text(); };
 			xml.onEndTag["name"]			= (in Element e) { name			= e.text(); };
@@ -119,6 +128,11 @@ class Chart
 		{
 			MFDebug_Warn(2, "Couldn't load settings: " ~ e.msg);
 		}
+	}
+
+	void parseChart1_0(string file)
+	{
+		// TODO: parse .chart v1.0
 	}
 
 	void saveChart(string path)

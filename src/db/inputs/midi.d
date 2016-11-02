@@ -64,34 +64,9 @@ class Midi : InputDevice
 //		device.stop(); // always running...
 	}
 
-	override void Update()
+	MFMidiEvent[] getEvents(MFMidiEvent[] eventBuffer)
 	{
-		// read midi stream, populate events
-		MFMidiEvent[64] buffer;
-		MFMidiEvent[] events;
-		do
-		{
-			events = device.getEvents(buffer[]);
-
-			foreach (ref e; events)
-			{
-				// we only care about trigger events...
-				if (e.ev <= MFMidiEventType.NoteAftertouch)
-				{
-					InputEvent ie;
-					ie.timestamp = cast(long)e.timestamp * 1_000 - (deviceLatency + Game.instance.settings.midiLatency)*1_000; // feedback times are microseconds
-					ie.event = (e.ev == MFMidiEventType.NoteOff || (e.ev == MFMidiEventType.NoteOn && e.noteOn.velocity == 0)) ? InputEventType.Off : (e.ev == MFMidiEventType.NoteOn ? InputEventType.On : InputEventType.Change);
-					ie.key = e.noteOn.note;
-					ie.velocity = e.noteOn.velocity * (1 / 127.0f);
-
-					// TODO: we probably want to apply some map to 'note' for the configured instrument type
-					//...
-
-					stream ~= ie;
-				}
-			}
-		}
-		while (events.length == buffer.length);
+		return device.getEvents(eventBuffer);
 	}
 
 	const uint vendor;

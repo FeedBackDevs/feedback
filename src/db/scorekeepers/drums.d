@@ -216,8 +216,8 @@ class DrumsScoreKeeper : ScoreKeeper
 
 		foreach (ref e; instrument.events)
 		{
-			if (e.key == DrumInput.HatPedal)
-				hatPos.emit(e.velocity == 0);
+//			if (e.key == DrumInput.HatPedal)
+//				hatPos.emit(e.velocity == 0);
 
 			if (e.event != InputEventType.On)
 				continue;
@@ -225,7 +225,7 @@ class DrumsScoreKeeper : ScoreKeeper
 			// adjust timestamp to compensate for audio latency
 			long timestamp = e.timestamp - audioLatency;
 
-//				WriteLog(format("%6d input: %d (%g)", timestamp/1000, e.key, e.velocity), MFVector(1,1,1,1));
+//			WriteLog(format("%6d input: %d (%g)", timestamp/1000, e.key, e.velocity), MFVector(1,1,1,1));
 
 			// consider next note
 			DrumNote[] next = GetNext();
@@ -233,8 +233,8 @@ class DrumsScoreKeeper : ScoreKeeper
 			int note = e.key;
 
 			// hat pedal down events trigger a hat hit
-			if (e.key == DrumInput.HatPedal && e.event == InputEventType.On)
-				note = DrumInput.Cymbal1;
+//			if (e.key == DrumInput.HatPedal && e.event == InputEventType.On)
+//				note = DrumInput.Cymbal1;
 
 			bool bDidHit = false;
 			for (size_t i = offset; i < notes.length && timestamp >= notes[i].time - tolerance; ++i)
@@ -302,5 +302,5 @@ class DrumsScoreKeeper : ScoreKeeper
 	size_t offset;
 
 	// drum specific
-	mixin Signal!(bool) hatPos;		// (bHatUp)
+//	mixin Signal!(bool) hatPos;		// (bHatUp)
 }

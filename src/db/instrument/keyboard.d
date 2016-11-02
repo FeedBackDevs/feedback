@@ -1,5 +1,6 @@
 module db.instrument.keyboard;
 
+import db.inputs.inputdevice;
 import db.instrument;
 
 enum TypeName = "keyboard";
@@ -138,15 +139,34 @@ __gshared immutable ubyte[128] WhiteKeys =
 	74		// G10
 ];
 
+class Keyboard : Instrument
+{
+	this(InputDevice device, uint features)
+	{
+		super(&descriptor, device, features);
+	}
+
+	override @property InputEvent[] events()
+	{
+		assert("!!");
+		return null;
+	}
+}
+
 
 package:
 
 void registerType()
 {
-	registerInstrumentType(desc);
+	registerInstrumentType(descriptor);
 }
 
 
 private:
 
-immutable InstrumentDesc desc = InstrumentDesc(TypeName, Parts, ScoreKeeper);
+Instrument createInstrument(InputDevice device, uint features)
+{
+	return new Keyboard(device, features);
+}
+
+immutable InstrumentDesc descriptor = InstrumentDesc(TypeName, Parts, ScoreKeeper, &createInstrument);

@@ -34,7 +34,7 @@ Controller findController(MFInputDevice device, int deviceId)
 {
 	foreach (c; controllers)
 	{
-		if (c.device == device && c.deviceId == deviceId)
+		if (c.isDevice(device, deviceId))
 			return c;
 	}
 	return null;
