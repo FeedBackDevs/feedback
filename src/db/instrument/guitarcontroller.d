@@ -155,7 +155,7 @@ Instrument detectInstrument(InputDevice device)
 	import db.inputs.controller;
 
 	Controller c = cast(Controller)device;
-	if (c)
+	if (c && c.device.device == MFInputDevice.Gamepad)
 	{
 		// detect instrument type... (we have a database of USB id's for various music game controllers)
 		uint flags = c.deviceFlags;

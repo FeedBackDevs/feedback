@@ -50,6 +50,10 @@ void initInputDevices()
 		Controller c = new Controller(MFInputDevice.Keyboard, i);
 		controllers ~= c;
 		devices ~= c;
+
+		Instrument instrument = detectInstrument(c);
+		if (instrument)
+			addInstrument(instrument);
 	}
 
 	// scan gamepads
@@ -59,6 +63,7 @@ void initInputDevices()
 
 		Controller c = new Controller(MFInputDevice.Gamepad, i);
 		controllers ~= c;
+		devices ~= c;
 
 		// detect instrument type... (we have a database of USB id's for various music game controllers)
 		uint flags = MFInput_GetDeviceFlags(MFInputDevice.Gamepad, i);
@@ -70,10 +75,7 @@ void initInputDevices()
 		{
 			Instrument instrument = detectInstrument(c);
 			if (instrument)
-			{
-				c.instrument = instrument;
 				addInstrument(instrument);
-			}
 		}
 	}
 

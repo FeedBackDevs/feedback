@@ -50,7 +50,5 @@ class Controller : db.inputs.inputdevice.InputDevice
 	ulong startTime;
 	bool bCantDetectFeatures;
 
-private:
-
 	fuji.input.InputDevice device;
 }

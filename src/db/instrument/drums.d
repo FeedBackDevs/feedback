@@ -85,7 +85,7 @@ class Drums : Instrument
 		super.Update();
 
 		Controller c = cast(Controller)device;
-		if (c)
+		if (c && c.device.device == MFInputDevice.Gamepad)
 		{
 			ulong rtcFreq = MFSystem_GetRTCFrequency();
 

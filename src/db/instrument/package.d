@@ -71,8 +71,9 @@ abstract class Instrument
 		device.Update();
 	}
 
-	void Begin(SyncSource sync)
+	void Begin(string part, SyncSource sync)
 	{
+		this.part = part;
 		device.Begin(sync);
 	}
 	void End()
@@ -81,6 +82,8 @@ abstract class Instrument
 	}
 
 protected:
+
+	string part;
 
 	InputEvent[] stream;
 }
@@ -150,6 +153,9 @@ Instrument detectInstrument(InputDevice device)
 
 void registerBuiltinInstrumentTypes()
 {
+	static import db.instrument.pckeyboard;
+	db.instrument.pckeyboard.registerType();
+
 	static import db.instrument.guitarcontroller;
 	db.instrument.guitarcontroller.registerType();
 

@@ -14,9 +14,9 @@ abstract class ScoreKeeper
 		this.instrument = instrument;
 	}
 
-	void Begin(SyncSource sync)
+	void Begin(string part, SyncSource sync)
 	{
-		instrument.Begin(sync);
+		instrument.Begin(part, sync);
 	}
 
 	void Update();

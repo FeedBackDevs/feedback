@@ -13,8 +13,8 @@ import fuji.fuji : MFBit;
 
 import luad.base : noscript;
 
-import db.game.player : Player;
 import db.library : archiveName;
+import db.instrument : Instrument;
 import db.instrument.drums;
 
 public import db.chart.part;
@@ -291,9 +291,8 @@ class Chart
 		return null;
 	}
 
-	Track GetSequence(Player player, const(char)[] variation, const(char)[] difficulty)
+	Track GetSequence(string part, Instrument instrument, const(char)[] variation, const(char)[] difficulty)
 	{
-		string part = player.input.part;
 		Part* pPart = part in parts;
 		if (!pPart || pPart.variations.empty)
 			return null;
@@ -310,7 +309,7 @@ class Chart
 		if (part[] == "drums")
 		{
 			// each drums configuration has a different preference for conversion
-			auto i = player.input.instrument;
+			auto i = instrument;
 			if ((i.features & MFBit!(DrumFeatures.Has4Drums)) && (i.features & MFBit!(DrumFeatures.Has3Cymbals)) && (i.features & MFBit!(DrumFeatures.HasHiHat)))
 				preferences = [ "-8drums", "-7drums", "-6drums", "-5drums", "-4drums" ];
 			else if ((i.features & MFBit!(DrumFeatures.Has4Drums)) && (i.features & MFBit!(DrumFeatures.Has2Cymbals)) && (i.features & MFBit!(DrumFeatures.HasHiHat)))

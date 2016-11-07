@@ -65,7 +65,7 @@ class Performer
 
 	void Begin(SyncSource sync)
 	{
-		scoreKeeper.Begin(sync);
+		scoreKeeper.Begin(player.input.part, sync);
 	}
 
 	void End()
@@ -108,9 +108,23 @@ class Performance
 		performers = null;
 		foreach (p; players)
 		{
-			Track s = song.chart.GetSequence(p, p.variation, p.difficulty);
+			Track s = song.chart.GetSequence(p.input.part, p.input.instrument, p.variation, p.difficulty);
 			if (s)
 				performers ~= new Performer(this, p, s);
+			else
+			{
+				// HACK: find a part the players instrument can play!
+				foreach (part; p.input.instrument.desc.parts)
+				{
+					s = song.chart.GetSequence(part, p.input.instrument, p.variation, p.difficulty);
+					if (s)
+					{
+						p.input.part = part;
+						performers ~= new Performer(this, p, s);
+						break;
+					}
+				}
+			}
 		}
 
 		ArrangePerformers();
