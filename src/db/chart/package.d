@@ -124,7 +124,7 @@ class Chart
 
 			songPath = filename;
 		}
-		catch(Exception e)
+		catch (Exception e)
 		{
 			MFDebug_Warn(2, "Couldn't load settings: " ~ e.msg);
 		}

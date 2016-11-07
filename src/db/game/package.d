@@ -30,16 +30,16 @@ import luad.state;
 
 class Game
 {
-	static void registerCallbacks()
+	void registerCallbacks()
 	{
-		MFSystem_RegisterSystemCallback(MFCallback.FileSystemInit, &staticInitFileSystem);
-		MFSystem_RegisterSystemCallback(MFCallback.InitDone, &staticInit);
-		MFSystem_RegisterSystemCallback(MFCallback.Deinit, &staticDeinit);
-		MFSystem_RegisterSystemCallback(MFCallback.Update, &staticUpdate);
-		MFSystem_RegisterSystemCallback(MFCallback.Draw, &staticDraw);
+		registerSystemCallback(MFCallback.FileSystemInit, &catchInitFileSystem);
+		registerSystemCallback(MFCallback.InitDone, &catchInit);
+		registerSystemCallback(MFCallback.Deinit, &catchDeinit);
+		registerSystemCallback(MFCallback.Update, &catchUpdate);
+		registerSystemCallback(MFCallback.Draw, &catchDraw);
 
-//		pChainResizeCallback = MFSystem_RegisterSystemCallback(MFCallback.DisplayResize, resizeCallback);
-		pChainResizeCallback = MFSystem_RegisterSystemCallback(MFCallback.DisplayReset, &resizeCallback);
+//		chainResize = registerSystemCallback(MFCallback.DisplayResize, resizeCallback);
+		chainResize = registerSystemCallback(MFCallback.DisplayReset, &catchCallback);
 	}
 
 	this()
@@ -309,91 +309,91 @@ class Game
 	// singleton stuff
 	static @property Game instance() { if (_instance is null) _instance = new Game; return _instance; }
 
-	static extern (C) void staticInitFileSystem() nothrow
+	void catchInitFileSystem() nothrow
 	{
 		try
 		{
-			_instance.initFileSystem();
+			initFileSystem();
 		}
-		catch(Exception e)
+		catch (Exception e)
 		{
 			MFDebug_Error(e.msg);
 		}
 	}
 
-	static extern (C) void staticInit() nothrow
+	void catchInit() nothrow
 	{
 		try
 		{
-			_instance.init();
+			init();
 		}
-		catch(Exception e)
+		catch (Exception e)
 		{
 			MFDebug_Error(e.msg);
 		}
 	}
 
-	static extern (C) void staticDeinit() nothrow
+	void catchDeinit() nothrow
 	{
 		try
 		{
-			_instance.deinit();
+			deinit();
 			_instance = null;
 		}
-		catch(Exception e)
+		catch (Exception e)
 		{
 			MFDebug_Error(e.msg);
 		}
 	}
 
-	static extern (C) void staticUpdate() nothrow
+	void catchUpdate() nothrow
 	{
 		try
 		{
-			_instance.update();
+			update();
 		}
-		catch(Exception e)
+		catch (Exception e)
 		{
 			MFDebug_Error(e.msg);
 		}
 	}
 
-	static extern (C) void staticDraw() nothrow
+	void catchDraw() nothrow
 	{
 		try
 		{
-			_instance.draw();
+			draw();
 		}
-		catch(Exception e)
+		catch (Exception e)
 		{
 			MFDebug_Error(e.msg);
 		}
 	}
 
-	static extern(C) void resizeCallback() nothrow
+	void catchCallback() nothrow
 	{
 		try
 		{
-			if (_instance.ui)
+			if (ui)
 			{
 				MFRect rect;
 				MFDisplay_GetDisplayRect(&rect);
 
-				_instance.ui.displayRect = rect;
+				ui.displayRect = rect;
 			}
 		}
-		catch(Exception e)
+		catch (Exception e)
 		{
 			MFDebug_Error(e.msg);
 		}
 		finally
 		{
-			if (pChainResizeCallback)
-				pChainResizeCallback();
+			if (chainResize)
+				chainResize();
 		}
 	}
 
 private:
 	__gshared Game _instance;
-	__gshared MFSystemCallbackFunction pChainResizeCallback;
+	__gshared SystemCallback chainResize;
 }

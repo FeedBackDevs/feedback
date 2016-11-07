@@ -101,7 +101,7 @@ void bindEvent(alias event)(const(char)[] handler)
 			auto ld = new LuaDelegate!(EventType.EventArgs)(handler);
 			d = ld.getDelegate;
 		}
-		catch(Exception e)
+		catch (Exception e)
 			MFDebug_Warn(2, "Couldn't create Lua delegate: " ~ e.msg);
 	}
 

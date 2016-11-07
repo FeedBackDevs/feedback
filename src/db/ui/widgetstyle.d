@@ -68,7 +68,7 @@ struct WidgetStyle
 			};
 			xml.parse();
 		}
-		catch(Exception e)
+		catch (Exception e)
 		{
 			MFDebug_Error(e.msg);
 			return false;

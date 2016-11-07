@@ -273,7 +273,7 @@ class SongLibrary
 			};
 			xml.parse();
 		}
-		catch(Exception e)
+		catch (Exception e)
 		{
 			MFDebug_Warn(2, "Couldn't load settings: " ~ e.msg);
 		}
@@ -482,7 +482,7 @@ private:
 						library[song._chart.id] = song;
 				}
 			}
-			catch(Exception e)
+			catch (Exception e)
 			{
 				MFDebug_Warn(2, "Failed to load '" ~ file.filepath ~ "': " ~ e.msg);
 			}

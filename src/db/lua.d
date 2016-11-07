@@ -32,7 +32,7 @@ struct LuaDelegate(Args...)
 
 			// TODO: check return value, if we returned a function, then call it with (widget, ev)
 		}
-		catch(Exception e)
+		catch (Exception e)
 		{
 			MFDebug_Error(e.msg);
 		}

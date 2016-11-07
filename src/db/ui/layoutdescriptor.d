@@ -52,7 +52,7 @@ public:
 			auto xml = new DocumentParser(file);
 			root = parseElement(xml);
 		}
-		catch(Exception e)
+		catch (Exception e)
 		{
 			MFDebug_Error(e.msg);
 			return false;
@@ -105,7 +105,7 @@ protected:
 		{
 			try
 				Game.instance.lua.doString(node.script);
-			catch(Exception e)
+			catch (Exception e)
 				MFDebug_Warn(2, "Script error: " ~ e.msg);
 		}
 

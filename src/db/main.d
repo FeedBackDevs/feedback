@@ -90,7 +90,7 @@ int Start()
 
 	Fuji_CreateEngineInstance();
 
-	Game.registerCallbacks();
+	game.registerCallbacks();
 
 	int r = MFMain(game.initParams);
 
