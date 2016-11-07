@@ -213,6 +213,133 @@ private:
 }
 
 
+class DrumConfig
+{
+	struct Config
+	{
+		enum Type
+		{
+			Unavailable,
+			Analog,
+			Digital
+		}
+
+		Type type;
+		int note;
+		int secondaryNote;
+		float triggerThreshold;
+	}
+
+	string deviceName;
+	ubyte[3] deviceId;
+	ushort family, member;
+
+	int hatPedalControl;
+	float hadPedalThreshold;
+
+	Config kick;
+	Config snare;
+	Config tom1;
+	Config tom2;
+	Config tom3;
+	Config hat;
+	Config crash;
+	Config ride;
+	Config cymbal3;
+
+	void read(const(char)[] filename)
+	{
+		import fuji.filesystem : MFFileSystem_LoadText;
+		import fuji.dbg : logWarning;
+		import std.exception : assumeUnique;
+		import std.typecons : Alias;
+		import std.xml;
+
+		try
+		{
+			string file = MFFileSystem_LoadText(filename).assumeUnique;
+
+			// parse xml
+			auto xml = new DocumentParser(file);
+			if (xml.tag.name[] != "dbdrums")
+				throw new Exception("Not a drums config file!");
+			int ver = cast(int)(xml.tag.attr["version"].to!float*100);
+
+			xml.onStartTag["device"] = (ElementParser xml) {
+				deviceName = xml.tag.attr["name"];
+				string id = xml.tag.attr["id"];
+				for (size_t i = 0; id.length >= i*2+2 && i < 3; ++i)
+					deviceId[i] = id[i*2..i*2+2].to!ubyte(16);
+				family = xml.tag.attr["family"].to!ushort(16);
+				member = xml.tag.attr["member"].to!ushort(16);
+			};
+			xml.onStartTag["triggers"] = (ElementParser xml) {
+				xml.onStartTag["trigger"] = (ElementParser xml)
+				{
+					foreach (m; __traits(allMembers, DrumConfig))
+					{
+						static if (is(typeof(__traits(getMember, DrumConfig, m)) == Config))
+						{
+							if (m[] == xml.tag.attr["name"][])
+							{
+								alias t = Alias!(__traits(getMember, this, m));
+								t.type = xml.tag.attr["type"].to!(Config.Type);
+								t.note = xml.tag.attr["note"].to!int;
+								t.secondaryNote = xml.tag.attr["secondary"].to!int;
+								t.triggerThreshold = xml.tag.attr["threshold"].to!float;
+							}
+						}
+					}
+
+					xml.parse();
+				};
+				xml.parse();
+			};
+			xml.parse();
+		}
+		catch (Exception e)
+		{
+			logWarning(2, "Couldn't load drum settings: %s", e.msg);
+		}
+
+	}
+	void write(const(char)[] filename) const
+	{
+		import fuji.filesystem : MFFileSystem_SaveText;
+		import std.typecons : Alias;
+		import std.xml;
+
+		auto doc = new Document(new Tag("dbdrums"));
+
+		doc ~= new Element("version", "1.0");
+		auto device = new Element("device");
+		device.tag.attr["name"] = deviceName;
+		device.tag.attr["id"] = format("%02x%02x%02x", deviceId[0], deviceId[1], deviceId[2]);
+		device.tag.attr["family"] = format("%04x", family);
+		device.tag.attr["member"] = format("%04x", member);
+		doc ~= device;
+		auto triggers = new Element("triggers");
+		foreach (m; __traits(allMembers, DrumConfig))
+		{
+			static if (is(typeof(__traits(getMember, DrumConfig, m)) == Config))
+			{
+				alias trigger = Alias!(__traits(getMember, this, m));
+				mixin("auto _" ~ m ~ " = new Element(\"trigger\");");
+				mixin("alias t = _" ~ m ~ ";");
+				t.tag.attr["type"] = trigger.type.to!string;
+				t.tag.attr["note"] = trigger.type.to!string;
+				t.tag.attr["secondary"] = trigger.type.to!string;
+				t.tag.attr["threshold"] = trigger.type.to!string;
+				triggers ~= t;
+			}
+		}
+		doc ~= triggers;
+
+		string xml = join(doc.pretty(2),"\n");
+		MFFileSystem_SaveText(filename, xml);
+	}
+}
+
 package:
 
 void registerType()
