@@ -58,6 +58,7 @@ bool LoadSM(Song* song, DirEntry file)
 		}
 		else if (filename[] == songName ~ ".lrc")
 		{
+			assert("load lyric file, populate vox track??");
 			// load lyrics into vocal track?
 			// move this into the DWI loader?
 		}
@@ -233,11 +234,24 @@ bool LoadSM(Song* song, const(char)[] sm, string path)
 
 				Track trk = new Track;
 				trk.part = "dance";
-				trk.variation = type.idup;
-				trk.difficulty = difficulty.idup;
+				trk.variationType = type.idup;
 				trk.difficultyMeter = to!int(meter);
 
-				// TODO: do something with desc?
+				enum Difficulty[string] difficultyMap = [ "Beginner": Difficulty.Beginner, "Easy": Difficulty.Easy, "Medium": Difficulty.Medium, "Hard": Difficulty.Hard, "Challenge": Difficulty.Expert ];
+				Difficulty* pDiff = difficulty in difficultyMap;
+				if (pDiff)
+				{
+					trk.difficulty = *pDiff;
+					trk.difficultyName = difficulty.idup; // look up proper DDR names?
+//					trk.variationName = desc.idup; // TODO: consider this; it can split the difficulty sequence into different variations though...
+				}
+				else
+				{
+					trk.variationName = desc.idup;
+					trk.difficulty = Difficulty.Expert;
+					trk.difficultyName = "Edit";
+				}
+
 				// TODO: do something with the radar values?
 
 				// generate note map
@@ -341,10 +355,10 @@ bool LoadSM(Song* song, const(char)[] sm, string path)
 				}
 
 				// find variation for tag, if there isn't one, create it.
-				Variation* pVariation = chart.getVariation(chart.getPart("dance"), type, true);
+				Variation* pVariation = chart.getVariation(chart.getPart("dance"), type, trk.variationName, true);
 
 				// create difficulty, set difficulty to feet rating
-				assert(!chart.getDifficulty(*pVariation, difficulty), "Difficulty already exists!");
+				assert(!chart.getDifficulty(*pVariation, trk.difficulty), "Difficulty already exists!");
 				pVariation.difficulties ~= trk;
 				break;
 

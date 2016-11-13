@@ -1,6 +1,7 @@
 module db.game.player;
 
 import db.game : Game;
+import db.chart : Difficulty;
 import db.inputs.controller : Controller;
 import db.inputs.devicemanager : findController;
 import db.instrument : Instrument, getInstruments;
@@ -79,7 +80,7 @@ class Player
 //	Input[] inputs;
 
 	string variation;
-	string difficulty;
+	Difficulty difficulty;
 
 	LuaTable data;
 }

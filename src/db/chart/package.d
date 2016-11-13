@@ -95,7 +95,10 @@ class Chart
 					xml.onStartTag["variation"] = (ElementParser xml)
 					{
 						Variation v;
-						v.name = xml.tag.attr["name"];
+						if ("type" in xml.tag.attr)
+							v.type = xml.tag.attr["type"];
+						if ("name" in xml.tag.attr)
+							v.name= xml.tag.attr["name"];
 
 						xml.onEndTag["hasCoopMarkers"]	= (in Element e) { v.bHasCoopMarkers = !icmp(e.text(), "true"); };
 
@@ -103,8 +106,12 @@ class Chart
 						{
 							Track s = new Track;
 							s.part = part;
-							s.variation = v.name;
-							s.difficulty = xml.tag.attr["name"];
+							s.variationType = v.type;
+							s.variationName = v.name;
+							s.difficulty = to!Difficulty(xml.tag.attr["level"]);
+							const(string)* pName = "name" in xml.tag.attr;
+							if (pName)
+								s.difficultyName = *pName;
 							s.difficultyMeter = to!int(xml.tag.attr["meter"]);
 
 							xml.onEndTag["sequence"] = (in Element e) { readSequence(e.text(), s.notes); };
@@ -204,14 +211,19 @@ class Chart
 			foreach (ref v; part.variations)
 			{
 				auto variationElement = new Element("variation");
-				variationElement.tag.attr["name"] = v.name;
+				if (v.type)
+					variationElement.tag.attr["type"] = v.type;
+				if (v.name)
+					variationElement.tag.attr["name"] = v.name;
 
 				if (v.bHasCoopMarkers)	variationElement ~= new Element("hasCoopMarkers", "true");
 
 				foreach (d; v.difficulties)
 				{
 					auto difficultyElement = new Element("difficulty");
-					difficultyElement.tag.attr["name"] = d.difficulty;
+					difficultyElement.tag.attr["level"] = to!string(d.difficulty);
+					if (d.difficultyName)
+						difficultyElement.tag.attr["name"] = d.difficultyName;
 					difficultyElement.tag.attr["meter"] = to!string(d.difficultyMeter);
 
 					difficultyElement ~= new Element("sequence", writeSequence(d.notes, 6));
@@ -258,40 +270,40 @@ class Chart
 		return *p;
 	}
 
-	Variation* getVariation(ref Part part, const(char)[] variation, bool bCreate = false)
+	Variation* getVariation(ref Part part, const(char)[] variationType, const(char)[] variationName, bool bCreate = false)
 	{
 		foreach (ref v; part.variations)
 		{
-			if (!variation || (variation && v.name[] == variation))
+			if ((!variationType || v.type[] == variationType) && (!variationName || v.name[] == variationName))
 				return &v;
 		}
 		if (bCreate)
 		{
-			part.variations ~= Variation(variation.idup);
+			part.variations ~= Variation(variationType.idup, variationName.idup);
 			return &part.variations.back;
 		}
 		return null;
 	}
 
-	Variation* getVariation(string part, const(char)[] variation, bool bCreate = false)
+	Variation* getVariation(string part, const(char)[] variationType, const(char)[] variationName, bool bCreate = false)
 	{
 		Part* pPart = part in parts;
 		if (!pPart)
 			return null;
-		return getVariation(*pPart, variation, bCreate);
+		return getVariation(*pPart, variationType, variationName, bCreate);
 	}
 
-	Track getDifficulty(ref Variation variation, const(char)[] difficulty)
+	Track getDifficulty(ref Variation variation, Difficulty difficulty)
 	{
 		foreach (d; variation.difficulties)
 		{
-			if (d.difficulty[] == difficulty)
+			if (d.difficulty == difficulty)
 				return d;
 		}
 		return null;
 	}
 
-	Track getSequence(string part, Instrument instrument, const(char)[] variation, const(char)[] difficulty)
+	Track getSequence(string part, Instrument instrument, const(char)[] variation, Difficulty difficulty)
 	{
 		Part* pPart = part in parts;
 		if (!pPart || pPart.variations.empty)
@@ -326,17 +338,17 @@ class Chart
 				// each drums configuration has a different preference for conversion
 				auto i = instrument;
 				if ((i.features & MFBit!(DrumFeatures.Has4Drums)) && (i.features & MFBit!(DrumFeatures.Has3Cymbals)) && (i.features & MFBit!(DrumFeatures.HasHiHat)))
-					preferences = [ "-8drums", "-7drums", "-6drums", "-5drums", "-4drums" ];
+					preferences = [ "8-drums", "7-drums", "6-drums", "5-drums", "4-drums" ];
 				else if ((i.features & MFBit!(DrumFeatures.Has4Drums)) && (i.features & MFBit!(DrumFeatures.Has2Cymbals)) && (i.features & MFBit!(DrumFeatures.HasHiHat)))
-					preferences = [ "-8drums", "-7drums", "-6drums", "-5drums", "-4drums" ];
+					preferences = [ "8-drums", "7-drums", "6-drums", "5-drums", "4-drums" ];
 				else if ((i.features & MFBit!(DrumFeatures.Has4Drums)) && (i.features & MFBit!(DrumFeatures.Has3Cymbals)))
-					preferences = [ "-7drums", "-8drums", "-6drums", "-5drums", "-4drums" ];
+					preferences = [ "7-drums", "8-drums", "6-drums", "5-drums", "4-drums" ];
 				else if ((i.features & MFBit!(DrumFeatures.Has4Drums)) && (i.features & MFBit!(DrumFeatures.Has2Cymbals)))
-					preferences = [ "-6drums", "-7drums", "-8drums", "-5drums", "-4drums" ];
+					preferences = [ "6-drums", "7-drums", "8-drums", "5-drums", "4-drums" ];
 				else if (i.features & MFBit!(DrumFeatures.Has2Cymbals))
-					preferences = [ "-5drums", "-6drums", "-7drums", "-8drums", "-4drums" ];
+					preferences = [ "5-drums", "6-drums", "7-drums", "8-drums", "4-drums" ];
 				else if (i.features & MFBit!(DrumFeatures.Has4Drums))
-					preferences = [ "-4drums", "-7drums", "-8drums", "-6drums", "-5drums" ];
+					preferences = [ "4-drums", "7-drums", "8-drums", "6-drums", "5-drums" ];
 				else
 					assert(false, "What kind of kit is this?!");
 
@@ -345,9 +357,9 @@ class Chart
 				{
 					foreach (ref v; pPart.variations)
 					{
-						if (v.name.endsWith(pref))
+						if (v.type[] == pref)
 						{
-							if (!variation || (variation && v.name.startsWith(variation)))
+							if (!variation || v.name[] == variation)
 							{
 								var = &v;
 								bFound = true;

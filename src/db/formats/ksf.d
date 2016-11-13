@@ -96,7 +96,8 @@ bool LoadKSF(Chart chart, const(char)[] ksf, const(char)[] filename)
 		enum KsfResolution = 48;
 		resolution = KsfResolution;
 
-		string type, difficulty;
+		string type;
+		Difficulty difficulty;
 		bool bParseMetadata;
 
 		with(DanceNotes)
@@ -107,51 +108,51 @@ bool LoadKSF(Chart chart, const(char)[] ksf, const(char)[] filename)
 			{
 				case "Easy_1.ksf":
 					type = "pump-single";
-					difficulty = "Easy";
+					difficulty = Difficulty.Easy;
 					panels = mapPump[0..5];
 					bParseMetadata = true;
 					break;
 				case "Hard_1.ksf":
 					type = "pump-single";
-					difficulty = "Medium";
+					difficulty = Difficulty.Medium;
 					panels = mapPump[0..5];
 					bParseMetadata = true;
 					break;
 				case "Crazy_1.ksf":
 					type = "pump-single";
-					difficulty = "Hard";
+					difficulty = Difficulty.Hard;
 					panels = mapPump[0..5];
 					bParseMetadata = true;
 					break;
 				case "Easy_2.ksf":
 					type = "pump-couple";
 					panels = mapPump;
-					difficulty = "Easy";
+					difficulty = Difficulty.Easy;
 					break;
 				case "Hard_2.ksf":
 					type = "pump-couple";
 					panels = mapPump;
-					difficulty = "Medium";
+					difficulty = Difficulty.Medium;
 					break;
 				case "Crazy_2.ksf":
 					type = "pump-couple";
 					panels = mapPump;
-					difficulty = "Hard";
+					difficulty = Difficulty.Hard;
 					break;
 				case "Double.ksf":
 					type = "pump-double";
 					panels = mapPump;
-					difficulty = "Medium";
+					difficulty = Difficulty.Medium;
 					break;
 				case "CrazyDouble.ksf":
 					type = "pump-double";
 					panels = mapPump;
-					difficulty = "Hard";
+					difficulty = Difficulty.Hard;
 					break;
 				case "HalfDouble.ksf":
 					type = "pump-double";
 					panels = mapPump;
-					difficulty = "Easy";	// NOTE: Should this be 'Easy', or 'Half'? Is the reduction to make it easier?
+					difficulty = Difficulty.Easy;	// NOTE: Should this be 'Easy', or 'Half'? Is the reduction to make it easier?
 					break;
 				default:
 					MFDebug_Warn(2, "Unknown .ksf file difficulty: " ~ filename);
@@ -161,7 +162,7 @@ bool LoadKSF(Chart chart, const(char)[] ksf, const(char)[] filename)
 
 		Track trk = new Track;
 		trk.part = "dance";
-		trk.variation = type;
+		trk.variationType = type;
 		trk.difficulty = difficulty;
 
 		bool bParseSync = sync.length == 0;
@@ -347,7 +348,7 @@ bool LoadKSF(Chart chart, const(char)[] ksf, const(char)[] filename)
 		}
 
 		// find variation, if there isn't one, create it.
-		Variation* pVariation = getVariation(chart.getPart("dance"), trk.variation, true);
+		Variation* pVariation = getVariation(chart.getPart("dance"), trk.variationType, trk.variationName, true);
 
 		// create difficulty, set difficulty to feet rating
 		assert(!getDifficulty(*pVariation, trk.difficulty), "Difficulty already exists!");

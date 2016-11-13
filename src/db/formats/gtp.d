@@ -155,13 +155,14 @@ bool LoadGPx(Chart song, GuitarProFile gpx)
 				Part* part = &song.getPart("drums");
 
 				part.part = "drums";
-				part.variations ~= Variation(t.name ~ "-8drums");
+				part.variations ~= Variation("8-drums", t.name);
 				Variation *variation = &part.variations[$-1];
 
 				db.chart.Track trk = new db.chart.Track();
 				trk.part = part.part;
-				trk.variation = variation.name;
-				trk.difficulty = "Expert";
+				trk.variationType = variation.type;
+				trk.variationName = variation.name;
+				trk.difficulty = Difficulty.Expert;
 				variation.difficulties ~= trk;
 
 				// parse drums

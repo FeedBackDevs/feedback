@@ -40,7 +40,7 @@ class DanceTrack : NoteTrack
 		edge = Material("edge");
 		edge.parameters.zread = false;
 
-		switch (performer.sequence.variation)
+		switch (performer.sequence.variationType)
 		{
 			case "dance-single":	numLanes = 4;  laneMap = [ 0,1,2,3,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1 ];	break;
 			case "dance-double":	numLanes = 8;  laneMap = [ 0,1,2,3,-1,-1,-1,-1,-1,-1,-1,-1,-1,4,5,6,7,-1,-1,-1,-1,-1,-1,-1 ];	break;

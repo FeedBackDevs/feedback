@@ -270,8 +270,8 @@ bool LoadDWI(Song* song, const(char)[] dwi, string path)
 						'L': MFBit!Right | MFBit!UpRight,
 						'M': MFBit!UpLeft | MFBit!UpRight ];
 
-					enum string[string] variationMap = [ "SINGLE":"dance-single", "DOUBLE":"dance-double", "COUPLE":"dance-couple", "SOLO":"dance-solo" ];
-					enum string[string] difficultyMap = [ "BEGINNER":"Beginner", "BASIC":"Easy", "ANOTHER":"Medium", "MANIAC":"Hard", "SMANIAC":"Challenge" ];
+					enum string[string] typeMap = [ "SINGLE":"dance-single", "DOUBLE":"dance-double", "COUPLE":"dance-couple", "SOLO":"dance-solo" ];
+					enum Difficulty[string] difficultyMap = [ "BEGINNER": Difficulty.Beginner, "BASIC": Difficulty.Easy, "ANOTHER": Difficulty.Medium, "MANIAC": Difficulty.Hard, "SMANIAC": Difficulty.Expert ];
 
 					auto parts = content.splitter(':');
 					auto diff = parts.front.strip; parts.popFront;
@@ -279,14 +279,25 @@ bool LoadDWI(Song* song, const(char)[] dwi, string path)
 					auto left = parts.front.strip; parts.popFront;
 					auto right = parts.empty ? null : parts.front.strip;
 
-					string variation = tag in variationMap ? variationMap[tag] : tag.idup;
-					string difficulty = diff in difficultyMap ? difficultyMap[diff] : diff.idup;
+					string type = tag in typeMap ? typeMap[tag] : tag.idup;
 
 					Track trk = new Track;
 					trk.part = "dance";
-					trk.variation = variation;
-					trk.difficulty = difficulty;
+					trk.variationType = type;
 					trk.difficultyMeter = to!int(meter);
+
+					Difficulty* pDiff = diff in difficultyMap;
+					if (pDiff)
+					{
+						trk.difficulty = *pDiff;
+						trk.difficultyName = diff.idup;
+					}
+					else
+					{
+						trk.variationName = diff.idup;
+						trk.difficulty = Difficulty.Expert; // TODO: change this to some non-ordered difficulty?
+						trk.difficultyName = "EDIT";
+					}
 
 					// read notes...
 					static void ReadNotes(Track trk, const(char)[] steps, int shift)
@@ -389,7 +400,7 @@ bool LoadDWI(Song* song, const(char)[] dwi, string path)
 					}
 
 					// find variation, if there isn't one, create it.
-					Variation* pVariation = chart.getVariation(chart.getPart("dance"), trk.variation, true);
+					Variation* pVariation = chart.getVariation(chart.getPart("dance"), trk.variationType, trk.variationName, true);
 
 					// create difficulty, set difficulty to feet rating
 					assert(!chart.getDifficulty(*pVariation, trk.difficulty), "Difficulty already exists!");

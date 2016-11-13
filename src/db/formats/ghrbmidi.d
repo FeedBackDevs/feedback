@@ -168,7 +168,7 @@ bool LoadMidi(Chart chart, MIDIFile midi, GHVersion ghVer = GHVersion.Unknown)
 {
 	with(chart)
 	{
-		__gshared immutable auto difficulties = [ "Easy", "Medium", "Hard", "Expert" ];
+		__gshared immutable auto difficulties = [ Difficulty.Easy, Difficulty.Medium, Difficulty.Hard, Difficulty.Expert ];
 
 		if (midi.format != 1)
 		{
@@ -302,7 +302,7 @@ bool LoadMidi(Chart chart, MIDIFile midi, GHVersion ghVer = GHVersion.Unknown)
 					if (!bFound)
 					{
 						ptrdiff_t v = pPart.variations.length;
-						pPart.variations ~= Variation(variation);
+						pPart.variations ~= Variation(null, variation);
 						pVariation = &pPart.variations[v];
 
 						// Note: Vox track only has one difficulty...
@@ -311,8 +311,8 @@ bool LoadMidi(Chart chart, MIDIFile midi, GHVersion ghVer = GHVersion.Unknown)
 						{
 							d = new Track;
 							d.part = part;
-							d.variation = variation;
-							d.difficulty = part[] == "vocals" ? "Default" : difficulties[j];
+							d.variationName = variation;
+							d.difficulty = part[] == "vocals" ? Difficulty.Expert : difficulties[j];
 							d.difficultyMeter = 0; // TODO: I think we can pull this from songs.ini?
 						}
 
@@ -331,7 +331,7 @@ bool LoadMidi(Chart chart, MIDIFile midi, GHVersion ghVer = GHVersion.Unknown)
 							{
 								// check if 'five_lane_drums' appears in song.ini
 								string* p5Lane = "five_lane_drums" in params;
-								bool b5Lane = p5Lane && (*p5Lane == "1" || !icmp(*p5Lane, "true"));
+								bool b5Lane = p5Lane && ((*p5Lane)[] == "1" || !icmp(*p5Lane, "true"));
 								if (b5Lane)
 									drumType = DrumsType.FiveDrums;
 								else
@@ -339,10 +339,10 @@ bool LoadMidi(Chart chart, MIDIFile midi, GHVersion ghVer = GHVersion.Unknown)
 							}
 
 							// prepend the drums type to the variation name
-							static __gshared immutable string[] variationNames = [ "-4drums", "-5drums", "-6drums", "-7drums", "-8drums" ];
-							pVariation.name = pVariation.name ~ variationNames[drumType];
+							static __gshared immutable string[] variationNames = [ "4-drums", "5-drums", "6-drums", "7-drums", "8-drums" ];
+							pVariation.type = variationNames[drumType];
 							foreach (d; pVariation.difficulties)
-								d.variation = pVariation.name;
+								d.variationType = pVariation.type;
 						}
 					}
 				}

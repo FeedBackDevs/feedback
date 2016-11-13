@@ -102,13 +102,14 @@ bool LoadRawMidi(Chart song, MIDIFile midi)
 					part = "drums";
 					pPart = &getPart(part);
 					pPart.part = part;
-					pPart.variations ~= Variation("Track " ~ to!string(track + 1) ~ "-8drums");
+					pPart.variations ~= Variation("8-drums", "Track " ~ to!string(track + 1));
 					pVariation = &pPart.variations[$-1];
 
 					Track trk = new Track();
 					trk.part = part;
-					trk.variation = pVariation.name;
-					trk.difficulty = "Expert";
+					trk.variationType = pVariation.type;
+					trk.variationName = pVariation.name;
+					trk.difficulty = Difficulty.Expert;
 					pVariation.difficulties ~= trk;
 				}
 				else if (bVox)

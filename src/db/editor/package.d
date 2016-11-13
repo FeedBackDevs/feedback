@@ -89,7 +89,7 @@ class Editor
 		editorPlayer = new Player(pKeyboard, null);
 		editorPlayer.input.part = "leadguitar";
 		editorPlayer.variation = null;
-		editorPlayer.difficulty = null;
+		editorPlayer.difficulty = Difficulty.Expert;
 
 		menuState = MenuState.MainMenu;
 		mainMenu.selection = 0;

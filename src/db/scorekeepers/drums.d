@@ -31,12 +31,13 @@ struct DrumNote
 
 Track fabricateTrack(Chart song, string type, Track from)
 {
-	int sourceDrums = from.variation[$-6] - '0';
-	int targetDrums = type[1] - '0';
+	int sourceDrums = from.variationType[0] - '0';
+	int targetDrums = type[0] - '0';
 
 	Track s = new Track;
 	s.part = from.part;
-	s.variation = from.variation;
+	s.variationType = type;
+	s.variationName = from.variationName;
 	s.difficulty = from.difficulty;
 	s.difficultyMeter = from.difficultyMeter;
 	s.numDoubleKicks = from.numDoubleKicks;

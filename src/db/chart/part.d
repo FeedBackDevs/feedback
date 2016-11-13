@@ -11,6 +11,7 @@ struct Part
 
 struct Variation
 {
+	string type;
 	string name;
 	Track[] difficulties;	// sequences for each difficulty
 
