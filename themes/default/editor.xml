@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<Frame align="Fill">
-	<Script src="editor.lua" />
-	<Label align="Center" text="Editor" text_height="60" text_colour="yellow" />
-</Frame>

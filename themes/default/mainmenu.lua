@@ -4,6 +4,7 @@ mainmenu.onEnter = function()
 	if mainmenu.element then
 		mainmenu.element.visibility = "Visible"
 	end
+	theme.playerui.element.visibility = "Visible"
 
 	-- set input device focus to default widgets...
 end
@@ -24,7 +25,7 @@ function selectDownload()
 end
 
 function selectEditor()
-	db.showScreen("editor")
+	startEditor()
 end
 
 function selectSettings()

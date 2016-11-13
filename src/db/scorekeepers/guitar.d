@@ -47,7 +47,7 @@ class GuitarScoreKeeper : ScoreKeeper
 		}
 	}
 
-	private GuitarNote[] GetNext()
+	private GuitarNote[] getNext()
 	{
 		size_t end = offset;
 		while (notes.length > end && notes[end].time == notes[offset].time)
@@ -55,9 +55,9 @@ class GuitarScoreKeeper : ScoreKeeper
 		return notes[offset..end];
 	}
 
-	override void Update()
+	override void update()
 	{
-		instrument.Update();
+		instrument.update();
 
 		long tolerance = window*1000 / 2;
 
@@ -85,10 +85,10 @@ class GuitarScoreKeeper : ScoreKeeper
 
 		}
 
-		instrument.Clear();
+		instrument.clear();
 	}
 
-	override bool WasHit(Event* pEvent)
+	override bool wasHit(Event* pEvent)
 	{
 		return pEvent.pScoreKeeperData ? (cast(GuitarNote*)pEvent.pScoreKeeperData).bHit : false;
 	}

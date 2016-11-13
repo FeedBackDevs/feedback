@@ -31,56 +31,55 @@ import fuji.materials.standard;
 import fuji.primitive;
 import fuji.render;
 
+
+enum Align
+{
+	None = -1,
+	Left = 0,
+	Center,
+	Right,
+	Fill
+}
+
+enum VAlign
+{
+	None = -1,
+	Top = 0,
+	Center,
+	Bottom,
+	Fill
+}
+
+enum Justification
+{
+	TopLeft = 0,
+	TopCenter,
+	TopRight,
+	TopFill,
+	CenterLeft,
+	Center,
+	CenterRight,
+	CenterFill,
+	BottomLeft,
+	BottomCenter,
+	BottomRight,
+	BottomFill,
+	FillLeft,
+	FillCenter,
+	FillRight,
+	Fill,
+	None
+}
+
+enum Visibility
+{
+	Visible = 0,
+	Invisible,
+	Gone
+}
+
 class Widget
 {
-	alias InputEventDelegate = UserInterface.InputEventDelegate;
-
-	enum Align
-	{
-		None = -1,
-		Left = 0,
-		Center,
-		Right,
-		Fill
-	}
-
-	enum VAlign
-	{
-		None = -1,
-		Top = 0,
-		Center,
-		Bottom,
-		Fill
-	}
-
-	enum Justification
-	{
-		TopLeft = 0,
-		TopCenter,
-		TopRight,
-		TopFill,
-		CenterLeft,
-		Center,
-		CenterRight,
-		CenterFill,
-		BottomLeft,
-		BottomCenter,
-		BottomRight,
-		BottomFill,
-		FillLeft,
-		FillCenter,
-		FillRight,
-		Fill,
-		None
-	}
-
-	enum Visibility
-	{
-		Visible = 0,
-		Invisible,
-		Gone
-	}
-
 	// properties
 	@property string typeName() const pure nothrow @nogc { return Unqual!(typeof(this)).stringof; }
 
@@ -129,7 +128,7 @@ class Widget
 	}
 
 	final @property Visibility visibility() const pure nothrow @nogc { return visible; }
-	final @property void visibility(Visibility visibility)
+	final @property void visibility(Visibility visibility) nothrow
 	{
 		Visibility old = visible;
 		if (visible != visibility)
@@ -154,7 +153,7 @@ class Widget
 	final @property void hoverable(bool hoverable) pure nothrow @nogc { bHoverable = hoverable; }
 
 	final @property ref const(MFVector) position() const pure nothrow @nogc { return _position; }
-	final @property void position(const(MFVector) position)
+	final @property void position(const(MFVector) position) nothrow
 	{
 		if (_position != position)
 		{
@@ -170,12 +169,12 @@ class Widget
 
 	final @property ref const(MFVector) size() const pure nothrow @nogc { return _size; }
 	final @property MFVector sizeWithMargin() const pure nothrow @nogc { return MFVector(_size.x + _layoutMargin.x + _layoutMargin.z, _size.y + _layoutMargin.y + _layoutMargin.w, _size.z, _size.w); }
-	final @property void size(const(MFVector) size) { bAutoWidth = bAutoHeight = false; resize(size); }
+	final @property void size(const(MFVector) size) nothrow { bAutoWidth = bAutoHeight = false; resize(size); }
 
 	final @property float width() const pure nothrow @nogc { return size.x; }
-	final @property void width(float width) { bAutoWidth = false; updateWidth(width); }
+	final @property void width(float width) nothrow { bAutoWidth = false; updateWidth(width); }
 	final @property float height() const pure nothrow @nogc { return  size.y; }
-	final @property void height(float height) { bAutoHeight = false; updateHeight(height); }
+	final @property void height(float height) nothrow { bAutoHeight = false; updateHeight(height); }
 
 	final @property ref const(MFVector) colour() const pure nothrow @nogc { return _colour; }
 	final @property void colour(const(MFVector) colour) pure nothrow @nogc { _colour = colour; }
@@ -201,7 +200,7 @@ class Widget
 	}
 
 	final @property ref const(MFVector) layoutMargin() const pure nothrow @nogc { return _layoutMargin; }
-	final @property void layoutMargin(const(MFVector) margin)
+	final @property void layoutMargin(const(MFVector) margin) nothrow
 	{
 		if (_layoutMargin != margin)
 		{
@@ -213,7 +212,7 @@ class Widget
 	}
 
 	final @property float layoutWeight() const pure nothrow @nogc { return _layoutWeight; }
-	final @property void layoutWeight(float weight)
+	final @property void layoutWeight(float weight) nothrow
 	{
 		if (_layoutWeight != weight)
 		{
@@ -225,7 +224,7 @@ class Widget
 	}
 
 	final @property Justification layoutJustification() const pure nothrow @nogc { return _layoutJustification; }
-	final @property void layoutJustification(Justification justification)
+	final @property void layoutJustification(Justification justification) nothrow
 	{
 		if (_layoutJustification != justification)
 		{
@@ -237,13 +236,13 @@ class Widget
 	}
 
 	final @property Align hAlign() const pure nothrow @nogc { return _layoutJustification == Justification.None ? Align.None : cast(Align)(_layoutJustification & 3); }
-	final @property void hAlign(Align hAlign)
+	final @property void hAlign(Align hAlign) nothrow
 	{
 		assert(hAlign != Align.None);
 		layoutJustification = cast(Justification)((_layoutJustification & ~0x3) | hAlign);
 	}
 	final @property VAlign vAlign() const pure nothrow @nogc { return _layoutJustification == Justification.None ? VAlign.None : cast(VAlign)((_layoutJustification >> 2) & 3); }
-	final @property void vAlign(VAlign vAlign)
+	final @property void vAlign(VAlign vAlign) nothrow
 	{
 		assert(vAlign != VAlign.None);
 		layoutJustification = cast(Justification)((_layoutJustification & ~0xC) | (vAlign << 2));
@@ -267,6 +266,24 @@ class Widget
 	}
 
 	final @property UserInterface ui() const nothrow @nogc { return UserInterface.active; }
+
+	// renderer properties
+	final @property void bgImage(string image) { setRenderProperty("background_image", image); }
+
+	final @property Justification bgAlign() const pure nothrow @nogc { return _imageAlignment; }
+	final @property void bgAlign(Justification alignment) pure nothrow @nogc { _imageAlignment = alignment; }
+
+	final @property ref const(MFVector) bgColour() const pure nothrow @nogc { return _bgColour; }
+	final @property void bgColour(MFVector colour) pure nothrow @nogc { _bgColour = colour; }
+
+	final @property ref const(MFVector) bgPadding() const pure nothrow @nogc { return _bgPadding; }
+	final @property void bgPadding(MFVector padding) pure nothrow @nogc { _bgPadding = padding; }
+
+	final @property ref const(MFVector) borderWidth() const pure nothrow @nogc { return _colour; }
+	final @property void borderWidth(MFVector width) pure nothrow @nogc { _colour = width; }
+
+	final @property ref const(MFVector) borderColour() const pure nothrow @nogc { return _colour; }
+	final @property void borderColour(MFVector colour) pure nothrow @nogc { _colour = colour; }
 
 	// methods
 	final bool isType(const(char)[] type) const
@@ -564,13 +581,13 @@ class Widget
 			child.dirtyMatrices();
 	}
 
-	final void resize(ref const(MFVector) size)
+	final void resize(ref const(MFVector) size) nothrow
 	{
 		if (_size != size)
 			doResize(size);
 	}
 
-	final void doResize(ref const(MFVector) size)
+	final void doResize(ref const(MFVector) size) nothrow
 	{
 		MFVector oldSize = _size;
 		_size = size;
@@ -609,10 +626,10 @@ class Widget
 		bMatrixDirty = false;
 	}
 
-	final void updateWidth(float width)		{ MFVector newSize = size; newSize.x = width; resize(newSize); }
-	final void updateHeight(float height)	{ MFVector newSize = size; newSize.y = height; resize(newSize); }
+	final void updateWidth(float width) nothrow		{ MFVector newSize = size; newSize.x = width; resize(newSize); }
+	final void updateHeight(float height) nothrow	{ MFVector newSize = size; newSize.y = height; resize(newSize); }
 
-	Widget intersectWidget(ref const(MFVector) pos, ref const(MFVector) dir, MFVector* pLocalPos)
+	Widget intersectWidget(ref const(MFVector) pos, ref const(MFVector) dir, MFVector* pLocalPos) nothrow
 	{
 		if (visibility != Visibility.Visible)
 			return null;
@@ -751,59 +768,59 @@ class Widget
 
 
 protected:
-	MFVector bgPadding;
-	MFVector bgColour;
-	MFVector border;		// width: left, top, right, bottom
-	MFVector borderColour;
-	Material image;
-	Widget.Justification imageAlignment = Widget.Justification.Center;
-	float texWidth, texHeight;
-	float bg9CellMargin;
+	MFVector _bgPadding;
+	MFVector _bgColour;
+	MFVector _border;		// width: left, top, right, bottom
+	MFVector _borderColour;
+	Material _image;
+	Justification _imageAlignment = Justification.Center;
+	float _texWidth, _texHeight;
+	float _bg9CellMargin;
 
 	bool setRenderProperty(const(char)[] property, const(char)[] value, Widget widget = null)
 	{
 		switch (property.toLower)
 		{
 			case "background_image":
-				image.create(value);
-				if (image)
+				_image.create(value);
+				if (_image)
 				{
 					int texW, texH;
-					Texture texture = image.parameters[MFMatStandardParameters.Texture][MFMatStandardTextures.DifuseMap].asTexture;
-					texWidth = texture.width;
-					texHeight = texture.height;
+					Texture texture = _image.parameters[MFMatStandardParameters.Texture][MFMatStandardTextures.DifuseMap].asTexture;
+					_texWidth = texture.width;
+					_texHeight = texture.height;
 
 					if (widget && (widget.bAutoWidth || widget.bAutoHeight))
 					{
 						if (widget.bAutoWidth && widget.bAutoHeight)
 						{
-							MFVector t = MFVector(texWidth, texHeight);
+							MFVector t = MFVector(_texWidth, _texHeight);
 							widget.resize(t);
 						}
 						else if (widget.bAutoWidth)
-							widget.updateWidth(texWidth);
+							widget.updateWidth(_texWidth);
 						else
-							widget.updateHeight(texHeight);
+							widget.updateHeight(_texHeight);
 					}
 				}
 				return true;
 			case "background_align":
-				imageAlignment = getEnumValue!(Widget.Justification)(value);
+				_imageAlignment = getEnumValue!(Justification)(value);
 				return true;
 			case "background_colour":
-				bgColour = getColourFromString(value);
+				_bgColour = getColourFromString(value);
 				return true;
 			case "background_padding":
-				bgPadding = getVectorFromString(value);
+				_bgPadding = getVectorFromString(value);
 				return true;
 			case "background_9-cell-margin":
-				bg9CellMargin = to!float(value);
+				_bg9CellMargin = to!float(value);
 				return true;
 			case "border_width":
-				border = getVectorFromString(value);
+				_border = getVectorFromString(value);
 				return true;
 			case "border_colour":
-				borderColour = getColourFromString(value);
+				_borderColour = getColourFromString(value);
 				return true;
 			default:
 		}
@@ -819,54 +836,54 @@ protected:
 	void render()
 	{
 		MFVector size = _size;
-		size.x -= bgPadding.x + bgPadding.z;
-		size.y -= bgPadding.y + bgPadding.w;
+		size.x -= _bgPadding.x + _bgPadding.z;
+		size.y -= _bgPadding.y + _bgPadding.w;
 
-		if (bgColour.w > 0)
+		if (_bgColour.w > 0)
 		{
-			float borderWidth = border.x + border.z;
-			float borderHeight = border.y + border.w;
-			MFVector wc = bgColour*_colour;
-			MFPrimitive_DrawUntexturedQuad(bgPadding.x + border.x, bgPadding.y + border.y, size.x - borderWidth, size.y - borderHeight, wc, transform);
+			float borderWidth = _border.x + _border.z;
+			float borderHeight = _border.y + _border.w;
+			MFVector wc = _bgColour*_colour;
+			MFPrimitive_DrawUntexturedQuad(_bgPadding.x + _border.x, _bgPadding.y + _border.y, size.x - borderWidth, size.y - borderHeight, wc, transform);
 		}
 
-		MFVector bc = borderColour*_colour;
-		if (border.x > 0) // left
-			MFPrimitive_DrawUntexturedQuad(bgPadding.x, bgPadding.y, border.x, size.y, bc, transform);
-		if (border.y > 0) // top
-			MFPrimitive_DrawUntexturedQuad(bgPadding.x, bgPadding.y, size.x, border.y, bc, transform);
-		if (border.z > 0) // right
-			MFPrimitive_DrawUntexturedQuad(size.x - border.z + bgPadding.x, bgPadding.y, border.z, size.y, bc, transform);
-		if (border.w > 0) // bottom
-			MFPrimitive_DrawUntexturedQuad(bgPadding.x, bgPadding.y + size.y - border.w, size.x, border.w, bc, transform);
+		MFVector bc = _borderColour*_colour;
+		if (_border.x > 0) // left
+			MFPrimitive_DrawUntexturedQuad(_bgPadding.x, _bgPadding.y, _border.x, size.y, bc, transform);
+		if (_border.y > 0) // top
+			MFPrimitive_DrawUntexturedQuad(_bgPadding.x, _bgPadding.y, size.x, _border.y, bc, transform);
+		if (_border.z > 0) // right
+			MFPrimitive_DrawUntexturedQuad(size.x - _border.z + _bgPadding.x, _bgPadding.y, _border.z, size.y, bc, transform);
+		if (_border.w > 0) // bottom
+			MFPrimitive_DrawUntexturedQuad(_bgPadding.x, _bgPadding.y + size.y - _border.w, size.x, _border.w, bc, transform);
 
-		if (image)
+		if (_image)
 		{
-			if (bg9CellMargin > 0)
+			if (_bg9CellMargin > 0)
 			{
 				// 9 cell stuff...
 			}
 			else
 			{
 				// draw the background image centered in the box
-				image.setCurrent();
+				_image.setCurrent();
 
 				float offset = 0;
 				float tc = MFRenderer_GetTexelCenterOffset();
 				if (tc > 0)
 				{
-					if (size.x == texWidth && size.y == texHeight)
+					if (size.x == _texWidth && size.y == _texHeight)
 						offset = tc;
 				}
 
-				MFPrimitive_DrawQuad(bgPadding.x - offset, bgPadding.y - offset, size.x, size.y, _colour, 0, 0, 1, 1, transform);
+				MFPrimitive_DrawQuad(_bgPadding.x - offset, _bgPadding.y - offset, size.x, size.y, _colour, 0, 0, 1, 1, transform);
 			}
 		}
 	}
 }
 
 
-bool getBoolFromString(const(char)[] value)
+bool getBoolFromString(const(char)[] value) pure
 {
 	if (!value.icmp("true") ||
 		!value.icmp("1") ||
@@ -877,7 +894,7 @@ bool getBoolFromString(const(char)[] value)
 	return false;
 }
 
-MFVector getVectorFromString(const(char)[] value, MFVector defaultValue = MFVector.zero)
+MFVector getVectorFromString(const(char)[] value, MFVector defaultValue = MFVector.zero) pure
 {
 	float[4] f = [ defaultValue.x, defaultValue.y, defaultValue.z, defaultValue.w ];
 	size_t numComponents;
@@ -892,7 +909,7 @@ MFVector getVectorFromString(const(char)[] value, MFVector defaultValue = MFVect
 	return MFVector(f[0], f[1], f[2], f[3]);
 }
 
-MFVector getColourFromString(const(char)[] value)
+MFVector getColourFromString(const(char)[] value) pure
 {
 	if (!value.length)
 		return MFVector.white;

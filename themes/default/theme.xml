@@ -4,7 +4,6 @@
 	<Prefab screen="mainmenu" prefab="mainmenu.xml" align="Fill" />
 	<Prefab screen="options" prefab="options.xml" align="Fill" />
 	<Prefab screen="songselect" prefab="songselect.xml" align="Fill" />
-	<Prefab screen="editor" prefab="editor.xml" align="Fill" />
 	<Prefab screen="download" prefab="download.xml" align="Fill" />
 	<Prefab screen="performance" prefab="performance.xml" align="Fill" />
 	<LinearLayout id="players" orientation="horizontal" align="TopCenter">

@@ -9,6 +9,7 @@ function begin(source)
 	-- collect some references to various UI elements
 	theme.ui = ui:find("theme")
 	theme.playerui = {}
+	theme.playerui.element = ui:find("players")
 
 	local players = theme.ui:findChild("players")
 	for i = 1, 8 do

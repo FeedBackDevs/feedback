@@ -1,6 +1,6 @@
 local performance = db.getScreen("performance")
 
-performance.onEnter = function()
+function performance.onEnter()
 	if performance.element then
 		performance.element.visibility = "Visible"
 	end
@@ -21,7 +21,7 @@ performance.onEnter = function()
 	-- set input device focus to default widgets...
 end
 
-performance.onExit = function()
+function performance.onExit()
 	if performance.element then
 		performance.element.visibility = "Invisible"
 	end

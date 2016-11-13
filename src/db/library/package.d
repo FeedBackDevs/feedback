@@ -102,7 +102,7 @@ struct Song
 				MFSound_PauseStream(s, bPause);
 	}
 
-	void seek(float offsetInSeconds)
+	void seek(double offsetInSeconds)
 	{
 		foreach (s; streams)
 			if (s)

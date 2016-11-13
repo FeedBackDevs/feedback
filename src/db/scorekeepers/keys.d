@@ -46,7 +46,7 @@ class KeysScoreKeeper : ScoreKeeper
 		}
 	}
 
-	private KeysNote[] GetNext()
+	private KeysNote[] getNext()
 	{
 		size_t end = offset;
 		while (notes.length > end && notes[end].time == notes[offset].time)
@@ -54,12 +54,12 @@ class KeysScoreKeeper : ScoreKeeper
 		return notes[offset..end];
 	}
 
-	override void Update()
+	override void update()
 	{
 		long audioLatency = Game.instance.settings.audioLatency*1_000;
 		long time = instrument.inputTime - audioLatency;
 
-		instrument.Update();
+		instrument.update();
 
 		long tolerance = window*1000 / 2;
 
@@ -94,7 +94,7 @@ class KeysScoreKeeper : ScoreKeeper
 //			WriteLog(format("%6d input: %d (%g)", timestamp/1000, e.key, e.velocity), MFVector(1,1,1,1));
 
 			// consider next note
-			KeysNote[] next = GetNext();
+			KeysNote[] next = getNext();
 
 			int note = e.key;
 
@@ -152,10 +152,10 @@ class KeysScoreKeeper : ScoreKeeper
 			}
 		}
 
-		instrument.Clear();
+		instrument.clear();
 	}
 
-	override bool WasHit(Event* pEvent)
+	override bool wasHit(Event* pEvent)
 	{
 		return pEvent.pScoreKeeperData ? (cast(KeysNote*)pEvent.pScoreKeeperData).bHit : false;
 	}

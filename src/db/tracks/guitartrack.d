@@ -186,12 +186,12 @@ class GHGuitar : NoteTrack
 		bar.setCurrent();
 		MFPrimitive(PrimType.TriStrip, 0);
 
-		int bottomTick = chart.CalculateTickAtTime(bottomTime);
+		int bottomTick = chart.calculateTickAtTime(bottomTime);
 		int res = chart.resolution;
 		int ticks = bHalfFrets ? res/2 : res;
 		int fretBeat = bottomTick + ticks - 1;
 		fretBeat -= fretBeat % ticks;
-		long fretTime = chart.CalculateTimeOfTick(fretBeat);
+		long fretTime = chart.calculateTimeOfTick(fretBeat);
 
 		while (fretTime < topTime)
 		{
@@ -232,7 +232,7 @@ class GHGuitar : NoteTrack
 			MFEnd();
 
 			fretBeat += ticks;
-			fretTime = chart.CalculateTimeOfTick(fretBeat);
+			fretTime = chart.calculateTimeOfTick(fretBeat);
 		}
 
 		// draw the notes
@@ -303,7 +303,7 @@ class GHGuitar : NoteTrack
 
 	override MFVector GetPosForTick(long offset, int tick, RelativePosition pos)
 	{
-		return GetPosForTime(offset, chart.CalculateTimeOfTick(tick), pos);
+		return GetPosForTime(offset, chart.calculateTimeOfTick(tick), pos);
 	}
 
 	override MFVector GetPosForTime(long offset, long time, RelativePosition pos)
@@ -322,7 +322,7 @@ class GHGuitar : NoteTrack
 			if (pStartTime)
 				*pStartTime = startTime;
 			if (pStartTick)
-				*pStartTick = chart.CalculateTickAtTime(startTime);
+				*pStartTick = chart.calculateTickAtTime(startTime);
 		}
 		if (pEndTime || pEndTick)
 		{
@@ -330,7 +330,7 @@ class GHGuitar : NoteTrack
 			if (pEndTime)
 				*pEndTime = endTime;
 			if (pEndTick)
-				*pEndTick = chart.CalculateTickAtTime(endTime);
+				*pEndTick = chart.calculateTickAtTime(endTime);
 		}
 	}
 

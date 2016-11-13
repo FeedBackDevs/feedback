@@ -234,14 +234,14 @@ class Chart
 	void prepare()
 	{
 		// calculate the note times for all tracks
-		CalculateNoteTimes(events, 0);
+		calculateNoteTimes(events, 0);
 		foreach (ref p; parts)
 		{
-			CalculateNoteTimes(p.events, 0);
+			calculateNoteTimes(p.events, 0);
 			foreach (ref v; p.variations)
 			{
 				foreach (d; v.difficulties)
-					CalculateNoteTimes(d.notes, 0);
+					calculateNoteTimes(d.notes, 0);
 			}
 		}
 	}
@@ -281,7 +281,7 @@ class Chart
 		return getVariation(*pPart, variation, bCreate);
 	}
 
-	Track GetDifficulty(ref Variation variation, const(char)[] difficulty)
+	Track getDifficulty(ref Variation variation, const(char)[] difficulty)
 	{
 		foreach (d; variation.difficulties)
 		{
@@ -291,7 +291,7 @@ class Chart
 		return null;
 	}
 
-	Track GetSequence(string part, Instrument instrument, const(char)[] variation, const(char)[] difficulty)
+	Track getSequence(string part, Instrument instrument, const(char)[] variation, const(char)[] difficulty)
 	{
 		Part* pPart = part in parts;
 		if (!pPart || pPart.variations.empty)
@@ -306,48 +306,11 @@ class Chart
 		// TODO: should there be a magic name for the default variation rather than the first one?
 		//...
 
-		if (part[] == "drums")
-		{
-			// each drums configuration has a different preference for conversion
-			auto i = instrument;
-			if ((i.features & MFBit!(DrumFeatures.Has4Drums)) && (i.features & MFBit!(DrumFeatures.Has3Cymbals)) && (i.features & MFBit!(DrumFeatures.HasHiHat)))
-				preferences = [ "-8drums", "-7drums", "-6drums", "-5drums", "-4drums" ];
-			else if ((i.features & MFBit!(DrumFeatures.Has4Drums)) && (i.features & MFBit!(DrumFeatures.Has2Cymbals)) && (i.features & MFBit!(DrumFeatures.HasHiHat)))
-				preferences = [ "-8drums", "-7drums", "-6drums", "-5drums", "-4drums" ];
-			else if ((i.features & MFBit!(DrumFeatures.Has4Drums)) && (i.features & MFBit!(DrumFeatures.Has3Cymbals)))
-				preferences = [ "-7drums", "-8drums", "-6drums", "-5drums", "-4drums" ];
-			else if ((i.features & MFBit!(DrumFeatures.Has4Drums)) && (i.features & MFBit!(DrumFeatures.Has2Cymbals)))
-				preferences = [ "-6drums", "-7drums", "-8drums", "-5drums", "-4drums" ];
-			else if (i.features & MFBit!(DrumFeatures.Has2Cymbals))
-				preferences = [ "-5drums", "-6drums", "-7drums", "-8drums", "-4drums" ];
-			else if (i.features & MFBit!(DrumFeatures.Has4Drums))
-				preferences = [ "-4drums", "-7drums", "-8drums", "-6drums", "-5drums" ];
-			else
-				assert(false, "What kind of kit is this?!");
-
-			// find the appropriate variation for the player's kit
-			outer: foreach (j, pref; preferences)
-			{
-				foreach (ref v; pPart.variations)
-				{
-					if (v.name.endsWith(pref))
-					{
-						if (!variation || (variation && v.name.startsWith(variation)))
-						{
-							var = &v;
-							bFound = true;
-							preference = j;
-							break outer;
-						}
-					}
-				}
-			}
-		}
-		else
+		if (variation)
 		{
 			foreach (ref v; pPart.variations)
 			{
-				if (!variation || (variation && v.name == variation))
+				if (v.name[] == variation[])
 				{
 					var = &v;
 					bFound = true;
@@ -357,11 +320,59 @@ class Chart
 		}
 
 		if (!bFound)
+		{
+			if (part[] == "drums" && instrument)
+			{
+				// each drums configuration has a different preference for conversion
+				auto i = instrument;
+				if ((i.features & MFBit!(DrumFeatures.Has4Drums)) && (i.features & MFBit!(DrumFeatures.Has3Cymbals)) && (i.features & MFBit!(DrumFeatures.HasHiHat)))
+					preferences = [ "-8drums", "-7drums", "-6drums", "-5drums", "-4drums" ];
+				else if ((i.features & MFBit!(DrumFeatures.Has4Drums)) && (i.features & MFBit!(DrumFeatures.Has2Cymbals)) && (i.features & MFBit!(DrumFeatures.HasHiHat)))
+					preferences = [ "-8drums", "-7drums", "-6drums", "-5drums", "-4drums" ];
+				else if ((i.features & MFBit!(DrumFeatures.Has4Drums)) && (i.features & MFBit!(DrumFeatures.Has3Cymbals)))
+					preferences = [ "-7drums", "-8drums", "-6drums", "-5drums", "-4drums" ];
+				else if ((i.features & MFBit!(DrumFeatures.Has4Drums)) && (i.features & MFBit!(DrumFeatures.Has2Cymbals)))
+					preferences = [ "-6drums", "-7drums", "-8drums", "-5drums", "-4drums" ];
+				else if (i.features & MFBit!(DrumFeatures.Has2Cymbals))
+					preferences = [ "-5drums", "-6drums", "-7drums", "-8drums", "-4drums" ];
+				else if (i.features & MFBit!(DrumFeatures.Has4Drums))
+					preferences = [ "-4drums", "-7drums", "-8drums", "-6drums", "-5drums" ];
+				else
+					assert(false, "What kind of kit is this?!");
+
+				// find the appropriate variation for the player's kit
+				outer: foreach (j, pref; preferences)
+				{
+					foreach (ref v; pPart.variations)
+					{
+						if (v.name.endsWith(pref))
+						{
+							if (!variation || (variation && v.name.startsWith(variation)))
+							{
+								var = &v;
+								bFound = true;
+								preference = j;
+								break outer;
+							}
+						}
+					}
+				}
+			}
+			else if (!variation && !pPart.variations.empty())
+			{
+				// TODO: select any part that's suitable for the instrument...
+
+				var = &pPart.variations[0];
+				bFound = true;
+			}
+		}
+
+		if (!bFound)
 			return null;
 
 		Track s;
 		if (difficulty)
-			s = GetDifficulty(*var, difficulty);
+			s = getDifficulty(*var, difficulty);
 
 		// TODO: should there be some fallback logic if a requested difficulty isn't available?
 		//       can we rank difficulties by magic name strings?
@@ -378,12 +389,12 @@ class Chart
 		return s;
 	}
 
-	bool IsPartPresent(string part)
+	bool isPartPresent(string part)
 	{
 		return (part in parts) != null;
 	}
 
-	int GetLastNoteTick()
+	int getLastNoteTick()
 	{
 		// find the last event in the song
 		int lastTick = sync.empty ? 0 : sync.back.tick;
@@ -411,7 +422,7 @@ class Chart
 		return 60_000_000/120; // microseconds per beat
 	}
 
-	void CalculateNoteTimes(E)(E[] stream, int startTick)
+	void calculateNoteTimes(E)(E[] stream, int startTick)
 	{
 		int offset = 0;
 		uint microsecondsPerBeat = startUsPB;
@@ -475,12 +486,12 @@ class Chart
 		}
 	}
 
-	long CalculateTimeOfTick(int tick)
+	long calculateTimeOfTick(int tick)
 	{
 		int offset, currentUsPB;
 		long time;
 
-		Event *pEv = GetMostRecentSyncEvent(tick);
+		Event *pEv = getMostRecentSyncEvent(tick);
 		if (pEv)
 		{
 			time = pEv.time;
@@ -500,25 +511,25 @@ class Chart
 		return time;
 	}
 
-	Event* GetMostRecentSyncEvent(int tick)
+	Event* getMostRecentSyncEvent(int tick)
 	{
 		auto e = sync.GetMostRecentEvent(tick, EventType.BPM, EventType.Anchor);
 		return e < 0 ? null : &sync[e];
 	}
 
-	Event* GetMostRecentSyncEventTime(long time)
+	Event* getMostRecentSyncEventTime(long time)
 	{
 		auto e = sync.GetMostRecentEventByTime(time, EventType.BPM, EventType.Anchor);
 		return e < 0 ? null : &sync[e];
 	}
 
-	int CalculateTickAtTime(long time, int *pUsPerBeat = null)
+	int calculateTickAtTime(long time, int *pUsPerBeat = null)
 	{
 		uint currentUsPerBeat;
 		long lastEventTime;
 		int lastEventOffset;
 
-		Event *e = GetMostRecentSyncEventTime(time);
+		Event *e = getMostRecentSyncEventTime(time);
 
 		if (e)
 		{

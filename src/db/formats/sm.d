@@ -344,7 +344,7 @@ bool LoadSM(Song* song, const(char)[] sm, string path)
 				Variation* pVariation = chart.getVariation(chart.getPart("dance"), type, true);
 
 				// create difficulty, set difficulty to feet rating
-				assert(!chart.GetDifficulty(*pVariation, difficulty), "Difficulty already exists!");
+				assert(!chart.getDifficulty(*pVariation, difficulty), "Difficulty already exists!");
 				pVariation.difficulties ~= trk;
 				break;
 

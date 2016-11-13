@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Frame align="Fill">
+	<Script src="editor.lua" />
+	<Listbox id="menu" align="Center" size="300,300" background_colour="black" list="editor.mainmenu.items" hoverSelect="true" OnSelChanged="editor.mainmenu.select" OnClick="editor.mainmenu.click" visibility="Gone" />
+	<Listbox id="picksong" align="Center" size="300,300" background_colour="black" list="editor.songs.items" hoverSelect="true" OnSelChanged="editor.songs.select" OnClick="editor.songs.click" visibility="Gone" />
+</Frame>

@@ -153,7 +153,7 @@ bool isValidIdentifier(const(char)[] handler)
 	foreach (i, c; handler[1..$])
 	{
 		if (c == '.')
-			return handler[i+1..$].isValidIdentifier;
+			return handler[i+2..$].isValidIdentifier;
 		else if (!c.isAlphaNum && c != '_')
 			return false;
 	}

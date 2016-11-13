@@ -15,14 +15,14 @@ class PcKeyboard : Instrument
 		super(&descriptor, device, features);
 	}
 
-	override void Update()
+	override void update()
 	{
 		import fuji.input;
 		import fuji.system : MFSystem_GetRTCFrequency;
 		import db.game : Game;
 		import db.inputs.controller : Controller;
 
-		super.Update();
+		super.update();
 
 		ulong rtcFreq = MFSystem_GetRTCFrequency();
 

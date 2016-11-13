@@ -35,9 +35,9 @@ class Controller : db.inputs.inputdevice.InputDevice
 		return this.device.device == device && this.device.deviceID == deviceId;
 	}
 
-	override void Begin(SyncSource sync)
+	override void begin()
 	{
-		super.Begin(sync);
+		super.begin();
 
 		startTime = MFSystem_ReadRTC();
 	}

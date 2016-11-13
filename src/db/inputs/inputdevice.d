@@ -15,20 +15,18 @@ class InputDevice
 
 @noscript:
 
-	void Begin(SyncSource sync)
-	{
-		this.sync = sync;
-	}
-
-	void End()
+	void begin()
 	{
 	}
 
-	void Update()
+	void end()
+	{
+	}
+
+	void update()
 	{
 		// NOTE: may be run on a high-frequency thread
 	}
 
 	Instrument instrument;
-	SyncSource sync;
 }

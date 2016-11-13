@@ -77,12 +77,12 @@ struct WidgetStyle
 		return true;
 	}
 
-	static WidgetStyle* findStyle(const(char)[] style)
+	static WidgetStyle* findStyle(const(char)[] style) nothrow
 	{
 		return style in styles ? styles[style] : null;
 	}
 
-	@property const(Property)[] properties() const { return _properties; }
+	@property const(Property)[] properties() const pure nothrow @safe @nogc { return _properties; }
 
 	void apply(Widget widget)
 	{

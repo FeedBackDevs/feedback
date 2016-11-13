@@ -15,6 +15,7 @@ import db.instrument;
 import db.game.player;
 import db.profile;
 import db.game.performance;
+import db.editor : Editor;
 import db.chart.track : Track;
 import db.settings;
 
@@ -149,8 +150,11 @@ class Game
 	{
 		updateInputDevices();
 
+		if (editor)
+			editor.update();
+
 		if (performance)
-			performance.Update();
+			performance.update();
 
 		ui.update();
 	}
@@ -158,13 +162,10 @@ class Game
 	void draw()
 	{
 		if (performance)
-		{
-			performance.Draw();
-		}
-		else
-		{
-			// where are we? in menus and stuff?
-		}
+			performance.draw();
+
+		if (editor)
+			editor.draw();
 
 		MFView_Push();
 
@@ -174,6 +175,9 @@ class Game
 		MFRect rect;
 		MFDisplay_GetDisplayRect(&rect);
 		MFView_SetOrtho(&rect);
+
+		if (editor)
+			editor.drawUi();
 
 		ui.draw();
 
@@ -200,19 +204,26 @@ class Game
 		if (pSong)
 		{
 			performance = new Performance(pSong, players);
-			performance.Begin();
+			performance.begin(0);
 		}
 	}
 
 	void endPerformance()
 	{
-		performance.Release();
+		performance.release();
 		performance = null;
 	}
 
 	void pausePerformance(bool bPause)
 	{
-		performance.Pause(bPause);
+		performance.pause(bPause);
+	}
+
+	void startEditor()
+	{
+		if (!editor)
+			editor = new Editor;
+		editor.enter();
 	}
 
 	void addPlayer(Player player)
@@ -248,18 +259,6 @@ class Game
 		import fuji.matrix;
 		import fuji.quaternion;
 
-		// register some functions with the VM
-		lua["quit"] = &MFSystem_Quit;
-		lua["startPerformance"] = &Game.instance.startPerformance;
-		lua["endPerformance"] = &Game.instance.endPerformance;
-		lua["pausePerformance"] = &Game.instance.pausePerformance;
-
-		lua["addPlayer"] = &Game.instance.addPlayer;
-		lua["removePlayer"] = &Game.instance.removePlayer;
-
-		lua["library"] = Game.instance.songLibrary;
-		lua["ui"] = Game.instance.ui;
-
 		// Fuji enums
 		registerType!MFKey();
 
@@ -285,7 +284,21 @@ class Game
 		registerType!LinearLayout();
 		registerType!Textbox();
 		registerType!Listbox();
-		//	registerType!Selectbox();
+//		registerType!Selectbox();
+
+		// register some functions with the VM
+		lua["quit"] = &MFSystem_Quit;
+		lua["startPerformance"] = &Game.instance.startPerformance;
+		lua["endPerformance"] = &Game.instance.endPerformance;
+		lua["pausePerformance"] = &Game.instance.pausePerformance;
+
+		lua["startEditor"] = &Game.instance.startEditor;
+
+		lua["addPlayer"] = &Game.instance.addPlayer;
+		lua["removePlayer"] = &Game.instance.removePlayer;
+
+		lua["library"] = Game.instance.songLibrary;
+		lua["ui"] = Game.instance.ui;
 	}
 
 	//-------------------------------------------------------------------------------------------------------
@@ -300,6 +313,8 @@ class Game
 	Player[] players;
 
 	Performance performance;
+
+	Editor editor;
 
 	UserInterface ui;
 	Theme theme;

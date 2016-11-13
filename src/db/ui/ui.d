@@ -26,11 +26,11 @@ import std.string;
 
 alias WidgetFactory = Factory!Widget;
 
+alias InputEventDelegate = bool delegate(InputManager, const(InputManager.EventInfo)*);
+alias UnknownPropertyDelegate = void delegate(Widget, const(char)[] property, const(char)[] value);
+
 class UserInterface
 {
-	alias InputEventDelegate = bool delegate(InputManager, const(InputManager.EventInfo)*);
-	alias UnknownPropertyDelegate = void delegate(Widget, const(char)[] property, const(char)[] value);
-
 	static Widget createWidget(const(char)[] widgetType)
 	{
 		widgetType = widgetType.toLower;
@@ -132,6 +132,10 @@ class UserInterface
 
 	static WidgetEvent.Handler getEventHandler(const(char)[] name) { return name in eventHandlerRegistry ? eventHandlerRegistry[name] : null; }
 
+	InputSource* findInputSource(MFInputDevice device, int deviceID = 0)
+	{
+		return inputManager.findSource(device, deviceID);
+	}
 
 	// methods
 	this(MFRect displayRect)

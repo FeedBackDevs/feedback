@@ -52,14 +52,14 @@ class Midi : InputDevice
 		deviceName = name;
 	}
 
-	override void Begin(SyncSource sync)
+	override void begin()
 	{
-		super.Begin(sync);
+		super.begin();
 
 //		device.start(); // always running...
 	}
 
-	override void End()
+	override void end()
 	{
 //		device.stop(); // always running...
 	}

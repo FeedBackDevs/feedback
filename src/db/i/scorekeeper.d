@@ -14,14 +14,14 @@ abstract class ScoreKeeper
 		this.instrument = instrument;
 	}
 
-	void Begin(string part, SyncSource sync)
+	void begin(string part)
 	{
-		instrument.Begin(part, sync);
+		instrument.begin(part);
 	}
 
-	void Update();
+	void update();
 
-	bool WasHit(Event* pEvent);
+	bool wasHit(Event* pEvent);
 
 	@property long averageError() { return numErrorSamples ? cumulativeError / numErrorSamples : 0; }
 	@property int hitPercentage() { return numNotes ? numHits*100 / numNotes : 0; }

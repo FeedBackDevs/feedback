@@ -72,7 +72,7 @@ class Drums : Instrument
 		super(&descriptor, device, features);
 	}
 
-	override void Update()
+	override void update()
 	{
 		import fuji.fuji : MFBit;
 		import fuji.input;
@@ -82,7 +82,7 @@ class Drums : Instrument
 		import db.inputs.controller : Controller;
 		import db.inputs.midi : Midi;
 
-		super.Update();
+		super.update();
 
 		Controller c = cast(Controller)device;
 		if (c && c.device.device == MFInputDevice.Gamepad)

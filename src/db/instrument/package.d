@@ -53,7 +53,7 @@ abstract class Instrument
 
 @noscript:
 
-	void Clear(long until = -1)
+	void clear(long until = -1)
 	{
 		import std.range : empty, popFront;
 
@@ -66,19 +66,19 @@ abstract class Instrument
 		}
 	}
 
-	void Update()
+	void update()
 	{
-		device.Update();
+		device.update();
 	}
 
-	void Begin(string part, SyncSource sync)
+	void begin(string part)
 	{
 		this.part = part;
-		device.Begin(sync);
+		device.begin();
 	}
-	void End()
+	void end()
 	{
-		device.End();
+		device.end();
 	}
 
 protected:

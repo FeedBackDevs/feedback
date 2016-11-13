@@ -63,27 +63,27 @@ class Performer
 		}
 	}
 
-	void Begin(SyncSource sync)
+	void begin(double startTime)
 	{
-		scoreKeeper.Begin(player.input.part, sync);
+		scoreKeeper.begin(player.input.part);
 	}
 
-	void End()
+	void end()
 	{
 	}
 
-	void Update(long now)
+	void update(long now)
 	{
-		scoreKeeper.Update();
+		scoreKeeper.update();
 		noteTrack.Update();
 	}
 
-	void Draw(long now)
+	void draw(long now)
 	{
 		noteTrack.Draw(screenSpace, now);
 	}
 
-	void DrawUI()
+	void drawUI()
 	{
 		noteTrack.DrawUI(screenSpace);
 	}
@@ -98,8 +98,10 @@ class Performer
 
 class Performance
 {
-	this(Song* song, Player[] players)
+	this(Song* song, Player[] players, SyncSource sync = null)
 	{
+		bPaused = true;
+
 		this.song = song;
 		song.prepare();
 
@@ -108,7 +110,7 @@ class Performance
 		performers = null;
 		foreach (p; players)
 		{
-			Track s = song.chart.GetSequence(p.input.part, p.input.instrument, p.variation, p.difficulty);
+			Track s = song.chart.getSequence(p.input.part, p.input.instrument, p.variation, p.difficulty);
 			if (s)
 				performers ~= new Performer(this, p, s);
 			else
@@ -116,7 +118,7 @@ class Performance
 				// HACK: find a part the players instrument can play!
 				foreach (part; p.input.instrument.desc.parts)
 				{
-					s = song.chart.GetSequence(part, p.input.instrument, p.variation, p.difficulty);
+					s = song.chart.getSequence(part, p.input.instrument, p.variation, p.difficulty);
 					if (s)
 					{
 						p.input.part = part;
@@ -127,17 +129,20 @@ class Performance
 			}
 		}
 
-		ArrangePerformers();
+		arrangePerformers();
 
-		sync = new SystemTimer;
+		if (!sync)
+			this.sync = new SystemTimer;
+		else
+			this.sync = sync;
 	}
 
 	~this()
 	{
-		Release();
+		release();
 	}
 
-	void ArrangePerformers()
+	void arrangePerformers()
 	{
 		if (performers.length == 0)
 			return;
@@ -156,35 +161,40 @@ class Performance
 		}
 	}
 
-	void Begin()
+	void begin(double startTime)
 	{
+		song.seek(startTime);
 		song.pause(false);
-		startTime = sync.now;
+
+		sync.pause(false);
+		sync.seconds = startTime;
 
 		foreach (p; performers)
-			p.Begin(sync);
+			p.begin(startTime);
+
+		bPaused = false;
 	}
 
-	void Pause(bool bPause)
+	void pause(bool bPause)
 	{
 		if (bPause && !bPaused)
 		{
+			sync.pause(true);
 			song.pause(true);
-			pauseTime = sync.now;
 			bPaused = true;
 		}
 		else if (!bPause && bPaused)
 		{
+			sync.pause(false);
 			song.pause(false);
-			startTime += sync.now - pauseTime;
 			bPaused = false;
 		}
 	}
 
-	void Release()
+	void release()
 	{
 		foreach (p; performers)
-			p.End();
+			p.end();
 		performers = null;
 
 		if (song)
@@ -192,18 +202,18 @@ class Performance
 		song = null;
 	}
 
-	void Update()
+	void update()
 	{
+		time = sync.now;
+
 		if (!bPaused)
 		{
-			time = sync.now - startTime;
-
 			foreach (p; performers)
-				p.Update(time);
+				p.update(time);
 		}
 	}
 
-	void Draw()
+	void draw()
 	{
 		MFView_Push();
 
@@ -213,7 +223,12 @@ class Performance
 		// draw the tracks
 		Renderer.instance.SetCurrentLayer(RenderLayers.Game);
 		foreach (p; performers)
-			p.Draw(time + (-Game.instance.settings.audioLatency + Game.instance.settings.videoLatency)*1_000);
+		{
+			long drawTime = time;
+			if (!bPaused)
+				drawTime += (-Game.instance.settings.audioLatency + Game.instance.settings.videoLatency)*1_000;
+			p.draw(drawTime);
+		}
 
 		// draw the UI
 		Renderer.instance.SetCurrentLayer(RenderLayers.UI);
@@ -222,7 +237,7 @@ class Performance
 		MFView_SetOrtho(&rect);
 
 		foreach (p; performers)
-			p.DrawUI();
+			p.drawUI();
 
 		MFView_Pop();
 	}
@@ -231,8 +246,6 @@ class Performance
 	Performer[] performers;
 	SyncSource sync;
 	long time;
-	long startTime;
-	long pauseTime;
 	bool bPaused;
 
 	mixin Signal!() beginMusic;		// ()

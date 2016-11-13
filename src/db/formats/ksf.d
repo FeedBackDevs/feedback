@@ -290,7 +290,7 @@ bool LoadKSF(Chart chart, const(char)[] ksf, const(char)[] filename)
 							}
 
 							long time = cast(long)(to!double(content) * 10_000.0);
-							sync[index].tick = CalculateTickAtTime(time);
+							sync[index].tick = calculateTickAtTime(time);
 						}
 						else
 						{
@@ -350,7 +350,7 @@ bool LoadKSF(Chart chart, const(char)[] ksf, const(char)[] filename)
 		Variation* pVariation = getVariation(chart.getPart("dance"), trk.variation, true);
 
 		// create difficulty, set difficulty to feet rating
-		assert(!GetDifficulty(*pVariation, trk.difficulty), "Difficulty already exists!");
+		assert(!getDifficulty(*pVariation, trk.difficulty), "Difficulty already exists!");
 		pVariation.difficulties ~= trk;
 
 		return false;

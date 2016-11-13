@@ -29,13 +29,13 @@ template EnumKeyValuePair(Enum)
 	alias EnumKeyValuePair = impl!(Keys.length, 0, TypeTuple!(Keys, Values));
 }
 
-immutable(KeyValuePair!Enum)[] getKeyValuePair(Enum)() nothrow
+immutable(KeyValuePair!Enum)[] getKeyValuePair(Enum)() pure nothrow
 {
 	static immutable(KeyValuePair!Enum[]) kvp = [ EnumKeyValuePair!Enum ];
 	return kvp;
 }
 
-Enum getEnumValue(Enum)(const(char)[] value) if (is(Enum == enum))
+Enum getEnumValue(Enum)(const(char)[] value) pure if (is(Enum == enum))
 {
 	value = value.strip;
 	if (!value.empty)
@@ -50,7 +50,7 @@ Enum getEnumValue(Enum)(const(char)[] value) if (is(Enum == enum))
 	return cast(Enum)-1;
 }
 
-uint getBitfieldValue(Enum)(const(char)[] flags)
+uint getBitfieldValue(Enum)(const(char)[] flags) pure
 {
 	uint value;
 	foreach (token; flags.splitter('|').map!(a => a.strip).filter!(a => !a.empty))
@@ -62,7 +62,7 @@ uint getBitfieldValue(Enum)(const(char)[] flags)
 	return value;
 }
 
-string getEnumFromValue(Enum)(Enum value)
+string getEnumFromValue(Enum)(Enum value) pure nothrow
 {
 	auto kvp = getKeyValuePair!Enum();
 	foreach (ref i; kvp)
@@ -73,7 +73,7 @@ string getEnumFromValue(Enum)(Enum value)
 	return null;
 }
 
-string getBitfieldFromValue(Enum)(uint bits)
+string getBitfieldFromValue(Enum)(uint bits) pure nothrow
 {
 	string bitfield;
 	foreach (i; 0..32)

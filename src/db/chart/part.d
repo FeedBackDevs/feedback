@@ -14,5 +14,5 @@ struct Variation
 	string name;
 	Track[] difficulties;	// sequences for each difficulty
 
-	bool bHasCoopMarkers;		// GH1/GH2 style co-op (players take turns)
+	bool bHasCoopMarkers;	// GH1/GH2 style co-op (players take turns)
 }

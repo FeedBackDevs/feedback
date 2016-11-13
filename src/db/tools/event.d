@@ -26,7 +26,7 @@ struct Event(Args...)
 	final @property bool empty() const pure nothrow @nogc { return _subscribers.length == 0; }
 	final @property inout(Handler)[] subscribers() inout pure nothrow @nogc { return _subscribers; }
 
-	void opCall(Args args) const
+	void opCall(Args args) const nothrow
 	{
 		signal(args);
 	}
@@ -36,10 +36,19 @@ struct Event(Args...)
 		subscribe(handler);
 	}
 
-	void signal(Args args) const
+	void signal(Args args) const nothrow
 	{
 		foreach (s; _subscribers)
-			s(args);
+		{
+			try
+			{
+				s(args);
+			}
+			catch (Exception e)
+			{
+				MFDebug_Warn(2, "Unhandled exception in event handler.".ptr);
+			}
+		}
 	}
 
 	void subscribe(Handler handler) pure nothrow

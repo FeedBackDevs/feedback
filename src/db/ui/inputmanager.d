@@ -90,6 +90,10 @@ public:
 			float deltaAngle;
 			int contact2;
 		}
+		struct Button
+		{
+			byte shift, ctrl, alt, meta;
+		}
 		struct Axis
 		{
 			float x, y;
@@ -111,6 +115,7 @@ public:
 			Up up;
 			Pinch pinch;
 			Spin spin;
+			Button button;
 			Axis axis;
 		}
 
@@ -303,6 +308,10 @@ public:
 						{
 							EventInfo info;
 							initButtonEvent(info, EventType.ButtonDown, b, a);
+							info.button.shift = MFInput_Read(MFKey.LShift, device, deviceID) || MFInput_Read(MFKey.RShift, device, deviceID);
+							info.button.ctrl = MFInput_Read(MFKey.LControl, device, deviceID) || MFInput_Read(MFKey.RControl, device, deviceID);
+							info.button.alt = MFInput_Read(MFKey.LAlt, device, deviceID) || MFInput_Read(MFKey.RAlt, device, deviceID);
+							info.button.meta = MFInput_Read(MFKey.LWin, device, deviceID) || MFInput_Read(MFKey.RWin, device, deviceID);
 							OnInputEvent(this, &info);
 
 							// button trigger supports repeats... (not yet supported)
@@ -313,6 +322,10 @@ public:
 						{
 							EventInfo info;
 							initButtonEvent(info, EventType.ButtonUp, b, a);
+							info.button.shift = MFInput_Read(MFKey.LShift, device, deviceID) || MFInput_Read(MFKey.RShift, device, deviceID);
+							info.button.ctrl = MFInput_Read(MFKey.LControl, device, deviceID) || MFInput_Read(MFKey.RControl, device, deviceID);
+							info.button.alt = MFInput_Read(MFKey.LAlt, device, deviceID) || MFInput_Read(MFKey.RAlt, device, deviceID);
+							info.button.meta = MFInput_Read(MFKey.LWin, device, deviceID) || MFInput_Read(MFKey.RWin, device, deviceID);
 							OnInputEvent(this, &info);
 						}
 					}

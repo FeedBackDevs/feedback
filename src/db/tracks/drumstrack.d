@@ -228,12 +228,12 @@ class GHDrums : NoteTrack
 		bar.setCurrent();
 		MFPrimitive(PrimType.TriStrip, 0);
 
-		int bottomTick = chart.CalculateTickAtTime(bottomTime);
+		int bottomTick = chart.calculateTickAtTime(bottomTime);
 		int res = chart.resolution;
 		int ticks = bHalfFrets ? res/2 : res;
 		int fretBeat = bottomTick + ticks - 1;
 		fretBeat -= fretBeat % ticks;
-		long fretTime = chart.CalculateTimeOfTick(fretBeat);
+		long fretTime = chart.calculateTimeOfTick(fretBeat);
 
 		while (fretTime < topTime)
 		{
@@ -274,7 +274,7 @@ class GHDrums : NoteTrack
 			MFEnd();
 
 			fretBeat += ticks;
-			fretTime = chart.CalculateTimeOfTick(fretBeat);
+			fretTime = chart.calculateTimeOfTick(fretBeat);
 		}
 
 		// draw the notes
@@ -291,7 +291,7 @@ class GHDrums : NoteTrack
 				continue;
 
 			// if it was hit, we don't need to render it
-			if (performer.scoreKeeper.WasHit(&e))
+			if (performer.scoreKeeper.wasHit(&e))
 				continue;
 
 			int key = laneMap[e.note.key];
@@ -398,7 +398,7 @@ class GHDrums : NoteTrack
 
 	override MFVector GetPosForTick(long offset, int tick, RelativePosition pos)
 	{
-		return GetPosForTime(offset, chart.CalculateTimeOfTick(tick), pos);
+		return GetPosForTime(offset, chart.calculateTimeOfTick(tick), pos);
 	}
 
 	override MFVector GetPosForTime(long offset, long time, RelativePosition pos)
@@ -417,7 +417,7 @@ class GHDrums : NoteTrack
 			if (pStartTime)
 				*pStartTime = startTime;
 			if (pStartTick)
-				*pStartTick = chart.CalculateTickAtTime(startTime);
+				*pStartTick = chart.calculateTickAtTime(startTime);
 		}
 		if (pEndTime || pEndTick)
 		{
@@ -425,7 +425,7 @@ class GHDrums : NoteTrack
 			if (pEndTime)
 				*pEndTime = endTime;
 			if (pEndTick)
-				*pEndTick = chart.CalculateTickAtTime(endTime);
+				*pEndTick = chart.calculateTickAtTime(endTime);
 		}
 	}
 

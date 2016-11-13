@@ -53,18 +53,18 @@ class Audio : InputDevice
 		return Game.instance.performance.time - (deviceLatency + Game.instance.settings.micLatency)*1_000;
 	}
 
-	override void Begin(SyncSource sync)
+	override void begin()
 	{
-		super.Begin(sync);
+		super.begin();
 		device.start(&GetSamplesCallback, cast(void*)this);
 	}
 
-	override void End()
+	override void end()
 	{
 		device.stop();
 	}
 
-	override void Update()
+	override void update()
 	{
 		// read audio stream, process into input sequence...
 
