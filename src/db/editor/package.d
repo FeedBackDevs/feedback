@@ -21,7 +21,9 @@ import fuji.filesystem : DirEntry;
 import fuji.font;
 import fuji.input;
 import fuji.vector;
-import std.algorithm : max, clamp;
+import std.algorithm : max, clamp, canFind, filter;
+import std.range : array;
+import std.conv : to;
 
 class Editor
 {
@@ -42,22 +44,11 @@ class Editor
 		}
 
 		// make local UI
-		mainMenu = new Listbox();
-		mainMenu.list = new StringList([ "New Chart", "Open Chart", "Save Chart", "Chart Settings", "Exit" ], (Label l) { l.textColour = MFVector.white; });
-		mainMenu.size = MFVector(400, 300);
-		mainMenu.bgColour = MFVector.black;
-		mainMenu.layoutJustification = Justification.Center;
-		mainMenu.visibility = Visibility.Visible;
-		mainMenu.OnClick ~= &menuSelect;
-		ui.addChild(mainMenu);
-
-		selectSong = new Listbox();
-		selectSong.size = MFVector(400, 300);
-		selectSong.bgColour = MFVector.black;
-		selectSong.layoutJustification = Justification.Center;
-		selectSong.visibility = Visibility.Gone;
-		selectSong.OnClick ~= &songSelect;
-		ui.addChild(selectSong);
+		menu = new Listbox();
+		menu.bgColour = MFVector.black;
+		menu.layoutJustification = Justification.Center;
+		menu.visibility = Visibility.Gone;
+		ui.addChild(menu);
 
 		fileSelector = new FileSelector;
 		fileSelector.title = "Select Chart";
@@ -91,8 +82,7 @@ class Editor
 		editorPlayer.variation = null;
 		editorPlayer.difficulty = Difficulty.Expert;
 
-		menuState = MenuState.MainMenu;
-		mainMenu.selection = 0;
+		showMainMenu();
 
 		bInEditor = true;
 	}
@@ -103,7 +93,6 @@ class Editor
 			play(false);
 
 		// clean up
-		songs = null;
 		pSong = null;
 		chart = null;
 		syncTtrack = null;
@@ -148,14 +137,38 @@ class Editor
 
 	void drawUi()
 	{
+		import fuji.display : MFDisplay_GetDisplayRect;
+
 		if (!bInEditor)
 			return;
 
 		if (chart)
 		{
+			Font font = Font.debugFont();
+
 			MFFont_DrawText2f(null, 10, 10, 20, MFVector.yellow, "Offset: %g", cast(double)offset / chart.resolution);
 			MFFont_DrawText2f(null, 10, 30, 20, MFVector.yellow, "Time: %d:%02d.%03d", time / 60_000_000, time / 1_000_000 % 60, time / 1_000 % 1_000);
 			MFFont_DrawText2f(null, 10, 50, 20, MFVector.yellow, "Step: 1/%d", step);
+
+			MFRect rect;
+			MFDisplay_GetDisplayRect(&rect);
+
+			MFVector pos = MFVector(rect.width - 10, 10);
+			font.drawAnchored(chart.name, pos, MFFontJustify.Top_Right, rect.width, 20, MFVector.white);
+			pos.y += 20;
+			font.drawAnchored(chart.artist, pos, MFFontJustify.Top_Right, rect.width, 20, MFVector.white);
+			pos.y += 30;
+			if (editorPlayer.input.type)
+				font.drawAnchored(editorPlayer.input.type, pos, MFFontJustify.Top_Right, rect.width, 20, MFVector.white);
+			else
+				font.drawAnchored(editorPlayer.input.part, pos, MFFontJustify.Top_Right, rect.width, 20, MFVector.white);
+			pos.y += 20;
+			font.drawAnchored(to!string(editorPlayer.difficulty), pos, MFFontJustify.Top_Right, rect.width, 20, MFVector.white);
+			if (editorPlayer.variation)
+			{
+				pos.y += 20;
+				font.drawAnchored(editorPlayer.variation, pos, MFFontJustify.Top_Right, rect.width, 20, MFVector.white);
+			}
 		}
 	}
 
@@ -170,8 +183,6 @@ class Editor
 
 	Player editorPlayer;
 
-	string[] songs;
-
 	Song* pSong;
 	Chart chart;
 	Track syncTtrack;
@@ -182,9 +193,26 @@ class Editor
 	SystemTimer sync;
 
 	Frame ui;
-	Listbox mainMenu;
-	Listbox selectSong;
+	Listbox menu;
 	FileSelector fileSelector;
+
+	__gshared string[] allParts = [
+		"leadguitar", "rhythmguitar", "bass",
+		"realleadguitar", "realrhythmguitar", "realbass",
+		"keyboard", "realkeyboard",
+		"drums",
+		"vocals",
+		"dance"
+	];
+	__gshared string[] drumTypes = [
+		"4-drums", "5-drums", "6-drums", "7-drums", "8-drums",
+	];
+	__gshared string[] danceTypes = [
+		"dance-single", "dance-double", "dance-couple", "dance-solo",
+		"pump-single", "pump-double", "pump-couple",
+		"dance-8pad-single", "dance-8pad-double",
+		"dance-9pad-single", "dance-9pad-double",
+	];
 
 	enum MenuState
 	{
@@ -192,8 +220,13 @@ class Editor
 		MainMenu,
 		NewFile,
 		OpenFile,
+		ChooseTrack,
+		NewTrack,
 	}
 	MenuState menuState;
+	string[] menuItems;
+
+	string selectedPart, selectedType, selectedVariation;
 
 	void shift(int steps)
 	{
@@ -240,6 +273,41 @@ class Editor
 		}
 	}
 
+	void showMenu(string[] list, void delegate(Widget, int) select, MFVector size = MFVector(400, 300))
+	{
+		menu.list = new StringList(list, (Label l) { l.textColour = MFVector.white; });
+		menu.size = size;
+		menu.selection = 0;
+		menu.OnClick.clear();
+		menu.OnClick ~= select;
+		menu.visibility = Visibility.Visible;
+	}
+	void hideMenu()
+	{
+		menu.visibility = Visibility.Gone;
+		menuState = MenuState.Closed;
+	}
+	void showMainMenu()
+	{
+		showMenu([ "New Chart", "Open Chart", "Save Chart", "Chart Settings", "Exit" ], &menuSelect);
+		menuState = MenuState.MainMenu;
+	}
+
+	void changeTrack(string part, string track, string variation, Difficulty difficulty)
+	{
+		editorPlayer.input.part = part;
+		editorPlayer.input.type = track;
+		editorPlayer.variation = variation;
+		editorPlayer.difficulty = difficulty;
+
+		game.performance.setPlayers((&editorPlayer)[0..1]);
+	}
+
+
+	//
+	// MENU LOGIC
+	//
+
 	bool inputEvent(InputManager inputManager, const(InputManager.EventInfo)* ev)
 	{
 		if (ev.device == MFInputDevice.Keyboard && ev.ev == InputManager.EventType.ButtonDown)
@@ -250,22 +318,17 @@ class Editor
 				{
 					switch (menuState)
 					{
-						case MenuState.Closed:
-							mainMenu.selection = 0;
-							goto showMainMenu;
-						case MenuState.MainMenu:
-							mainMenu.visibility = Visibility.Gone;
-							menuState = MenuState.Closed;
-							break;
 						case MenuState.NewFile:
 							fileSelector.visibility = Visibility.Gone;
-							goto showMainMenu;
+							goto case MenuState.Closed;
+						case MenuState.Closed:
 						case MenuState.OpenFile:
-							selectSong.visibility = Visibility.Gone;
-							goto showMainMenu;
-						showMainMenu:
-							mainMenu.visibility = Visibility.Visible;
-							menuState = MenuState.MainMenu;
+						case MenuState.ChooseTrack:
+						case MenuState.NewTrack:
+							showMainMenu();
+							break;
+						case MenuState.MainMenu:
+							hideMenu();
 							break;
 						default:
 							break;
@@ -273,6 +336,7 @@ class Editor
 					return true;
 				}
 				case MFKey.Space:
+				case MFKey.PlayPause:
 				{
 					if (menuState != MenuState.Closed)
 						return true;
@@ -328,6 +392,23 @@ class Editor
 					gotoTick(0);
 					return true;
 				}
+				case MFKey.F1:
+				{
+					// help??
+					return true;
+				}
+				case MFKey.F2:
+				{
+					if (menuState != MenuState.Closed)
+						return true;
+
+					menuItems = chart.parts.keys;
+					menuItems ~= "[New Part]";
+
+					showMenu(menuItems, &selectPart, MFVector(200, 200));
+					menuState = MenuState.ChooseTrack;
+					return true;
+				}
 				default:
 					break;
 			}
@@ -340,17 +421,14 @@ class Editor
 		switch (i)
 		{
 			case 1:
-				mainMenu.visibility = Visibility.Gone;
+				hideMenu();
 				fileSelector.root = "songs:";
 				fileSelector.visibility = Visibility.Visible;
 				menuState = MenuState.NewFile;
 				break;
 			case 2:
-				songs = Game.instance.songLibrary.songs;
-				selectSong.list = new StringList(songs, (Label l) { l.textColour = MFVector.white; });
-				mainMenu.visibility = Visibility.Gone;
-				selectSong.selection = 0;
-				selectSong.visibility = Visibility.Visible;
+				menuItems = game.songLibrary.songs;
+				showMenu(menuItems, &songSelect);
 				menuState = MenuState.OpenFile;
 				break;
 			case 3:
@@ -366,6 +444,188 @@ class Editor
 		}
 	}
 
+	void selectPart(Widget w, int i)
+	{
+		--i; // i is always out by one
+
+		hideMenu();
+
+		selectedPart = null;
+		selectedType = null;
+		selectedVariation = null;
+
+		if (i == menuItems.length - 1)
+		{
+			string[] parts = chart.parts.keys;
+			menuItems = allParts.filter!(e => !parts.canFind(e)).array;
+			if (menuItems)
+			{
+				showMenu(menuItems, &newTrack, MFVector(200, 200));
+				menuState = MenuState.NewTrack;
+			}
+			else
+			{
+				// TODO: all parts present... make noise?
+			}
+			return;
+		}
+		if (i >= 0 && i < menuItems.length)
+		{
+			selectedPart = menuItems[i];
+
+			Part* pPart = &chart.parts[selectedPart];
+			string[] types = pPart.types;
+			assert(types.length > 0);
+			if (types.length > 1 || selectedPart == "drums" || selectedPart[] == "dance")
+			{
+				menuItems = types;
+				menuItems ~= "[New Type]";
+				showMenu(menuItems, &selectType, MFVector(200, 200));
+				menuState = MenuState.ChooseTrack;
+				return;
+			}
+			selectedType = types[0];
+
+			string[] variations = pPart.variationsForType(selectedType);
+			assert(variations.length > 0);
+			if (variations.length > 1)
+			{
+				menuItems = variations;
+				showMenu(menuItems, &selectVariation, MFVector(200, 200));
+				menuState = MenuState.ChooseTrack;
+				return;
+			}
+
+			// select nearest difficulty
+			editorPlayer.difficulty = chart.getVariation(selectedPart, selectedType, variations[0]).nearestDifficulty(editorPlayer.difficulty);
+
+			// change the track
+			changeTrack(selectedPart, selectedType, variations[0], editorPlayer.difficulty);
+		}
+	}
+
+	void selectType(Widget w, int i)
+	{
+		--i; // i is always out by one
+
+		hideMenu();
+
+		Part* pPart = &chart.parts[selectedPart];
+
+		if (i == menuItems.length - 1)
+		{
+			string[] types = pPart.types;
+			string[] allTypes;
+			if (selectedPart[] == "drums")
+				allTypes = drumTypes;
+			else if (selectedPart[] == "dance")
+				allTypes = danceTypes;
+			menuItems = allTypes.filter!(e => !types.canFind(e)).array;
+			if (menuItems)
+			{
+				showMenu(menuItems, &newTrack, MFVector(200, 200));
+				menuState = MenuState.NewTrack;
+			}
+			else
+			{
+				// TODO: don't know what types to offer?
+			}
+			return;
+		}
+		if (i >= 0 && i < menuItems.length)
+		{
+			selectedType = menuItems[i];
+
+			string[] variations = pPart.variationsForType(selectedType);
+			assert(variations.length > 0);
+			if (variations.length > 1)
+			{
+				menuItems = variations;
+				showMenu(menuItems, &selectVariation, MFVector(200, 200));
+				menuState = MenuState.ChooseTrack;
+				return;
+			}
+
+			// select nearest difficulty
+			editorPlayer.difficulty = chart.getVariation(selectedPart, selectedType, variations[0]).nearestDifficulty(editorPlayer.difficulty);
+
+			// change the track
+			changeTrack(selectedPart, selectedType, variations[0], editorPlayer.difficulty);
+		}
+	}
+
+	void selectVariation(Widget w, int i)
+	{
+		--i; // i is always out by one
+
+		hideMenu();
+
+		if (i >= 0 && i < menuItems.length)
+		{
+			selectedVariation = menuItems[i];
+
+			// select nearest difficulty
+			editorPlayer.difficulty = chart.getVariation(selectedPart, selectedType, selectedVariation).nearestDifficulty(editorPlayer.difficulty);
+
+			// change the track
+			changeTrack(selectedPart, selectedType, selectedVariation, editorPlayer.difficulty);
+		}
+	}
+
+	void newTrack(Widget w, int i)
+	{
+		--i; // i is always out by one
+
+		hideMenu();
+
+		if (i >= 0 && i < menuItems.length)
+		{
+			if (!selectedPart)
+			{
+				selectedPart = menuItems[i];
+
+				if (selectedPart[] == "drums")
+				{
+					menuItems = drumTypes;
+					showMenu(menuItems, &newTrack, MFVector(200, 200));
+					menuState = MenuState.NewTrack;
+					return;
+				}
+				else if (selectedPart[] == "dance")
+				{
+					menuItems = danceTypes;
+					showMenu(menuItems, &newTrack, MFVector(200, 200));
+					menuState = MenuState.NewTrack;
+					return;
+				}
+			}
+			else if (!selectedType)
+			{
+				selectedType = menuItems[i];
+
+				if (chart.hasPart(selectedPart))
+				{
+					string[] variations = chart.parts[selectedPart].uniqueVariations();
+					assert(variations.length > 0);
+					if (variations.length > 1)
+					{
+						menuItems = variations;
+						showMenu(menuItems, &newTrack, MFVector(200, 200));
+						menuState = MenuState.NewTrack;
+						return;
+					}
+					selectedVariation = variations[0];
+				}
+			}
+			else
+				selectedVariation = menuItems[i];
+
+			Difficulty diff = selectedPart[] == "vocals" ? Difficulty.Expert : editorPlayer.difficulty;
+			chart.createTrack(selectedPart, selectedType, selectedVariation, diff);
+			changeTrack(selectedPart, selectedType, selectedVariation, diff);
+		}
+	}
+
 	void newChart(Widget w, DirEntry e)
 	{
 //		Game.perfo
@@ -373,13 +633,12 @@ class Editor
 
 	void songSelect(Widget w, int i)
 	{
+		hideMenu();
+
 		if (bPlaying)
 			play(false);
 
-		selectSong.visibility = Visibility.Gone;
-		menuState = MenuState.Closed;
-
-		pSong = game.songLibrary.find(songs[i-1]);
+		pSong = game.songLibrary.find(menuItems[i-1]);
 		if (!pSong)
 		{
 			game.performance = null;
@@ -396,6 +655,16 @@ class Editor
 		gotoTick(0);
 		step = 4;
 
-		// player should be configured to show the first part -> variation -> difficulty
+		done: foreach (ref p; chart.parts)
+		{
+			foreach (ref v; p.variations)
+			{
+				foreach (ref trk; v.difficulties)
+				{
+					changeTrack(trk.part, trk.variationType, trk.variationName, trk.difficulty);
+					break done;
+				}
+			}
+		}
 	}
 }

@@ -1,6 +1,6 @@
 module db.chart;
 
-import std.algorithm : max, map, filter, startsWith, endsWith;
+import std.algorithm : min, max, map, filter, startsWith, endsWith;
 import std.conv : to;
 import std.exception : assumeUnique;
 import std.range : back, empty;
@@ -258,6 +258,11 @@ class Chart
 		}
 	}
 
+	bool hasPart(string part)
+	{
+		return (part in parts) != null;
+	}
+
 	ref Part getPart(const(char)[] name)
 	{
 		Part* p = name in parts;
@@ -303,7 +308,19 @@ class Chart
 		return null;
 	}
 
-	Track getSequence(string part, Instrument instrument, const(char)[] variation, Difficulty difficulty)
+	Track createTrack(string part, string type, string variation, Difficulty difficulty)
+	{
+		Variation* pVariation = getVariation(getPart(part), type, variation, true);
+		Track trk = new Track();
+		pVariation.difficulties ~= trk;
+		trk.part = part;
+		trk.variationType = type;
+		trk.variationName = name;
+		trk.difficulty = difficulty;
+		return trk;
+	}
+
+	Track getTrackForInstrument(string part, Instrument instrument, const(char)[] variation, Difficulty difficulty)
 	{
 		Part* pPart = part in parts;
 		if (!pPart || pPart.variations.empty)
@@ -338,17 +355,15 @@ class Chart
 				// each drums configuration has a different preference for conversion
 				auto i = instrument;
 				if ((i.features & MFBit!(DrumFeatures.Has4Drums)) && (i.features & MFBit!(DrumFeatures.Has3Cymbals)) && (i.features & MFBit!(DrumFeatures.HasHiHat)))
-					preferences = [ "8-drums", "7-drums", "6-drums", "5-drums", "4-drums" ];
+					preferences = [ "8-drums", "7-drums", "5-drums", "4-drums" ];
 				else if ((i.features & MFBit!(DrumFeatures.Has4Drums)) && (i.features & MFBit!(DrumFeatures.Has2Cymbals)) && (i.features & MFBit!(DrumFeatures.HasHiHat)))
-					preferences = [ "8-drums", "7-drums", "6-drums", "5-drums", "4-drums" ];
+					preferences = [ "8-drums", "7-drums", "5-drums", "4-drums" ];
 				else if ((i.features & MFBit!(DrumFeatures.Has4Drums)) && (i.features & MFBit!(DrumFeatures.Has3Cymbals)))
-					preferences = [ "7-drums", "8-drums", "6-drums", "5-drums", "4-drums" ];
-				else if ((i.features & MFBit!(DrumFeatures.Has4Drums)) && (i.features & MFBit!(DrumFeatures.Has2Cymbals)))
-					preferences = [ "6-drums", "7-drums", "8-drums", "5-drums", "4-drums" ];
+					preferences = [ "7-drums", "8-drums", "5-drums", "4-drums" ];
 				else if (i.features & MFBit!(DrumFeatures.Has2Cymbals))
-					preferences = [ "5-drums", "6-drums", "7-drums", "8-drums", "4-drums" ];
+					preferences = [ "5-drums", "7-drums", "8-drums", "4-drums" ];
 				else if (i.features & MFBit!(DrumFeatures.Has4Drums))
-					preferences = [ "4-drums", "7-drums", "8-drums", "6-drums", "5-drums" ];
+					preferences = [ "4-drums", "7-drums", "8-drums", "5-drums" ];
 				else
 					assert(false, "What kind of kit is this?!");
 
@@ -399,11 +414,6 @@ class Chart
 		}
 
 		return s;
-	}
-
-	bool isPartPresent(string part)
-	{
-		return (part in parts) != null;
 	}
 
 	int getLastNoteTick()

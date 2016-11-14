@@ -41,38 +41,33 @@ class GHDrums : NoteTrack
 		edge = Material("edge");
 		edge.parameters.zread = false;
 
-		Instrument input = performer.scoreKeeper.instrument;
-		if ((input.features & MFBit!(DrumFeatures.Has4Drums)) && (input.features & MFBit!(DrumFeatures.Has3Cymbals)) && (input.features & MFBit!(DrumFeatures.HasHiHat)))
+		string type = performer.sequence.variationType;
+//		Instrument input = performer.scoreKeeper.instrument;
+		if (type[] == "8-drums")
 		{
 			// real kit - 3 cymbals
 			numLanes = 8;
 			laneMap = [ 0, 1, 2, 3, 4, 5, 6, 7, 8 ];
 		}
-		else if ((input.features & MFBit!(DrumFeatures.Has4Drums)) && (input.features & MFBit!(DrumFeatures.Has2Cymbals)) && (input.features & MFBit!(DrumFeatures.HasHiHat)))
-		{
-			// real kit - 2 cymbals
-			numLanes = 7;
-			laneMap = [ 0, 1, 2, 3, 4, -1, 5, 6, 8 ];
-		}
-		else if ((input.features & MFBit!(DrumFeatures.Has4Drums)) && (input.features & MFBit!(DrumFeatures.Has3Cymbals)))
+//		else if (type[] == "7-drums" && (input.features & MFBit!(DrumFeatures.Has4Drums)) && (input.features & MFBit!(DrumFeatures.Has2Cymbals)) && (input.features & MFBit!(DrumFeatures.HasHiHat)))
+//		{
+//			// real kit - 2 cymbals
+//			numLanes = 7;
+//			laneMap = [ 0, 1, 2, 3, 4, -1, 5, 6, 8 ];
+//		}
+		else if (type[] == "7-drums")
 		{
 			// RB - 3 cymbals
 			numLanes = 7;
 			laneMap = [ -1, 0, 1, 2, 4, 3, 6, 5, 8 ];
 		}
-		else if ((input.features & MFBit!(DrumFeatures.Has4Drums)) && (input.features & MFBit!(DrumFeatures.Has2Cymbals)))
-		{
-			// RB - 2 cymbals
-			numLanes = 6;
-			laneMap = [ -1, 0, 1, 2, 3, -1, 5, 4, 8 ];
-		}
-		else if (input.features & MFBit!(DrumFeatures.Has2Cymbals))
+		else if (type[] == "5-drums")
 		{
 			// GH
 			numLanes = 5;
 			laneMap = [ -1, 0, 1, -1, 2, -1, 4, 3, 8 ];
 		}
-		else if (input.features & MFBit!(DrumFeatures.Has4Drums))
+		else if (type[] == "4-drums")
 		{
 			// RB
 			numLanes = 4;

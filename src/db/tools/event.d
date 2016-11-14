@@ -26,6 +26,8 @@ struct Event(Args...)
 	final @property bool empty() const pure nothrow @nogc { return _subscribers.length == 0; }
 	final @property inout(Handler)[] subscribers() inout pure nothrow @nogc { return _subscribers; }
 
+	final void clear() pure nothrow @nogc { _subscribers = null; }
+
 	void opCall(Args args) const nothrow
 	{
 		signal(args);

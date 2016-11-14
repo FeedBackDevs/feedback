@@ -98,36 +98,71 @@ bool LoadDWI(Song* song, const(char)[] dwi, string path)
 	enum DwiResolution = 48;
 	chart.resolution = DwiResolution;
 
-	while (1)
+	bool parsingBackground = false;
+
+	foreach (line; dwi.lineSplitter)
 	{
-		auto start = dwi.find('#');
-		if (!start)
-			break;
-		size_t split = start.countUntil(':');
-		if (split == -1)
-			break;
+		auto comment = line.countUntil("//");
+		if (comment != -1)
+			line = line[0 .. comment];
 
-		// get the tag
-		auto tag = start[1..split];
+		line = line.strip;
+		if (line.empty)
+			continue;
 
-		string term = tag[] == "BACKGROUND" ? "#END;" : ";";
-		auto end = countUntil(start[split..$], term);
-		if (end == -1)
-			break;
+		if (line[0] != '#')
+		{
+			if (!parsingBackground)
+			{
+				logWarning(2, "DWI: Unknown line: %s", line);
+				continue;
+			}
+
+			// append background line...
+			if (chart.params["BACKGROUND"].empty)
+				chart.params["BACKGROUND"] = line.idup;
+			else
+				chart.params["BACKGROUND"] ~= "\n" ~ line.idup;
+			continue;
+		}
+
+		// parse the tag
+		const(char)[] tag, content;
+
+		auto split = line.countUntil(':');
+		if (split != -1)
+		{
+			tag = line[1 .. split];
+			content = line[split+1 .. $];
+		}
+
+		if (tag[] != "BACKGROUND")
+		{
+			auto end = countUntil(tag ? content : line, ';');
+			if (end == -1)
+			{
+				logWarning(2, "DWI: Expected ';' to terminate tag!");
+				continue;
+			}
+			if (tag)
+				content = content[0 .. end];
+			else
+				tag = line[1 .. end];
+		}
 
 		// get the content
-		auto content = start[split+1..split+end];
-		dwi = start[split+end+term.length..$];
-
 		switch (tag)
 		{
 			case "TITLE":			// #TITLE:...;  	 title of the song.
 				chart.name = content.idup;
-				chart.params[tag.idup] = song.name;
+				ptrdiff_t tab;
+				while ((tab = chart.name.countUntil('\t')) != -1)
+					chart.name = chart.name[0 .. tab] ~ "\n" ~ chart.name[tab+1 .. $];
+				chart.params[tag.idup] = chart.name;
 				break;
 			case "ARTIST":			// #ARTIST:...;  	 artist of the song.
 				chart.artist = content.idup;
-				chart.params[tag.idup] = song.artist;
+				chart.params[tag.idup] = chart.artist;
 				break;
 
 				// Special Characters are denoted by giving filenames in curly-brackets.
@@ -214,8 +249,8 @@ bool LoadDWI(Song* song, const(char)[] dwi, string path)
 				break;
 			case "GENRE":			// #GENRE:...;  	 a genre to assign to the song if "sort by Genre" is selected in the System Options. Multiple Genres can be given by separating them with commas.
 				chart.genre = content.idup;
-				chart.packageName = song.genre;
-				chart.params[tag.idup] = song.genre;
+				chart.packageName = chart.genre;
+				chart.params[tag.idup] = chart.genre;
 				break;
 			case "CDTITLE":			// #CDTITLE:...;  	 points to a small graphic file (64x40) that will display in the song selection screen in the bottom right of the background, showing which CD the song is from. The colour of the pixel in the upper-left will be made transparent.
 				chart.params[tag.idup] = content.idup;
@@ -239,7 +274,12 @@ bool LoadDWI(Song* song, const(char)[] dwi, string path)
 				chart.params[tag.idup] = content.idup;
 				break;
 			case "BACKGROUND":		// #BACKGROUND:     ........     #END;
-				chart.params[tag.idup] = content.idup;
+				parsingBackground = true;
+				content = content.strip;
+				chart.params["BACKGROUND"] = content.idup;
+				break;
+			case "END":
+				parsingBackground = false;
 				break;
 
 			case "SINGLE", "DOUBLE", "COUPLE", "SOLO":
@@ -270,7 +310,7 @@ bool LoadDWI(Song* song, const(char)[] dwi, string path)
 						'L': MFBit!Right | MFBit!UpRight,
 						'M': MFBit!UpLeft | MFBit!UpRight ];
 
-					enum string[string] typeMap = [ "SINGLE":"dance-single", "DOUBLE":"dance-double", "COUPLE":"dance-couple", "SOLO":"dance-solo" ];
+					enum string[string] typeMap = [ "SINGLE": "dance-single", "DOUBLE": "dance-double", "COUPLE": "dance-couple", "SOLO": "dance-solo" ];
 					enum Difficulty[string] difficultyMap = [ "BEGINNER": Difficulty.Beginner, "BASIC": Difficulty.Easy, "ANOTHER": Difficulty.Medium, "MANIAC": Difficulty.Hard, "SMANIAC": Difficulty.Expert ];
 
 					auto parts = content.splitter(':');

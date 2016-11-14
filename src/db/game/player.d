@@ -71,6 +71,7 @@ class Player
 	struct Input
 	{
 		string part;
+		string type;
 		Instrument instrument;
 	}
 	Input input;

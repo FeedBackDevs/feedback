@@ -36,7 +36,9 @@ class Performer
 
 		// HACK: hardcoded classes for the moment...
 		// Note: note track should be chosen accorting to the instrument type, and player preference for theme/style (GH/RB/Bemani?)
-		if (player.input.part[] == "leadguitar")
+		if (player.input.part[] == "leadguitar" ||
+			player.input.part[] == "rhythmguitar" ||
+			player.input.part[] == "bass")
 		{
 			scoreKeeper = new GuitarScoreKeeper(sequence, player.input.instrument);
 			noteTrack = new GHGuitar(this);
@@ -65,7 +67,8 @@ class Performer
 
 	void begin(double startTime)
 	{
-		scoreKeeper.begin(player.input.part);
+		if (scoreKeeper)
+			scoreKeeper.begin(player.input.part);
 	}
 
 	void end()
@@ -74,18 +77,22 @@ class Performer
 
 	void update(long now)
 	{
-		scoreKeeper.update();
-		noteTrack.Update();
+		if (scoreKeeper)
+			scoreKeeper.update();
+		if (noteTrack)
+			noteTrack.Update();
 	}
 
 	void draw(long now)
 	{
-		noteTrack.Draw(screenSpace, now);
+		if (noteTrack)
+			noteTrack.Draw(screenSpace, now);
 	}
 
 	void drawUI()
 	{
-		noteTrack.DrawUI(screenSpace);
+		if (noteTrack)
+			noteTrack.DrawUI(screenSpace);
 	}
 
 	MFRect screenSpace;
@@ -105,12 +112,27 @@ class Performance
 		this.song = song;
 		song.prepare();
 
+		setPlayers(players);
+
+		if (!sync)
+			this.sync = new SystemTimer;
+		else
+			this.sync = sync;
+	}
+
+	~this()
+	{
+		release();
+	}
+
+	void setPlayers(Player[] players)
+	{
 		// create and arrange the performers for 'currentSong'
 		// Note: Players whose parts are unavailable in the song will not have performers created
 		performers = null;
 		foreach (p; players)
 		{
-			Track s = song.chart.getSequence(p.input.part, p.input.instrument, p.variation, p.difficulty);
+			Track s = song.chart.getTrackForInstrument(p.input.part, p.input.instrument, p.variation, p.difficulty);
 			if (s)
 				performers ~= new Performer(this, p, s);
 			else
@@ -118,7 +140,7 @@ class Performance
 				// HACK: find a part the players instrument can play!
 				foreach (part; p.input.instrument.desc.parts)
 				{
-					s = song.chart.getSequence(part, p.input.instrument, p.variation, p.difficulty);
+					s = song.chart.getTrackForInstrument(part, p.input.instrument, p.variation, p.difficulty);
 					if (s)
 					{
 						p.input.part = part;
@@ -130,16 +152,6 @@ class Performance
 		}
 
 		arrangePerformers();
-
-		if (!sync)
-			this.sync = new SystemTimer;
-		else
-			this.sync = sync;
-	}
-
-	~this()
-	{
-		release();
 	}
 
 	void arrangePerformers()
