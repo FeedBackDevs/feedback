@@ -4,6 +4,10 @@ import db.chart;
 import db.game : Game;
 import db.game.performance;
 import db.game.player;
+import db.instrument.dance : DanceNotes;
+import db.instrument.drums : DrumNotes;
+import db.instrument.guitarcontroller : GuitarNotes;
+import db.instrument.keyboard: KeyboardNotes;
 import db.library;
 import db.sync.systime;
 import db.theme;
@@ -223,6 +227,8 @@ class Editor
 	string selectedPart, selectedType, selectedVariation;
 	bool donePart, doneType, doneVariation;
 
+	int[] noteMap;
+
 	void shift(int steps)
 	{
 		gotoTick(offset + (steps * chart.resolution * 4 / step), false);
@@ -320,8 +326,64 @@ class Editor
 		editorPlayer.difficulty = trk.difficulty;
 
 		game.performance.setPlayers((&editorPlayer)[0..1]);
+
+		noteMap = getNoteMap(trk.part, trk.variationType);
 	}
 
+	int[] getNoteMap(string part, string type)
+	{
+		switch (part)
+		{
+			case "leadguitar":
+			case "rhythmguitar":
+			case "bass":
+				return [ GuitarNotes.Open, GuitarNotes.Green, GuitarNotes.Red, GuitarNotes.Yellow, GuitarNotes.Blue, GuitarNotes.Orange, GuitarNotes.Open, -1, -1, -1 ];
+			case "keyboard":
+				return [ -1, KeyboardNotes.Green, KeyboardNotes.Red, KeyboardNotes.Yellow, KeyboardNotes.Blue, KeyboardNotes.Orange, -1, -1, -1, -1 ];
+			case "drums":
+				switch (type)
+				{
+					case "4-drums":
+						return [ DrumNotes.Kick, DrumNotes.Snare, DrumNotes.Tom1, DrumNotes.Tom2, DrumNotes.Tom3, DrumNotes.Kick, -1, -1, -1, -1 ];
+					case "5-drums":
+						return [ DrumNotes.Kick, DrumNotes.Snare, DrumNotes.Crash, DrumNotes.Tom2, DrumNotes.Ride, DrumNotes.Tom3, DrumNotes.Kick, -1, -1, -1 ];
+					case "7-drums":
+						return [ DrumNotes.Kick, DrumNotes.Snare, DrumNotes.Crash, DrumNotes.Tom1, DrumNotes.Splash, DrumNotes.Tom2, DrumNotes.Ride, DrumNotes.Tom3, DrumNotes.Kick, -1 ];
+					case "6-drums-hh":
+						return [ DrumNotes.Kick, DrumNotes.Hat, DrumNotes.Snare, DrumNotes.Crash, DrumNotes.Tom1, DrumNotes.Tom2, DrumNotes.Ride, DrumNotes.Tom3, DrumNotes.Kick, -1 ];
+					case "8-drums":
+						return [ DrumNotes.Kick, DrumNotes.Hat, DrumNotes.Snare, DrumNotes.Crash, DrumNotes.Tom1, DrumNotes.Splash, DrumNotes.Tom2, DrumNotes.Ride, DrumNotes.Tom3, DrumNotes.Kick ];
+					default:
+						break;
+				}
+				goto default;
+			case "dance":
+				switch (type)
+				{
+					case "dance-single":
+						return [ cast(DanceNotes)-1, DanceNotes.Left, DanceNotes.Down, DanceNotes.Up, DanceNotes.Right, cast(DanceNotes)-1, cast(DanceNotes)-1, cast(DanceNotes)-1, cast(DanceNotes)-1, cast(DanceNotes)-1 ];
+					case "dance-double":
+					case "dance-couple":
+						return [ cast(DanceNotes)-1, DanceNotes.Left, DanceNotes.Down, DanceNotes.Up, DanceNotes.Right, DanceNotes.Left2, DanceNotes.Down2, DanceNotes.Up2, DanceNotes.Right2, cast(DanceNotes)-1 ];
+					case "dance-solo":
+						return [ cast(DanceNotes)-1, DanceNotes.Left, DanceNotes.UpLeft, DanceNotes.Down, DanceNotes.Up, DanceNotes.UpRight, DanceNotes.Right, cast(DanceNotes)-1, cast(DanceNotes)-1, cast(DanceNotes)-1 ];
+					case "pump-single":
+						return [ cast(DanceNotes)-1, DanceNotes.DownLeft, DanceNotes.UpLeft, DanceNotes.Center, DanceNotes.UpRight, DanceNotes.DownRight, cast(DanceNotes)-1, cast(DanceNotes)-1, cast(DanceNotes)-1, cast(DanceNotes)-1 ];
+					case "pump-double":
+					case "pump-couple":
+						return [ DanceNotes.DownRight2, DanceNotes.DownLeft, DanceNotes.UpLeft, DanceNotes.Center, DanceNotes.UpRight, DanceNotes.DownRight, DanceNotes.DownLeft2, DanceNotes.UpLeft2, DanceNotes.Center2, DanceNotes.UpRight2 ];
+					case "dance-8pad-single":
+						return [ cast(DanceNotes)-1, DanceNotes.DownLeft, DanceNotes.Left, DanceNotes.UpLeft, DanceNotes.Down, DanceNotes.Up, DanceNotes.UpRight, DanceNotes.Right, DanceNotes.DownRight, cast(DanceNotes)-1 ];
+					case "dance-9pad-single":
+						return [ cast(DanceNotes)-1, DanceNotes.DownLeft, DanceNotes.Left, DanceNotes.UpLeft, DanceNotes.Down, DanceNotes.Center, DanceNotes.Up, DanceNotes.UpRight, DanceNotes.Right, DanceNotes.DownRight ];
+					default:
+						break;
+				}
+				goto default;
+			default:
+				return [ -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 ];
+		}
+	}
 
 	//
 	// MENU LOGIC
@@ -443,6 +505,34 @@ class Editor
 
 					// change the track
 					changeTrack(trk);
+					return true;
+				}
+				case MFKey._0:
+				..
+				case MFKey._9:
+				{
+					if (menuState != MenuState.Closed || bPlaying)
+						return true;
+
+					int note = noteMap[ev.buttonID - MFKey._0];
+					if (note == -1)
+						return true;
+
+					// TODO: if we interrupt a sustain, remove the sustained note!
+					auto i = track.notes.FindEvent(EventType.Note, offset, note);
+					if (i != -1)
+					{
+						// remove existing note!
+						chart.removeEvent(track, &track.notes[i]);
+						return true;
+					}
+
+					// insert note event at tick
+					Event e;
+					e.tick = offset;
+					e.event = EventType.Note;
+					e.note.key = note;
+					chart.insertTrackEvent(track, e);
 					return true;
 				}
 

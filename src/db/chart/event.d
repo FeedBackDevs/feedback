@@ -383,15 +383,15 @@ private template AllIs(Ty, T...)
 // skip over events of specified types
 ptrdiff_t SkipEvents(bool reverse = false, Types...)(Event[] events, ptrdiff_t e, Types types) if (AllIs!(E.EventType, Types))
 {
-outer: for (; (reverse && e >= 0) || (!reverse && e < events.length); e += reverse ? -1 : 1)
-{
-	foreach (t; types)
+	outer: for (; (reverse && e >= 0) || (!reverse && e < events.length); e += reverse ? -1 : 1)
 	{
-		if (events[e].event == t)
-			continue outer;
+		foreach (t; types)
+		{
+			if (events[e].event == t)
+				continue outer;
+		}
+		return e;
 	}
-	return e;
-}
 	return -1;
 }
 
@@ -413,7 +413,7 @@ ptrdiff_t SkipToEvents(bool reverse = false, Types...)(Event[] events, ptrdiff_t
 Event[] EventsAt(Event[] events, int tick)
 {
 	ptrdiff_t i = events.GetEventForOffset!(false, false)(tick);
-	if (i != tick)
+	if (i == -1 || events[i].tick != tick)
 		return null;
 	auto e = i;
 	while (e < events.length-1 && events[e+1].tick == events[e].tick)

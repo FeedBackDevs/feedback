@@ -7,6 +7,15 @@ enum TypeName = "keyboard";
 enum Parts = [ "keyboard", "realkeyboard" ];
 enum ScoreKeeper = "basicscorekeeper";
 
+enum KeyboardNotes
+{
+	Green,
+	Red,
+	Yellow,
+	Blue,
+	Orange
+}
+
 __gshared immutable ubyte[128] WhiteKeys =
 [
 	0,		// C0
