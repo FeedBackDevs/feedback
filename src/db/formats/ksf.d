@@ -348,11 +348,11 @@ bool LoadKSF(Chart chart, const(char)[] ksf, const(char)[] filename)
 		}
 
 		// find variation, if there isn't one, create it.
-		Variation* pVariation = getVariation(chart.getPart("dance"), trk.variationType, trk.variationName, true);
+		Variation* pVariation = chart.getVariation("dance", trk.variationType, trk.variationName, true);
 
 		// create difficulty, set difficulty to feet rating
-		assert(!getDifficulty(*pVariation, trk.difficulty), "Difficulty already exists!");
-		pVariation.difficulties ~= trk;
+		assert(!pVariation.difficulty(trk.difficulty), "Difficulty already exists!");
+		pVariation.addDifficulty(trk);
 
 		return false;
 	}

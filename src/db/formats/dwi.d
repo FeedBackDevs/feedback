@@ -440,11 +440,11 @@ bool LoadDWI(Song* song, const(char)[] dwi, string path)
 					}
 
 					// find variation, if there isn't one, create it.
-					Variation* pVariation = chart.getVariation(chart.getPart("dance"), trk.variationType, trk.variationName, true);
+					Variation* pVariation = chart.getVariation("dance", trk.variationType, trk.variationName, true);
 
-					// create difficulty, set difficulty to feet rating
-					assert(!chart.getDifficulty(*pVariation, trk.difficulty), "Difficulty already exists!");
-					pVariation.difficulties ~= trk;
+					// create difficulty
+					assert(!pVariation.difficulty(trk.difficulty), "Difficulty already exists!");
+					pVariation.addDifficulty(trk);
 				}
 				break;
 

@@ -12,9 +12,9 @@ import db.formats.parsers.guitarprofile;
 import db.tools.filetypes;
 import db.library;
 
-import std.string;
-import std.path;
 import std.conv : to;
+import std.path;
+import std.string;
 
 // Pieced together from multiple sources:
 // http://dguitar.sourceforge.net/GP4format.html
@@ -152,7 +152,7 @@ bool LoadGPx(Chart song, GuitarProFile gpx)
 
 			if (t.channel == 10)
 			{
-				Part* part = &song.getPart("drums");
+				Part* part = song.getPart("drums", true);
 
 				part.part = "drums";
 				part.variations ~= Variation("8-drums", t.name);
@@ -163,7 +163,7 @@ bool LoadGPx(Chart song, GuitarProFile gpx)
 				trk.variationType = variation.type;
 				trk.variationName = variation.name;
 				trk.difficulty = Difficulty.Expert;
-				variation.difficulties ~= trk;
+				variation.addDifficulty(trk);
 
 				// parse drums
 				ptrdiff_t[STRING_MAX_NUMBER][2] lastNotes = -1;

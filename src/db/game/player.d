@@ -81,7 +81,7 @@ class Player
 //	Input[] inputs;
 
 	string variation;
-	Difficulty difficulty;
+	Difficulty difficulty = Difficulty.Easy;
 
 	LuaTable data;
 }

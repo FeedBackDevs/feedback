@@ -4,7 +4,9 @@ public import db.chart.event;
 
 enum Difficulty
 {
-	Beginner,
+	Unknown = -1,
+
+	Beginner = 0,
 	Easy,
 	Medium,
 	Hard,

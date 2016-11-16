@@ -355,11 +355,11 @@ bool LoadSM(Song* song, const(char)[] sm, string path)
 				}
 
 				// find variation for tag, if there isn't one, create it.
-				Variation* pVariation = chart.getVariation(chart.getPart("dance"), type, trk.variationName, true);
+				Variation* pVariation = chart.getVariation("dance", type, trk.variationName, true);
 
-				// create difficulty, set difficulty to feet rating
-				assert(!chart.getDifficulty(*pVariation, trk.difficulty), "Difficulty already exists!");
-				pVariation.difficulties ~= trk;
+				// create difficulty
+				assert(!pVariation.difficulty(trk.difficulty), "Difficulty already exists!");
+				pVariation.addDifficulty(trk);
 				break;
 
 			default:

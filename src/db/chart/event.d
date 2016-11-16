@@ -28,9 +28,9 @@ enum EventType
 
 enum SpecialType
 {
-	Boost,			// star power/overdrive
 	LeftPlayer,		// GH1/2 co-op mode
 	RightPlayer,	// GH1/2 co-op mode
+	Boost,			// star power/overdrive
 	Slide,			// GH4 slider
 	Solo,			// RB solo
 	FreeStyle,

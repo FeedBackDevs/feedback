@@ -1,21 +1,21 @@
 module db.formats.rawmidi;
 
-import fuji.fuji;
-import fuji.filesystem;
 import fuji.dbg;
+import fuji.filesystem;
+import fuji.fuji;
 
 import db.chart;
+import db.formats.parsers.midifile;
 import db.instrument;
 import db.instrument.drums : DrumNotes, DrumNoteFlags;
-import db.formats.parsers.midifile;
-import db.tools.filetypes;
 import db.library;
+import db.tools.filetypes;
 
-import std.string;
-import std.path;
-import std.conv : to;
 import std.algorithm : canFind;
+import std.conv : to;
+import std.path;
 import std.range : back;
+import std.string;
 
 bool LoadRawMidi(Song* song, DirEntry file)
 {
@@ -100,17 +100,15 @@ bool LoadRawMidi(Chart song, MIDIFile midi)
 				if (bDrums)
 				{
 					part = "drums";
-					pPart = &getPart(part);
-					pPart.part = part;
-					pPart.variations ~= Variation("8-drums", "Track " ~ to!string(track + 1));
-					pVariation = &pPart.variations[$-1];
+					pPart = getPart(part, true);
+					pVariation = pPart.variation("8-drums", "Track " ~ to!string(track + 1), true);
 
 					Track trk = new Track();
 					trk.part = part;
 					trk.variationType = pVariation.type;
 					trk.variationName = pVariation.name;
 					trk.difficulty = Difficulty.Expert;
-					pVariation.difficulties ~= trk;
+					pVariation.addDifficulty(trk);
 				}
 				else if (bVox)
 				{

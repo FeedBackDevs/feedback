@@ -285,7 +285,7 @@ bool LoadMidi(Chart chart, MIDIFile midi, GHVersion ghVer = GHVersion.Unknown)
 
 				if (part[] != "unknown" && !bIsEventTrack)
 				{
-					pPart = &getPart(part);
+					pPart = getPart(part, true);
 
 					// find variation...
 					bool bFound;

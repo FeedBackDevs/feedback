@@ -132,7 +132,7 @@ class Performance
 		performers = null;
 		foreach (p; players)
 		{
-			Track s = song.chart.getTrackForInstrument(p.input.part, p.input.instrument, p.variation, p.difficulty);
+			Track s = song.chart.getTrackForPlayer(p.input.part, p.input.type, p.variation, p.difficulty);
 			if (s)
 				performers ~= new Performer(this, p, s);
 			else
@@ -140,7 +140,14 @@ class Performance
 				// HACK: find a part the players instrument can play!
 				foreach (part; p.input.instrument.desc.parts)
 				{
-					s = song.chart.getTrackForInstrument(part, p.input.instrument, p.variation, p.difficulty);
+					// if part == "drums" or "dance", 'type' needs to try a few things...
+					string type = null;
+					if (part[] == "drums")
+						type = "8-drums";
+					else if (part[] == "dance")
+						type = "dance-single";
+
+					s = song.chart.getTrackForPlayer(part, type, p.variation, p.difficulty);
 					if (s)
 					{
 						p.input.part = part;

@@ -186,6 +186,9 @@ struct Song
 		foreach (ref s; source.streams)
 		{
 			streams[s.type] = MFSound_CreateStream(s.stream.toStringz, MFAudioStreamFlags.QueryLength | MFAudioStreamFlags.AllowSeeking);
+			if (!streams[s.type])
+				continue;
+
 			MFSound_PlayStream(streams[s.type], MFPlayFlags.BeginPaused);
 
 			voices[s.type] = MFSound_GetStreamVoice(streams[s.type]);
@@ -293,12 +296,12 @@ class SongLibrary
 
 			if (song.localChart)	s ~= new Element("localChart", song.localChart);
 
-			if (song._preview)	s ~= new Element("preview", song._preview);
-			if (song.video)		s ~= new Element("video", song.video);
+			if (song._preview)		s ~= new Element("preview", song._preview);
+			if (song.video)			s ~= new Element("video", song.video);
 
 			if (song.coverImage)	s ~= new Element("cover", song.coverImage);
 			if (song.background)	s ~= new Element("background", song.background);
-			if (song.fretboard)	s ~= new Element("fretboard", song.fretboard);
+			if (song.fretboard)		s ~= new Element("fretboard", song.fretboard);
 
 			auto srcs = new Element("sources");
 			foreach (ref src; song.sources)
@@ -365,30 +368,57 @@ private:
 				Song song;
 				song._chart = new Chart(e.filepath);
 
-				// search for the music and other stuff...
-				string songName = e.filename.stripExtension.toLower;
-				foreach (f; dirEntries(e.directory ~ "/*", SpanMode.shallow))
+				if (song._chart.params["source_format"][] == ".chart_1_0")
 				{
-					string filename = f.filename.toLower;
-					string fn = filename.stripExtension;
-					if (isImageFile(filename))
+					string dir = e.directory ~ "/";
+
+					Song.Source source;
+					string* fn = "MusicStream" in song._chart.params;
+					if (fn)
+						source.addStream(dir ~ *fn, Streams.Song);
+					fn = "GuitarStream" in song._chart.params;
+					if (fn)
+						source.addStream(dir ~ *fn, Streams.Guitar);
+					fn = "BassStream" in song._chart.params;
+					if (fn)
+						source.addStream(dir ~ *fn, Streams.Bass);
+
+					song.sources ~= source;
+
+					fn = "Fretboard" in song._chart.params;
+					if (fn)
+						song.fretboard = dir ~ *fn;
+
+					song._chart.saveChart(dir);
+					song.localChart = song._chart.songPath;
+				}
+				else
+				{
+					// search for the music and other stuff...
+					string songName = e.filename.stripExtension.toLower;
+					foreach (f; dirEntries(e.directory ~ "/*", SpanMode.shallow))
 					{
-						if (fn[] == songName)
-							song.coverImage = f.filename;
-						else if (fn[] == songName ~ "-bg")
-							song.background = f.filename;
-					}
-					else if (isAudioFile(filename))
-					{
-						if (fn[] == songName)
-							song.addSource().addStream(f.filename);
-						if (fn[] == songName ~ "-intro")
-							song._preview = f.filename;
-					}
-					else if (isVideoFile(filename))
-					{
-						if (fn[] == songName)
-							song.video = f.filename;
+						string filename = f.filename.toLower;
+						string fn = filename.stripExtension;
+						if (isImageFile(filename))
+						{
+							if (fn[] == songName)
+								song.coverImage = f.filename;
+							else if (fn[] == songName ~ "-bg")
+								song.background = f.filename;
+						}
+						else if (isAudioFile(filename))
+						{
+							if (fn[] == songName)
+								song.addSource().addStream(f.filename);
+							if (fn[] == songName ~ "-intro")
+								song._preview = f.filename;
+						}
+						else if (isVideoFile(filename))
+						{
+							if (fn[] == songName)
+								song.video = f.filename;
+						}
 					}
 				}
 
