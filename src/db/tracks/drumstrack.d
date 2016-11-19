@@ -7,7 +7,6 @@ import db.i.notetrack;
 import db.i.scorekeeper;
 import db.inputs.inputdevice;
 import db.i.syncsource;
-import db.instrument;
 import db.instrument.drums : DrumNotes, DrumFeatures;
 import db.game.performance;
 import db.renderer;
@@ -42,36 +41,33 @@ class GHDrums : NoteTrack
 		edge.parameters.zread = false;
 
 		string type = performer.sequence.variationType;
-//		Instrument input = performer.scoreKeeper.instrument;
-		if (type[] == "8-drums")
+		if (type[] == "real-drums")
 		{
 			// real kit - 3 cymbals
 			numLanes = 8;
 			laneMap = [ 0, 1, 2, 3, 4, 5, 6, 7, 8 ];
+			colourMap = [ MFVector.yellow+MFVector.grey, MFVector.red, MFVector.green+MFVector.grey, MFVector.yellow, MFVector.blue, MFVector.white, MFVector.green, MFVector.blue+MFVector.grey, MFVector.magenta*MFVector.grey ];
 		}
-//		else if (type[] == "7-drums" && (input.features & MFBit!(DrumFeatures.Has4Drums)) && (input.features & MFBit!(DrumFeatures.Has2Cymbals)) && (input.features & MFBit!(DrumFeatures.HasHiHat)))
-//		{
-//			// real kit - 2 cymbals
-//			numLanes = 7;
-//			laneMap = [ 0, 1, 2, 3, 4, -1, 5, 6, 8 ];
-//		}
-		else if (type[] == "7-drums")
+		if (type[] == "real-drums-2c")
+		{
+			// real kit - 2 cymbals
+			numLanes = 7;
+			laneMap = [ 0, 1, 2, 3, 4, -1, 5, 6, 8 ];
+			colourMap = [ MFVector.yellow+MFVector.grey, MFVector.red, MFVector.green+MFVector.grey, MFVector.yellow, MFVector.blue, MFVector.white, MFVector.green, MFVector.blue+MFVector.grey, MFVector.magenta*MFVector.grey ];
+		}
+		else if (type[] == "pro-drums" || type[] == "rb-drums")
 		{
 			// RB - 3 cymbals
-			numLanes = 7;
-			laneMap = [ -1, 0, 1, 2, 4, 3, 6, 5, 8 ];
+			numLanes = 4;
+			laneMap = [ 1, 0, 3, 1, 2, -1, 3, 2, 8 ];
+			colourMap = [ min(MFVector.yellow+MFVector.grey, MFVector.white), MFVector.red, min(MFVector.green+MFVector.grey, MFVector.white), MFVector.yellow, MFVector.blue, MFVector.white, MFVector.green, min(MFVector.blue+MFVector.grey, MFVector.white), MFVector.magenta*MFVector.grey ];
 		}
-		else if (type[] == "5-drums")
+		else if (type[] == "gh-drums")
 		{
 			// GH
 			numLanes = 5;
 			laneMap = [ -1, 0, 1, -1, 2, -1, 4, 3, 8 ];
-		}
-		else if (type[] == "4-drums")
-		{
-			// RB
-			numLanes = 4;
-			laneMap = [ -1, 0, -1, 1, 2, -1, 3, -1, 8 ];
+			colourMap = [ MFVector.white, MFVector.red, MFVector.yellow, MFVector.white, MFVector.blue, MFVector.white, MFVector.green, MFVector.orange, MFVector.magenta*MFVector.grey ];
 		}
 	}
 
@@ -275,11 +271,6 @@ class GHDrums : NoteTrack
 		// draw the notes
 		auto notes = performer.sequence.notes.BetweenTimes(bottomTime, topTime);
 
-		static __gshared immutable MFVector[9] realColours = [ MFVector.red * MFVector.grey, MFVector.red, MFVector.yellow * MFVector.grey, MFVector.yellow, MFVector.blue, MFVector.blue * MFVector.grey, MFVector.green, MFVector.green * MFVector.grey, MFVector.magenta ];
-		static __gshared immutable MFVector[9] rbColours = [ MFVector.red * MFVector.grey, MFVector.red, MFVector.yellow * MFVector.grey, MFVector.yellow, MFVector.blue, MFVector.blue * MFVector.grey, MFVector.green, MFVector.green * MFVector.grey, MFVector.magenta ];
-		static __gshared immutable MFVector[9] ghColours = [ MFVector.red * MFVector.grey, MFVector.red, MFVector.yellow, MFVector.yellow, MFVector.blue, MFVector.blue, MFVector.green, MFVector.orange, MFVector.magenta ];
-		immutable MFVector[] colours = (performer.scoreKeeper.instrument.features & MFBit!(DrumFeatures.HasHiHat)) ? realColours : (!(performer.scoreKeeper.instrument.features & MFBit!(DrumFeatures.Has4Drums)) ? ghColours : rbColours);
-
 		foreach (ref e; notes)
 		{
 			if (e.event != EventType.Note)
@@ -319,12 +310,12 @@ class GHDrums : NoteTrack
 
 				auto b1 = MFVector(pos.x - noteWidth*0.3f, 0, end.z);
 				auto b2 = MFVector(pos.x + noteWidth*0.3f, noteHeight*0.05f, pos.z);
-				MFPrimitive_DrawBox(b1, b2, colours[e.note.key], MFMatrix.identity, false);
+				MFPrimitive_DrawBox(b1, b2, colourMap[e.note.key], MFMatrix.identity, false);
 			}
 
 			auto b1 = MFVector(pos.x - noteWidth, 0, pos.z - noteDepth);
 			auto b2 = MFVector(pos.x + noteWidth, noteHeight, pos.z + noteDepth);
-			MFPrimitive_DrawBox(b1, b2, colours[e.note.key], MFMatrix.identity, false);
+			MFPrimitive_DrawBox(b1, b2, colourMap[e.note.key], MFMatrix.identity, false);
 		}
 
 /*
@@ -456,6 +447,7 @@ private:
 	// some constants for the fretboard
 	int numLanes;
 	int[] laneMap;
+	MFVector[] colourMap;
 
 	int start = -4;
 	int end = 60;

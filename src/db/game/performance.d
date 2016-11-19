@@ -143,7 +143,7 @@ class Performance
 					// if part == "drums" or "dance", 'type' needs to try a few things...
 					string type = null;
 					if (part[] == "drums")
-						type = "8-drums";
+						type = "real-drums";
 					else if (part[] == "dance")
 						type = "dance-single";
 

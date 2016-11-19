@@ -239,9 +239,9 @@ struct Event
 			case KeyboardPosition:
 				return format(f~"KP %d%s", prefix, tick, position, suffix);
 			case Lighting:
-				return format(f~"I %s%s", prefix, tick, text, suffix);
+				return format(f~"I `%s`%s", prefix, tick, text, suffix);
 			case DirectedCut:
-				return format(f~"DC %s%s", prefix, tick, text, suffix);
+				return format(f~"DC `%s`%s", prefix, tick, text, suffix);
 			case MIDI:
 				if (midi.type == 0xFF)
 				{
@@ -260,6 +260,36 @@ struct Event
 			default:
 				return null;
 		}
+	}
+
+	int opCmp(ref const(Event) b) const
+	{
+		import std.uni : icmp;
+
+		if (tick != b.tick)
+			return tick - b.tick;
+		if (event != b.event)
+			return event - b.event;
+		switch (event) with (EventType)
+		{
+			case Note:
+				return note.key - b.note.key;
+			case GuitarNote:
+				if (guitar._string != b.guitar._string)
+					return guitar._string - b.guitar._string;
+				return guitar.fret - b.guitar.fret;
+			case Special:
+				return special - b.special;
+			case Event:
+			case Section:
+			case Lighting:
+				return icmp(text, b.text);
+			case DrumAnimation:
+				return drumAnim - b.drumAnim;
+			default:
+				break;
+		}
+		return 0;
 	}
 
 	long time;		// the physical time of the note (in microseconds)

@@ -27,7 +27,6 @@ enum DrumsType
 
 	FourDrums = 0,	// 4 drums in line
 	FiveDrums,		// 3 drums, 2 cymbals
-	SixDrums,		// 4 drums, 2 cymbals
 	SevenDrums,		// 4 drums, 3 cymbals
 	EightDrums		// 4 drums, 3 cymbals, hihat
 }
@@ -164,6 +163,31 @@ private GHVersion DetectVersion(MIDIFile midi)
 	return GHVersion.Unknown;
 }
 
+void AddEvent(ref Event[] events, ref Event ev)
+{
+	if (ev.event == EventType.Event)
+	{
+		if (ev.text.startsWith("section "))
+		{
+			ev.event = EventType.Section;
+			ev.text = ev.text[8 .. $].strip;
+		}
+		else if (ev.text.startsWith("lighting "))
+		{
+			ev.event = EventType.Lighting;
+			ev.text = ev.text[9 .. $].strip;
+			if (ev.text.length >= 2 && ev.text[0] == '(' && ev.text[$-1] == ')')
+				ev.text = ev.text[1 .. $-1];
+		}
+		else if (ev.text.startsWith("do_directed_cut "))
+		{
+			ev.event = EventType.DirectedCut;
+			ev.text = ev.text[16 .. $].strip;
+		}
+	}
+	events ~= ev;
+}
+
 bool LoadMidi(Chart chart, MIDIFile midi, GHVersion ghVer = GHVersion.Unknown)
 {
 	with(chart)
@@ -217,7 +241,7 @@ bool LoadMidi(Chart chart, MIDIFile midi, GHVersion ghVer = GHVersion.Unknown)
 				{
 					case "T1 GEMS":				variation = "PART GUITAR"; goto case "PART GUITAR";
 					case "PART GUITAR":
-					case "PART GUITAR COOP":	part = "leadguitar" ; bIsEventTrack = false; break;
+					case "PART GUITAR COOP":	part = "leadguitar"; bIsEventTrack = false; break;
 					case "PART RHYTHM":			part = "rhythmguitar"; bIsEventTrack = false; break;
 					case "PART BASS":			part = "bass"; bIsEventTrack = false; break;
 					case "PART DRUMS":			part = "drums"; bIsEventTrack = false; break;
@@ -226,7 +250,7 @@ bool LoadMidi(Chart chart, MIDIFile midi, GHVersion ghVer = GHVersion.Unknown)
 					case "PART VOCALS":
 					case "HARM1":
 					case "HARM2":
-					case "HARM3":				part = "vocals"; bIsEventTrack = false; break;
+					case "HARM3":				part = "vocals"; difficulty = 0; bIsEventTrack = false; break;
 
 					case "PART REAL_GUITAR":
 					case "PART REAL_GUITAR_22":	part = "realleadguitar"; bIsEventTrack = false; break;
@@ -339,7 +363,7 @@ bool LoadMidi(Chart chart, MIDIFile midi, GHVersion ghVer = GHVersion.Unknown)
 							}
 
 							// prepend the drums type to the variation name
-							static __gshared immutable string[] variationNames = [ "4-drums", "5-drums", "6-drums", "7-drums", "8-drums" ];
+							static __gshared immutable string[] variationNames = [ "rb-drums", "gh-drums", "pro-drums", "real-drums" ];
 							pVariation.type = variationNames[drumType];
 							foreach (d; pVariation.difficulties)
 								d.variationType = pVariation.type;
@@ -398,14 +422,14 @@ bool LoadMidi(Chart chart, MIDIFile midi, GHVersion ghVer = GHVersion.Unknown)
 								// stash it in the events track
 								ev.event = EventType.Event;
 								ev.text = text;
-								events ~= ev;
+								events.AddEvent(ev);
 							}
 							else
 							{
 								// stash it in the part (all difficulties)
 								ev.event = EventType.Event;
 								ev.text = text;
-								pPart.events ~= ev;
+								pPart.events.AddEvent(ev);
 							}
 							break;
 						case Lyric:
@@ -476,10 +500,10 @@ bool LoadMidi(Chart chart, MIDIFile midi, GHVersion ghVer = GHVersion.Unknown)
 					int duration = e.tick - currentNotes[channel][note].tick;
 
 					// Note: allegedly, in GH1, notes less than 161 length were rejected...
-					//					if (ghVer == GHVersion.GH && duration < 161 && !bIsEventTrack && currentEvents[channel][note])
-					//					{
-					//						MFDebug_Warn(2, "[" ~ name.text ~ "] Note is invalid, must be removed: " ~ to!string(note));
-					//					}
+//					if (ghVer == GHVersion.GH && duration < 161 && !bIsEventTrack && currentEvents[channel][note])
+//					{
+//						MFDebug_Warn(2, "[" ~ name.text ~ "] Note is invalid, must be removed: " ~ to!string(note));
+//					}
 
 					// Note: 240 (1/8th) seems like an established minimum sustain
 					if (duration >= 240 && currentEvents[channel][note])
@@ -508,12 +532,12 @@ bool LoadMidi(Chart chart, MIDIFile midi, GHVersion ghVer = GHVersion.Unknown)
 					ev.midi.velocity = e.note.velocity;
 					if (part[] != "unknown")
 					{
-						pPart.events ~= ev;
+						pPart.events.AddEvent(ev);
 						currentEvents[channel][note] = &pPart.events.back;
 					}
 					else
 					{
-						events ~= ev;
+						events.AddEvent(ev);
 						currentEvents[channel][note] = &events.back;
 					}
 */
@@ -579,7 +603,7 @@ bool LoadMidi(Chart chart, MIDIFile midi, GHVersion ghVer = GHVersion.Unknown)
 										if (part[] == "drums")
 										{
 											static __gshared immutable int[5] fourDrumMap = [ DrumNotes.Kick, DrumNotes.Snare, DrumNotes.Tom1, DrumNotes.Tom2, DrumNotes.Tom3 ];
-											static __gshared immutable int[5] fiveDrumMap = [ DrumNotes.Kick, DrumNotes.Snare, DrumNotes.Hat, DrumNotes.Tom2, DrumNotes.Tom3 ];
+											static __gshared immutable int[5] fiveDrumMap = [ DrumNotes.Kick, DrumNotes.Snare, DrumNotes.Crash, DrumNotes.Tom2, DrumNotes.Tom3 ];
 											static __gshared immutable int[5] sevenDrumMap = [ DrumNotes.Kick, DrumNotes.Snare, DrumNotes.Hat, DrumNotes.Ride, DrumNotes.Crash ];
 
 											switch (drumType) with(DrumsType)
@@ -594,20 +618,37 @@ bool LoadMidi(Chart chart, MIDIFile midi, GHVersion ghVer = GHVersion.Unknown)
 										goto current_difficulty;
 
 									case 5:
-										if (part[] == "drums" && drumType == DrumsType.FiveDrums)
+										switch (part)
 										{
-											ev.event = EventType.Note;
-											ev.note.key = DrumNotes.Ride;
-											goto current_difficulty;
-										}
-										else
-										{
-											// forced strum?
+											case "leadguitar", "rhythmguitar", "bass":
+												// forced hammer-on...
+												// TODO: for all difficulties, or current difficulty?
+												// appears that this note uses a duration marks a range of notes rather than 'chording' with them
+												break;
+											case "drums":
+												if (drumType == DrumsType.FiveDrums)
+												{
+													ev.event = EventType.Note;
+													ev.note.key = DrumNotes.Ride;
+													goto current_difficulty;
+												}
+												break;
+											default:
+												break;
 										}
 										break;
 
 									case 6:
-										// forced pick
+										switch (part)
+										{
+											case "leadguitar", "rhythmguitar", "bass":
+												// forced strum
+												// TODO: for all difficulties, or current difficulty?
+												// appears that this note uses a duration marks a range of notes rather than 'chording' with them
+												break;
+											default:
+												break;
+										}
 										break;
 
 									case 7:
@@ -643,7 +684,7 @@ bool LoadMidi(Chart chart, MIDIFile midi, GHVersion ghVer = GHVersion.Unknown)
 										// unreachable...
 										break;
 								}
-								break;
+								goto default;
 
 							case 108:
 								// GH1: singer mouth open/close
@@ -652,7 +693,7 @@ bool LoadMidi(Chart chart, MIDIFile midi, GHVersion ghVer = GHVersion.Unknown)
 									// TODO: this needs to be an event with duration...
 									ev.event = EventType.Event;
 									ev.text = "open_mouth";
-									getPart("vocals").events ~= ev;
+									getPart("vocals").events.AddEvent(ev);
 									currentEvents[channel][note] = &getPart("vocals").events.back;
 									continue;
 								}
@@ -662,7 +703,7 @@ bool LoadMidi(Chart chart, MIDIFile midi, GHVersion ghVer = GHVersion.Unknown)
 								if (ghVer == GHVersion.GH2)
 								{
 									// GH2: unknown guitar event
-									//										ev.event = ???; break;
+//									ev.event = ???; break;
 									goto midi_event;
 								}
 								goto case;
@@ -842,7 +883,7 @@ bool LoadMidi(Chart chart, MIDIFile midi, GHVersion ghVer = GHVersion.Unknown)
 
 							default:
 								// TODO: there are still a bunch of unknown notes...
-								MFDebug_Warn(2, "[" ~ name.text ~ "] Unknown note: " ~ to!string(note));
+								MFDebug_Warn(2, "[" ~ name.text ~ "] Unknown realkeyguitar note: " ~ to!string(note));
 								goto midi_event;
 						}
 
@@ -880,13 +921,44 @@ bool LoadMidi(Chart chart, MIDIFile midi, GHVersion ghVer = GHVersion.Unknown)
 
 							default:
 								// TODO: there are still a bunch of unknown notes...
-								MFDebug_Warn(2, "[" ~ name.text ~ "] Unknown note: " ~ to!string(note));
+								MFDebug_Warn(2, "[" ~ name.text ~ "] Unknown realkeyboard note: " ~ to!string(note));
 								goto midi_event;
 						}
 
 					case "vocals":
-						// TODO: read vox...
-						break;
+						switch (note)
+						{
+							case 12: .. case 15:
+								// RB: h2h camera cuts and focus notes
+								goto midi_event;
+
+							case 36: .. case 84:
+								ev.event = EventType.Note;
+								ev.note.key = note;
+								goto current_difficulty;
+
+							case 96: .. case 97:
+								// RB: percussion gems (tambourine, cowbell, etc)
+								goto midi_event;
+
+							case 103:
+								// RB: percussion phrases
+								goto midi_event;
+
+							case 105: .. case 106:
+								// RB: multiplayer phrases
+								goto midi_event;
+
+							case 116:
+								ev.event = EventType.Special;
+								ev.special = SpecialType.Boost;
+								goto all_difficulties;
+
+							default:
+								// TODO: there are still a bunch of unknown notes...
+								MFDebug_Warn(2, "[" ~ name.text ~ "] Unknown vocals note: " ~ to!string(note));
+								goto midi_event;
+						}
 
 					default:
 						// TODO: there are still many notes in unknown parts...
@@ -915,7 +987,7 @@ bool LoadMidi(Chart chart, MIDIFile midi, GHVersion ghVer = GHVersion.Unknown)
 						break;
 
 					add_event:
-						pPart.events ~= ev;
+						pPart.events.AddEvent(ev);
 						currentEvents[channel][note] = &pPart.events.back;
 						break;
 				}

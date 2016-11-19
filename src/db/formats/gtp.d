@@ -155,7 +155,7 @@ bool LoadGPx(Chart song, GuitarProFile gpx)
 				Part* part = song.getPart("drums", true);
 
 				part.part = "drums";
-				part.variations ~= Variation("8-drums", t.name);
+				part.variations ~= Variation("real-drums", t.name);
 				Variation *variation = &part.variations[$-1];
 
 				db.chart.Track trk = new db.chart.Track();

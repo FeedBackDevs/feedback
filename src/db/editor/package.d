@@ -178,7 +178,7 @@ class Editor
 
 	bool bInEditor, bPlaying;
 
-	int offset;
+	int offset, playOffset;
 	long time;
 	int step = 4;
 
@@ -203,13 +203,13 @@ class Editor
 		"dance"
 	];
 	__gshared string[] drumTypes = [
-		"4-drums", "5-drums", "6-drums", "7-drums", "8-drums",
+		"real-drums", "pro-drums", "gh-drums", "rb-drums"
 	];
 	__gshared string[] danceTypes = [
 		"dance-single", "dance-double", "dance-couple", "dance-solo",
 		"pump-single", "pump-double", "pump-couple",
 		"dance-8pad-single", "dance-8pad-double",
-		"dance-9pad-single", "dance-9pad-double",
+		"dance-9pad-single", "dance-9pad-double"
 	];
 
 	enum MenuState
@@ -343,15 +343,15 @@ class Editor
 			case "drums":
 				switch (type)
 				{
-					case "4-drums":
+					case "rb-drums":
 						return [ DrumNotes.Kick, DrumNotes.Snare, DrumNotes.Tom1, DrumNotes.Tom2, DrumNotes.Tom3, DrumNotes.Kick, -1, -1, -1, -1 ];
-					case "5-drums":
+					case "gh-drums":
 						return [ DrumNotes.Kick, DrumNotes.Snare, DrumNotes.Crash, DrumNotes.Tom2, DrumNotes.Ride, DrumNotes.Tom3, DrumNotes.Kick, -1, -1, -1 ];
-					case "7-drums":
-						return [ DrumNotes.Kick, DrumNotes.Snare, DrumNotes.Crash, DrumNotes.Tom1, DrumNotes.Splash, DrumNotes.Tom2, DrumNotes.Ride, DrumNotes.Tom3, DrumNotes.Kick, -1 ];
-					case "6-drums-hh":
+					case "pro-drums":
+						return [ DrumNotes.Kick, DrumNotes.Snare, DrumNotes.Tom1, DrumNotes.Tom2, DrumNotes.Tom3, DrumNotes.Hat, DrumNotes.Ride, DrumNotes.Crash, DrumNotes.Kick, -1 ];
+					case "real-drums-2c":
 						return [ DrumNotes.Kick, DrumNotes.Hat, DrumNotes.Snare, DrumNotes.Crash, DrumNotes.Tom1, DrumNotes.Tom2, DrumNotes.Ride, DrumNotes.Tom3, DrumNotes.Kick, -1 ];
-					case "8-drums":
+					case "real-drums":
 						return [ DrumNotes.Kick, DrumNotes.Hat, DrumNotes.Snare, DrumNotes.Crash, DrumNotes.Tom1, DrumNotes.Splash, DrumNotes.Tom2, DrumNotes.Ride, DrumNotes.Tom3, DrumNotes.Kick ];
 					default:
 						break;
@@ -404,9 +404,11 @@ class Editor
 							goto case MenuState.Closed;
 						case MenuState.Closed:
 						case MenuState.OpenFile:
+							showMainMenu();
+							break;
 						case MenuState.ChooseTrack:
 						case MenuState.NewTrack:
-							showMainMenu();
+							hideMenu();
 							break;
 						case MenuState.MainMenu:
 							hideMenu();
@@ -421,12 +423,27 @@ class Editor
 				{
 					if (menuState != MenuState.Closed)
 						return true;
-					if (ev.button.shift)
+					if (!bPlaying)
 					{
-						time = 0; // shift-space restarts from start
-						sync.reset(time);
+						// shift-space plays from start
+						if (ev.button.shift)
+						{
+							offset = 0;
+							time = 0;
+							sync.reset(time);
+						}
+						playOffset = offset;
+
+						play(true);
 					}
-					play(!bPlaying);
+					else
+					{
+						play(false);
+
+						// shift-space returns to position where play started
+						if (ev.button.shift)
+							gotoTick(playOffset);
+					}
 					return true;
 				}
 				case MFKey.Up:
@@ -434,7 +451,13 @@ class Editor
 				{
 					if (menuState != MenuState.Closed || bPlaying)
 						return true;
-					shift(ev.buttonID == MFKey.Up ? 1 : -1);
+					if (ev.button.alt)
+					{
+						// prev/next section
+						// TODO ...
+					}
+					else
+						shift(ev.buttonID == MFKey.Up ? 1 : -1);
 					return true;
 				}
 				case MFKey.Left:
@@ -525,6 +548,21 @@ class Editor
 						// remove existing note!
 						chart.removeEvent(track, &track.notes[i]);
 						return true;
+					}
+
+					if (track.variationType[] == "pro-drums")
+					{
+						// enforce RB 'pro-drums' rules, cymbals and toms can't coexist...
+						foreach (j, n; [ DrumNotes.Tom1, DrumNotes.Tom2, DrumNotes.Tom3, DrumNotes.Hat, DrumNotes.Ride, DrumNotes.Crash ])
+						{
+							if (note != n)
+								continue;
+
+							i = track.notes.FindEvent(EventType.Note, offset, [ DrumNotes.Hat, DrumNotes.Ride, DrumNotes.Crash, DrumNotes.Tom1, DrumNotes.Tom2, DrumNotes.Tom3 ][j]);
+							if (i != -1)
+								chart.removeEvent(track, &track.notes[i]);
+							break;
+						}
 					}
 
 					// insert note event at tick

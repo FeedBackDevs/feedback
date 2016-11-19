@@ -101,7 +101,7 @@ bool LoadRawMidi(Chart song, MIDIFile midi)
 				{
 					part = "drums";
 					pPart = getPart(part, true);
-					pVariation = pPart.variation("8-drums", "Track " ~ to!string(track + 1), true);
+					pVariation = pPart.variation("real-drums", "Track " ~ to!string(track + 1), true);
 
 					Track trk = new Track();
 					trk.part = part;
