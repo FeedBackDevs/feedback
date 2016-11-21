@@ -81,7 +81,7 @@ class FileSelector : LinearLayout
 
 	@property string path() const { return path; }
 
-	Event!(Widget, DirEntry) OnSelectFile;
+	Event!(DirEntry, Widget) OnSelectFile;
 
 protected:
 	string _root;
@@ -137,7 +137,7 @@ protected:
 		_listWidget.list = new DirListing(dirListing);
 	}
 
-	void onListSelect(Widget w, int i)
+	void onListSelect(int i, Widget w)
 	{
 		--i;
 		if (dirListing[i].isDir || dirListing[i].isSymlink)
@@ -149,7 +149,7 @@ protected:
 			updateList();
 		}
 		else
-			OnSelectFile(this, dirListing[i]);
+			OnSelectFile(dirListing[i], this);
 	}
 
 	void onFilterChange(Widget, const(char)[] value, const(InputSource)*)

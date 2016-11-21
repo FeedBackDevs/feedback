@@ -28,16 +28,16 @@ class DanceTrack : NoteTrack
 		this.chart = chart;
 
 		string fb = t.fretboard ? t.fretboard : "track0";
-		track = Material(fb);
+		track = Material("fretboards/" ~ fb);
 		auto params = track.parameters;
 		params.zread = false;
 		params.minfilter["diffuse"] = MFTexFilter.Anisotropic;
 		params.addressu["diffuse"] = MFTexAddressMode.Clamp;
 
-		bar = Material("bar");
+		bar = Material("textures/bar");
 		bar.parameters.zread = false;
 
-		edge = Material("edge");
+		edge = Material("textures/edge");
 		edge.parameters.zread = false;
 
 		switch (performer.sequence.variationType)

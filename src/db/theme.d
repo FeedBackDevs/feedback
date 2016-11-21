@@ -20,8 +20,37 @@ class Theme
 		scanForThemes();
 	}
 
+	static string themePath(string filename)
+	{
+		string fn = "theme:" ~ filename;
+		if (MFFileSystem_Exists(fn))
+			return MFFileSystem_ResolveSystemPath(fn).idup;
+		return MFFileSystem_ResolveSystemPath("system:themes/default/" ~ filename).idup;
+	}
+
+	static Widget loadUi(string filename)
+	{
+		LayoutDescriptor desc = new LayoutDescriptor(filename);
+		if (!desc)
+		{
+			MFDebug_Warn(2, "Couldn't load " ~ filename);
+			return null;
+		}
+
+		Widget ui = desc.spawn();
+		if (!ui)
+		{
+			MFDebug_Warn(2, "Couldn't spawn ui for " ~ filename);
+			return null;
+		}
+
+		return ui;
+	}
+
 	static Theme load(string theme)
 	{
+		import db.lua : doFile;
+
 		if (theme !in themes)
 		{
 			MFDebug_Warn(2, "Theme not present: " ~ theme);
@@ -33,23 +62,12 @@ class Theme
 
 		mountTheme(theme);
 
-		LayoutDescriptor desc = new LayoutDescriptor("theme.xml");
-		if (!desc)
-		{
-			MFDebug_Warn(2, "Couldn't load theme.xml".ptr);
-			return null;
-		}
-
 		Theme t = new Theme;
 
-		t.ui = desc.spawn();
-		if (!t.ui)
-		{
-			MFDebug_Warn(2, "Couldn't spawn theme!".ptr);
-			return null;
-		}
-
 		themes[theme].theme = t;
+
+		doFile("theme:theme.lua");
+
 		return t;
 	}
 
@@ -68,7 +86,7 @@ private:
 			}
 			else if (entry.attributes & (MFFileAttributes.Directory|MFFileAttributes.SymLink))
 			{
-				if (!MFFileSystem_Exists(entry.filepath ~ "/theme.xml"))
+				if (!MFFileSystem_Exists(entry.filepath ~ "/theme.lua"))
 					continue;
 			}
 			else
@@ -101,8 +119,7 @@ private:
 
 			MFMountDataZipFile mountData;
 			mountData.priority = MFMountPriority.AboveNormal;
-//			mountData.flags = MFMountFlags.Recursive;
-			mountData.flags = MFMountFlags.FlattenDirectoryStructure | MFMountFlags.Recursive;
+			mountData.flags = MFMountFlags.Recursive;
 			mountData.pMountpoint = "theme";
 			mountData.pZipArchive = pFile;
 
@@ -115,8 +132,7 @@ private:
 
 			MFMountDataNative mountData;
 			mountData.priority = MFMountPriority.AboveNormal;
-//			mountData.flags = 0;
-			mountData.flags = MFMountFlags.FlattenDirectoryStructure | MFMountFlags.Recursive;
+			mountData.flags = MFMountFlags.Recursive;
 			mountData.pMountpoint = "theme";
 			mountData.pPath = MFFile_SystemPath(t.path[7..$].toStringz);
 

@@ -9,6 +9,7 @@ import db.instrument.drums : DrumNotes;
 import db.instrument.guitarcontroller : GuitarNotes;
 import db.instrument.keyboard: KeyboardNotes;
 import db.library;
+import db.lua : lua, LuaFunction, LuaObject;
 import db.sync.systime;
 import db.theme;
 import db.ui.inputmanager : InputSource;
@@ -33,19 +34,7 @@ class Editor
 {
 	this()
 	{
-		LayoutDescriptor desc = new LayoutDescriptor("editor.xml");
-		if (!desc)
-		{
-			logWarning(2, "Couldn't load editor.xml");
-			return;
-		}
-
-		ui = cast(Frame)desc.spawn();
-		if (!ui)
-		{
-			logWarning(2, "Couldn't spawn editor UI!");
-			return;
-		}
+		ui = cast(Frame)lua.get!Widget("theme", "editor", "ui");
 
 		// make local UI
 		menu = new Listbox();
@@ -69,12 +58,6 @@ class Editor
 	void enter()
 	{
 		game = Game.instance;
-
-		// show the editor ui
-		game.ui.addTopLevelWidget(ui);
-
-		// hide the theme ui
-		game.theme.ui.visibility = Visibility.Gone;
 
 		// set input hook
 		oldInputHandler = game.ui.registerUnhandledInputHandler(&inputEvent);
@@ -105,17 +88,15 @@ class Editor
 
 		game.performance = null;
 
-		// hide editor ui
-		game.ui.removeTopLevelWidget(ui);
-
-		// return to the theme
-		game.theme.ui.visibility = Visibility.Visible;
+		// return to input handler
 		game.ui.registerUnhandledInputHandler(oldInputHandler);
 		oldInputHandler = null;
 
 		game = null;
 
 		bInEditor = false;
+
+		lua.get!LuaFunction("theme", "editor", "exit")(lua.get!LuaObject("theme", "editor"));
 	}
 
 	void update()
@@ -274,7 +255,7 @@ class Editor
 		}
 	}
 
-	void showMenu(string[] list, void delegate(Widget, int) select, MFVector size = MFVector(400, 300))
+	void showMenu(string[] list, void delegate(int, Widget) select, MFVector size = MFVector(400, 300))
 	{
 		menu.list = new StringList(list, (Label l) { l.textColour = MFVector.white; });
 		menu.size = size;
@@ -581,29 +562,29 @@ class Editor
 		return false;
 	}
 
-	void menuSelect(Widget w, int i)
+	void menuSelect(int i, Widget w)
 	{
 		hideMenu();
 
 		switch (i)
 		{
-			case 1:
+			case 0:
 				fileSelector.root = "songs:";
 				fileSelector.visibility = Visibility.Visible;
 				menuState = MenuState.NewFile;
 				break;
-			case 2:
+			case 1:
 				menuItems = game.songLibrary.songs;
 				showMenu(menuItems, &songSelect);
 				menuState = MenuState.OpenFile;
 				break;
-			case 3:
+			case 2:
 				chart.saveChart(chart.songPath);
 				// TODO: note that it was saved!!
 				break;
-			case 4:
+			case 3:
 				break;
-			case 5:
+			case 4:
 				// TODO: want to save?!
 				exit();
 				break;
@@ -612,10 +593,8 @@ class Editor
 		}
 	}
 
-	void selectTrack(Widget w, int i)
+	void selectTrack(int i, Widget w)
 	{
-		--i; // i is always out by one
-
 		hideMenu();
 
 		Part *pPart;
@@ -736,10 +715,8 @@ class Editor
 		}
 	}
 
-	void newTrack(Widget w, int i)
+	void newTrack(int i, Widget w)
 	{
-		--i; // i is always out by one
-
 		hideMenu();
 
 		if (i >= 0 && i < menuItems.length)
@@ -798,19 +775,19 @@ class Editor
 		}
 	}
 
-	void newChart(Widget w, DirEntry e)
+	void newChart(DirEntry e, Widget w)
 	{
 //		Game.perfo
 	}
 
-	void songSelect(Widget w, int i)
+	void songSelect(int i, Widget w)
 	{
 		hideMenu();
 
 		if (bPlaying)
 			play(false);
 
-		pSong = game.songLibrary.find(menuItems[i-1]);
+		pSong = game.songLibrary.find(menuItems[i]);
 		if (!pSong)
 		{
 			game.performance = null;

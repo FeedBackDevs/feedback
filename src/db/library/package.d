@@ -239,7 +239,7 @@ class SongLibrary
 			// parse xml
 			auto xml = new DocumentParser(file);
 
-			xml.onEndTag["lastScan"] = (in Element e) { lastScan.ticks		= to!ulong(e.text()); };
+			xml.onEndTag["lastScan"] = (in Element e) { lastScan = to!ulong(e.text()); };
 
 			xml.onStartTag["songs"] = (ElementParser xml)
 			{
@@ -286,7 +286,7 @@ class SongLibrary
 	{
 		auto doc = new Document(new Tag("library"));
 
-		doc ~= new Element("lastScan", to!string(lastScan.ticks));
+		doc ~= new Element("lastScan", to!string(lastScan));
 
 		auto songs = new Element("songs");
 		foreach (id, ref song; library)

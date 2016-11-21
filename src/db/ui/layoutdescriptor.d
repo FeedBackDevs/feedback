@@ -5,6 +5,7 @@ import db.ui.ui;
 import db.ui.widget;
 import db.ui.widgetstyle;
 import db.ui.widgets.layout;
+import db.ui.widgets.prefab;
 
 import fuji.dbg;
 import fuji.heap;
@@ -97,8 +98,17 @@ protected:
 			return null;
 
 		// apply properties
+		bool isPrefab = cast(Prefab)widget !is null;
 		foreach (ref a; node.attributes)
-			widget.setProperty(a.property, a.value);
+		{
+			string value = a.value;
+
+			// HAX: paths need to be corrected relative to the location of the source
+			if (isPrefab && a.property[] == "prefab")
+				value = makePath(filepath, value);
+
+			widget.setProperty(a.property, value);
+		}
 
 		// execute script
 		if (node.script)

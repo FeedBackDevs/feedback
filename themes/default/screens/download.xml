@@ -1,5 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Frame align="Fill">
-	<Script src="download.lua" />
 	<Label align="Center" text="Download Songs" text_height="60" text_colour="yellow" />
 </Frame>

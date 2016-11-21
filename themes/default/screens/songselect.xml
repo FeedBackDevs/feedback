@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Frame id="songselect" align="Fill">
+	<Label align="TopCenter" text="Song Select" text_height="60" text_colour="yellow" />
+	<Listbox id="songlist" align="Center" size="600,600" background_colour="black" list="hax.songs" hoverSelect="true" OnSelChanged="theme.songselect:selectSong(item)" OnClick="theme.songselect:playSong(item)" />
+</Frame>

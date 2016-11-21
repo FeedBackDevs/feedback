@@ -774,8 +774,8 @@ protected:
 	MFVector _borderColour;
 	Material _image;
 	Justification _imageAlignment = Justification.Center;
-	float _texWidth, _texHeight;
-	float _bg9CellMargin;
+	float _texWidth = 0, _texHeight = 0;
+	float _bg9CellMargin = 0;
 
 	bool setRenderProperty(const(char)[] property, const(char)[] value, Widget widget = null)
 	{

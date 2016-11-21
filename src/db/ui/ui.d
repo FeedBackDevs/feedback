@@ -284,7 +284,8 @@ protected:
 		}
 		else
 		{
-			unhandledEventHandler(manager, ev);
+			if (unhandledEventHandler)
+				unhandledEventHandler(manager, ev);
 		}
 	}
 

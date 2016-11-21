@@ -11,9 +11,10 @@ import db.tools.event;
 import fuji.fuji;
 import fuji.vector;
 
+import std.math : floor;
 import std.string;
 import std.traits : Unqual;
-import std.math : floor;
+import std.typecons : tuple;
 
 class Listbox : Layout
 {
@@ -85,7 +86,7 @@ class Listbox : Layout
 			_selection = item;
 
 			if (OnSelChanged)
-				OnSelChanged(this, item + 1);
+				OnSelChanged(item, this);
 		}
 	}
 
@@ -151,9 +152,9 @@ class Listbox : Layout
 		else if (!icmp(property, "hoverSelect"))
 			flags = (flags & ~Flags.HoverSelect) | (getBoolFromString(value) ? Flags.HoverSelect : 0);
 		else if (!icmp(property, "onSelChanged"))
-			bindEvent!OnSelChanged(value);
+			bindEvent!(OnSelChanged, (int i, Widget w) => tuple!(int, Widget)(i + 1, w))(value, "local item, widget = ...");
 		else if (!icmp(property, "onClick"))
-			bindEvent!OnClick(value);
+			bindEvent!(OnClick, (int i, Widget w) => tuple!(int, Widget)(i + 1, w))(value, "local item, widget = ...");
 		else
 			super.setProperty(property, value);
 	}
@@ -166,8 +167,8 @@ class Listbox : Layout
 	}
 
 
-	Event!(Widget, int) OnSelChanged;
-	Event!(Widget, int) OnClick;
+	Event!(int, Widget) OnSelChanged;
+	Event!(int, Widget) OnClick;
 
 protected:
 	Orientation _orientation = Orientation.Vertical;
@@ -255,7 +256,7 @@ protected:
 				if (!MFTypes_PointInRect(ev.down.x, ev.down.y, rect))
 				{
 					if (OnClick)
-						OnClick(this, 0);
+						OnClick(-1, this);
 				}
 				break;
 			}
@@ -367,7 +368,7 @@ protected:
 	final void onItemClick(Widget widget, const(InputSource)* pSource)
 	{
 		if (OnClick)
-			OnClick(this, cast(int)getChildIndex(widget) + 1);
+			OnClick(cast(int)getChildIndex(widget), this);
 	}
 
 	final void onItemOver(Widget widget, const(InputSource)* pSource)

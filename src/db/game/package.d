@@ -111,15 +111,9 @@ class Game
 		lua = initLua();
 		luaRegister();
 
-		// load the bootup UI
-		doFile("boot.lua");
-		LayoutDescriptor desc = new LayoutDescriptor("boot.xml");
-		if (desc)
-		{
-			Widget boot = desc.spawn();
-			if (boot)
-				ui.addTopLevelWidget(boot);
-		}
+		doFile("data:flow.lua");
+
+		// TODO: load and show a loading screen...
 
 		// TODO: the following stuff should all be asynchronous with a loading screen:
 
@@ -135,13 +129,14 @@ class Game
 			MFDebug_Warn(2, "Couldn't load theme!".ptr);
 			return;
 		}
-
-		ui.addTopLevelWidget(theme.ui);
 	}
 
 	void deinit()
 	{
 		ui = null;
+
+		// TODO: eagerly clean this up, since it's GC heap has loads of references to D stuff!
+		lua = null;
 
 		renderer.Destroy();
 	}
@@ -195,6 +190,14 @@ class Game
 	void saveSettings()
 	{
 		settings.Save();
+	}
+
+
+	// --- lua API ---
+
+	void quit()
+	{
+		MFSystem_Quit();
 	}
 
 	void startPerformance(string song)
@@ -286,19 +289,28 @@ class Game
 		registerType!Listbox();
 //		registerType!Selectbox();
 
+		LuaTable dbTable = lua.newTable();
+		lua["db"] = dbTable;
+
+		// some data accessors
+		dbTable["ui"] = Game.instance.ui;
+
 		// register some functions with the VM
-		lua["quit"] = &MFSystem_Quit;
-		lua["startPerformance"] = &Game.instance.startPerformance;
-		lua["endPerformance"] = &Game.instance.endPerformance;
-		lua["pausePerformance"] = &Game.instance.pausePerformance;
+		dbTable["quit"] = &Game.instance.quit;
+		dbTable["startEditor"] = &Game.instance.startEditor;
 
-		lua["startEditor"] = &Game.instance.startEditor;
+		dbTable["themePath"] = &Theme.themePath;
+		dbTable["loadUi"] = &Theme.loadUi;
 
-		lua["addPlayer"] = &Game.instance.addPlayer;
-		lua["removePlayer"] = &Game.instance.removePlayer;
+		dbTable["library"] = Game.instance.songLibrary;
 
-		lua["library"] = Game.instance.songLibrary;
-		lua["ui"] = Game.instance.ui;
+		dbTable["startPerformance"] = &Game.instance.startPerformance;
+		dbTable["endPerformance"] = &Game.instance.endPerformance;
+		dbTable["pausePerformance"] = &Game.instance.pausePerformance;
+
+		//------
+		dbTable["addPlayer"] = &Game.instance.addPlayer;
+		dbTable["removePlayer"] = &Game.instance.removePlayer;
 	}
 
 	//-------------------------------------------------------------------------------------------------------

@@ -25,16 +25,16 @@ class GHGuitar : NoteTrack
 		this.chart = chart;
 
 		string fb = t.fretboard ? t.fretboard : "fretboard2";
-		fretboard = Material(fb);
+		fretboard = Material("fretboards/" ~ fb);
 		auto params = fretboard.parameters;
 		params.zread = false;
 		params.minfilter["diffuse"] = MFTexFilter.Anisotropic;
 		params.addressu["diffuse"] = MFTexAddressMode.Clamp;
 
-		bar = Material("bar");
+		bar = Material("textures/bar");
 		bar.parameters.zread = false;
 
-		edge = Material("edge");
+		edge = Material("textures/edge");
 		edge.parameters.zread = false;
 	}
 

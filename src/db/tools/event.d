@@ -84,13 +84,13 @@ private:
 	Handler[] _subscribers;
 }
 
-void bindEvent(alias event)(const(char)[] handler)
+void bindEvent(alias event, alias argAdjust = null)(const(char)[] handler, string entry = null)
 {
 	alias EventType = typeof(event);
 	EventType.Handler d;
 
 	LuaObject obj = getLuaObject(handler);
-	if (obj.type == LuaType.Function)
+	if (!obj.isNil && obj.type == LuaType.Function)
 	{
 		LuaFunction f = obj.to!LuaFunction;
 		auto ld = new LuaDelegate!(EventType.EventArgs)(f);
@@ -103,17 +103,29 @@ void bindEvent(alias event)(const(char)[] handler)
 
 		// search for registered D handler
 //		d = UserInterface.getEventHandler(handler.strip);
+
+		// NOTE: registered D functions should NOT apply argAdjust!!
 	}
 	if (!d)
 	{
 		// treat the text as lua code
 		try
 		{
-			auto ld = new LuaDelegate!(EventType.EventArgs)(handler);
+			auto ld = new LuaDelegate!(EventType.EventArgs)(entry ? entry ~ "\n" ~ handler : "local arg = {...}\n" ~ handler);
 			d = ld.getDelegate;
 		}
 		catch (Exception e)
 			MFDebug_Warn(2, "Couldn't create Lua delegate: " ~ e.msg);
+	}
+
+	static if (!is(typeof(argAdjust) == typeof(null)))
+	{
+		auto dlgt = d; // copy for the closure
+		void adjust(typeof(event).EventArgs args)
+		{
+			dlgt(argAdjust(args).expand);
+		}
+		d = &adjust; // this is a closure containing the delegate we want to call
 	}
 
 	if (d)

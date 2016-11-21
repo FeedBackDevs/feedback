@@ -35,6 +35,9 @@ class Prefab : Frame
 	{
 		clearChildren();
 
+		if (!prefab)
+			return;
+
 		_prefab = prefab.idup;
 
 		if (prefab.length >= 4 && !icmp(prefab[$-4..$], ".xml"))
