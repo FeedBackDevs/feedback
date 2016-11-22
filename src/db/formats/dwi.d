@@ -19,18 +19,18 @@ import std.path;
 import std.exception;
 import std.conv : to;
 
-bool LoadDWI(Song* song, DirEntry file)
+bool LoadDWI(Song* song, string file)
 {
-	string steps = enforce(MFFileSystem_LoadText(file.filepath).assumeUnique, "");
+	string steps = enforce(MFFileSystem_LoadText(file).assumeUnique, "");
 
-	string path = file.directory ~ "/";
+	string path = file.dirName ~ "/";
 
-	MFDebug_Log(2, "Loading song: '" ~ file.filepath ~ "'");
+	MFDebug_Log(2, "Loading song: '" ~ file ~ "'");
 
 	song._chart = new Chart;
 	song._chart.params["source_format"] = ".dwi";
 
-	string name = file.filename.stripExtension;
+	string name = file.baseName.stripExtension;
 	song._chart.params["original_name"] = name;
 	song._chart.name = name;
 

@@ -17,16 +17,16 @@ import std.path;
 import std.range : back;
 import std.string;
 
-bool LoadRawMidi(Song* song, DirEntry file)
+bool LoadRawMidi(Song* song, string file)
 {
-	string path = file.directory ~ "/";
+	string path = file.dirName ~ "/";
 
-	MFDebug_Log(2, "Loading song: '" ~ file.filepath ~ "'");
+	MFDebug_Log(2, "Loading song: '" ~ file ~ "'");
 
 	song._chart = new Chart;
 	song._chart.params["source_format"] = ".midi";
 
-	song._chart.name = file.filename.stripExtension;
+	song._chart.name = file.baseName.stripExtension;
 
 	MIDIFile midi = new MIDIFile(file);
 //	midi.WriteText(file.filepath.stripExtension ~ ".txt");
@@ -34,7 +34,7 @@ bool LoadRawMidi(Song* song, DirEntry file)
 	song._chart.LoadRawMidi(midi);
 
 	// search for the music and other stuff...
-	string songName = file.filename.stripExtension.toLower;
+	string songName = file.baseName.stripExtension.toLower;
 	foreach (f; dirEntries(path ~ "*", SpanMode.shallow))
 	{
 		string filename = f.filename.toLower;

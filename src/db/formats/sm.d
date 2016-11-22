@@ -17,22 +17,22 @@ import std.path;
 import std.exception;
 import std.conv : to;
 
-bool LoadSM(Song* song, DirEntry file)
+bool LoadSM(Song* song, string file)
 {
-	string steps = enforce(MFFileSystem_LoadText(file.filepath).assumeUnique, "");
+	string steps = enforce(MFFileSystem_LoadText(file).assumeUnique, "");
 
-	string path = file.directory ~ "/";
+	string path = file.dirName ~ "/";
 
-	MFDebug_Log(2, "Loading song: '" ~ file.filepath ~ "'");
+	MFDebug_Log(2, "Loading song: '" ~ file ~ "'");
 
 	song._chart = new Chart;
 
-	string name = file.filename.stripExtension;
+	string name = file.baseName.stripExtension;
 	song._chart.params["original_name"] = name;
 	song._chart.name = name;
 
 	// search for the music and other stuff...
-	string songName = file.filename.stripExtension.toLower;
+	string songName = file.baseName.stripExtension.toLower;
 	foreach (f; dirEntries(path ~ "*", SpanMode.shallow))
 	{
 		string filename = f.filename.toLower;

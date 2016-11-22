@@ -31,13 +31,13 @@ enum DrumsType
 	EightDrums		// 4 drums, 3 cymbals, hihat
 }
 
-bool LoadGHRBMidi(Song* song, DirEntry file)
+bool LoadGHRBMidi(Song* song, string file)
 {
-	Windows1252String ini = cast(Windows1252String)MFFileSystem_Load(file.filepath).assumeUnique;
+	Windows1252String ini = cast(Windows1252String)MFFileSystem_Load(file).assumeUnique;
 
-	string path = file.directory ~ "/";
+	string path = file.dirName ~ "/";
 
-	MFDebug_Log(2, "Loading song: '" ~ file.directory ~ "'");
+	MFDebug_Log(2, "Loading song: '" ~ file.dirName ~ "'");
 
 	MIDIFile midi = new MIDIFile(path ~ "notes.mid");
 //	midi.WriteText(path ~ "midi.txt");

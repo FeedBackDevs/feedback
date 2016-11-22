@@ -21,17 +21,17 @@ import std.string;
 // http://sourceforge.net/p/kguitar/code/HEAD/tree/trunk/kguitar/kguitar/convertgtp.cpp
 // http://sourceforge.net/p/tuxguitar/code/HEAD/tree/trunk/TuxGuitar-gtp/src/org/herac/tuxguitar/io/gtp/GP4InputStream.java#l201
 
-bool LoadGuitarPro(Song* song, DirEntry file)
+bool LoadGuitarPro(Song* song, string file)
 {
-	string path = file.directory ~ "/";
+	string path = file.dirName ~ "/";
 
-	MFDebug_Log(2, "Loading song: '" ~ file.filepath ~ "'");
+	MFDebug_Log(2, "Loading song: '" ~ file ~ "'");
 
 	song._chart = new Chart;
-	song._chart.params["source_format"] = file.filename.extension.toLower;
+	song._chart.params["source_format"] = file.baseName.extension.toLower;
 
 	// search for the music and other stuff...
-	string songName = file.filename.stripExtension.toLower;
+	string songName = file.baseName.stripExtension.toLower;
 	foreach (f; dirEntries(path ~ "*", SpanMode.shallow))
 	{
 		string filename = f.filename.toLower;

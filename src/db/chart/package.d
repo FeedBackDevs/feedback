@@ -630,7 +630,7 @@ class Chart
 		doc ~= partsElement;
 
 		string xml = join(doc.pretty(1),"\n");
-		songPath = path ~ id ~ ".chart";
+		songPath = path ~ "/" ~ id ~ ".chart";
 		MFFileSystem_Save(songPath, cast(immutable(ubyte)[])xml);
 	}
 }
