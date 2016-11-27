@@ -26,6 +26,7 @@ import fuji.filesystem : DirEntry;
 import fuji.font;
 import fuji.input;
 import fuji.vector;
+import fuji.sound;
 import std.algorithm : max, clamp, canFind, filter, find;
 import std.range : array, retro;
 import std.conv : to;
@@ -55,6 +56,29 @@ class Editor
 		ui.addChild(fileSelector);
 
 		sync = new SystemTimer;
+
+		tick = MFSound_Create("Sounds/row".ptr);
+		change = MFSound_Create("Sounds/prompt".ptr);
+		metronomeHigh = MFSound_Create("Sounds/hightick".ptr);
+		metronomeLow = MFSound_Create("Sounds/lowtick".ptr);
+		save = MFSound_Create("Sounds/save".ptr);
+		clap = MFSound_Create("Sounds/claps".ptr);
+	}
+
+	~this()
+	{
+		if (tick)
+			MFSound_Destroy(tick);
+		if (change)
+			MFSound_Destroy(change);
+		if (metronomeHigh)
+			MFSound_Destroy(metronomeHigh);
+		if (metronomeLow)
+			MFSound_Destroy(metronomeLow);
+		if (save)
+			MFSound_Destroy(save);
+		if (clap)
+			MFSound_Destroy(clap);
 	}
 
 	void enter()
@@ -179,6 +203,8 @@ class Editor
 	Listbox menu;
 	FileSelector fileSelector;
 
+	MFSound* tick, change, metronomeHigh, metronomeLow, save, clap;
+
 	__gshared string[] allParts = [
 		"leadguitar", "rhythmguitar", "bass",
 		"drums",
@@ -219,7 +245,7 @@ class Editor
 		gotoTick(offset + (steps * chart.resolution * 4 / step), false);
 	}
 
-	void gotoTick(int offset, bool roundToStep = true)
+	void gotoTick(int offset, bool roundToStep = true, bool noSound = false)
 	{
 		this.offset = max(offset, 0);
 		if (roundToStep)
@@ -228,9 +254,12 @@ class Editor
 		sync.reset(time);
 
 		updateHolds();
+
+		if (!noSound)
+			MFSound_Play(tick);
 	}
 
-	void gotoTime(long time, bool roundToStep = true)
+	void gotoTime(long time, bool roundToStep = true, bool noSound = false)
 	{
 		offset =  max(chart.calculateTickAtTime(time), 0);
 		if (roundToStep)
@@ -243,6 +272,9 @@ class Editor
 		sync.reset(this.time);
 
 		updateHolds();
+
+		if (!noSound)
+			MFSound_Play(tick);
 	}
 
 	void play(bool playing = true)
@@ -539,7 +571,8 @@ class Editor
 					while (step > steps[i])
 						++i;
 					step = steps[clamp(ev.buttonID == MFKey.Left ? i - 1 : i + 1, 0, steps.length-1)];
-					gotoTick(offset);
+					gotoTick(offset, true, true);
+					MFSound_Play(change);
 					return true;
 				}
 				case MFKey.PageUp:
@@ -728,6 +761,7 @@ class Editor
 				break;
 			case 2:
 				chart.saveChart(chart.songPath);
+				MFSound_Play(save);
 				// TODO: note that it was saved!!
 				break;
 			case 3:
@@ -949,7 +983,7 @@ class Editor
 		game.performance = new Performance(pSong, null, sync);
 		chart = pSong.chart;
 
-		gotoTick(0);
+		gotoTick(0, true, true);
 		step = 4;
 
 		done: foreach (p; allParts)
