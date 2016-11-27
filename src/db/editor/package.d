@@ -26,7 +26,7 @@ import fuji.filesystem : DirEntry;
 import fuji.font;
 import fuji.input;
 import fuji.vector;
-import std.algorithm : max, clamp, canFind, filter;
+import std.algorithm : max, clamp, canFind, filter, find;
 import std.range : array, retro;
 import std.conv : to;
 
@@ -165,6 +165,8 @@ class Editor
 	long time;
 	int step = 4;
 
+	ptrdiff_t[10] keyHold = -1;
+
 	Player editorPlayer;
 
 	Song* pSong;
@@ -224,6 +226,8 @@ class Editor
 			this.offset -= offset % (chart.resolution * 4 / step);
 		time = chart.calculateTimeOfTick(this.offset);
 		sync.reset(time);
+
+		updateHolds();
 	}
 
 	void gotoTime(long time, bool roundToStep = true)
@@ -237,12 +241,16 @@ class Editor
 		else
 			this.time = time;
 		sync.reset(this.time);
+
+		updateHolds();
 	}
 
 	void play(bool playing = true)
 	{
 		if (playing && !bPlaying)
 		{
+			endAllHolds();
+
 			game.performance.begin(cast(double)time / 1_000_000);
 
 			bPlaying = true;
@@ -301,6 +309,8 @@ class Editor
 
 	void changeTrack(Track trk)
 	{
+		endAllHolds();
+
 		track = trk;
 
 		editorPlayer.input.part = trk.part;
@@ -311,6 +321,82 @@ class Editor
 		game.performance.setPlayers((&editorPlayer)[0..1]);
 
 		noteMap = getNoteMap(trk.part, trk.variationType);
+	}
+
+	void startHold(int key, ptrdiff_t n)
+	{
+		assert(keyHold[key] == -1, "Expected no key held?");
+
+		adjustHold(n);
+
+		keyHold[key] = n;
+	}
+	void endHold(int key)
+	{
+		if (keyHold[key] != -1)
+		{
+			// if the hold crossed existing notes, they need to be removed.
+			ptrdiff_t n = keyHold[key];
+			int start = track.notes[n].tick;
+			int end = start + track.notes[n].duration;
+			if (end > start)
+			{
+				int k = track.notes[n].note.key;
+
+				// RB pro-drums can't have cymbals and toms at the same time
+				int complement = -1;
+				if (track.variationType[] == "pro-drums")
+				{
+					auto r = [ DrumNotes.Tom1, DrumNotes.Tom2, DrumNotes.Tom3, DrumNotes.Hat, DrumNotes.Ride, DrumNotes.Crash ].find(k);
+					if (r.length > 0)
+						complement = [ DrumNotes.Hat, DrumNotes.Ride, DrumNotes.Crash, DrumNotes.Tom1, DrumNotes.Tom2, DrumNotes.Tom3 ][6 - r.length];
+				}
+
+			keep_looking:
+				Event[] notes = track.notes.Between(start + 1, end - 1);
+				foreach (ref note; notes)
+				{
+					if (note.event == EventType.Note && (note.note.key == k || note.note.key == complement))
+					{
+						ptrdiff_t i = &note - track.notes.ptr;
+						adjustHold(i, true);
+
+						chart.removeEvent(track, &note);
+						goto keep_looking;
+					}
+				}
+			}
+			keyHold[key] = -1;
+		}
+	}
+	void adjustHold(ptrdiff_t i, bool bRemove = false)
+	{
+		// any holding notes ahead of i need to be incremented/decremented
+		foreach (ref v; keyHold)
+		{
+			if (i < v)
+				v = bRemove ? v - 1 : v + 1;
+		}
+	}
+	void updateHolds()
+	{
+		// holding notes should have their lengths updated
+		foreach (n; keyHold)
+		{
+			if (n == -1)
+				continue;
+			track.notes[n].duration = max(0, this.offset - track.notes[n].tick);
+		}
+	}
+	void endAllHolds()
+	{
+		// end any existing holds...
+		// TODO: or should we remove the hold notes themselves?
+		foreach (int i, v; keyHold)
+		{
+			if (v != -1)
+				endHold(i);
+		}
 	}
 
 	int[] getNoteMap(string part, string type)
@@ -529,6 +615,8 @@ class Editor
 					if (editorPlayer.input.part[] == "vocals")
 						return true;
 
+					endAllHolds();
+
 					// select difficulty
 					Difficulty diff = cast(Difficulty)(Difficulty.Beginner + (ev.buttonID - MFKey.F5));
 					Track trk = chart.getVariation(editorPlayer.input.part, editorPlayer.input.type, editorPlayer.variation).difficulty(diff);
@@ -557,10 +645,15 @@ class Editor
 					auto i = track.notes.FindEvent(EventType.Note, offset, note);
 					if (i != -1)
 					{
+						// TODO: if shift down, toggle flags...
+
 						// remove existing note!
 						chart.removeEvent(track, &track.notes[i]);
+						adjustHold(i, true);
 						return true;
 					}
+
+					// TODO: if shift down, don't do any note placement...
 
 					if (track.variationType[] == "pro-drums")
 					{
@@ -572,19 +665,43 @@ class Editor
 
 							i = track.notes.FindEvent(EventType.Note, offset, [ DrumNotes.Hat, DrumNotes.Ride, DrumNotes.Crash, DrumNotes.Tom1, DrumNotes.Tom2, DrumNotes.Tom3 ][j]);
 							if (i != -1)
-								chart.removeEvent(track, &track.notes[i]);
+							{
+								// change tom <-> cymbal
+								track.notes[i].note.key = note;
+								return true;
+							}
 							break;
 						}
 					}
+
+					// check if this note cuts another sustain
+					// TODO... cut sustain (remember to handle RB pro-drums!)
+					// ...get most recent note, check sustain ends before 'offset'
 
 					// insert note event at tick
 					Event e;
 					e.tick = offset;
 					e.event = EventType.Note;
 					e.note.key = note;
-					chart.insertTrackEvent(track, e);
+					ptrdiff_t n = chart.insertTrackEvent(track, e);
+
+					startHold(ev.buttonID - MFKey._0, n);
 					return true;
 				}
+
+				default:
+					break;
+			}
+		}
+		else if (ev.device == MFInputDevice.Keyboard && ev.ev == InputManager.EventType.ButtonUp)
+		{
+			switch (ev.buttonID)
+			{
+				case MFKey._0:
+				..
+				case MFKey._9:
+					endHold(ev.buttonID - MFKey._0);
+					break;
 
 				default:
 					break;

@@ -360,26 +360,30 @@ class Chart
 		return lastEventOffset + cast(int)((time - lastEventTime)*resolution/currentUsPerBeat);
 	}
 
-	void insertSyncEvent(ref Event ev)
+	ptrdiff_t insertSyncEvent(ref Event ev)
 	{
 		if (sync.FindEvent(ev.event, ev.tick) != -1)
 		{
 			// there's already a sync event here!
-			return;
+			return -1;
 		}
 
 		ev.time = calculateTimeOfTick(ev.tick);
 
 		ptrdiff_t i = sync.GetNextEvent(ev.tick + 1);
 		if (i == -1)
+		{
 			sync ~= ev;
+			return sync.length - 1;
+		}
 		else
 		{
 			sync = sync[0 .. i] ~ ev ~ sync[i .. $];
 			calculateNoteTimes(sync, ev.tick);
+			return i;
 		}
 	}
-	void insertEvent(ref Event ev, Part *pPart = null)
+	ptrdiff_t insertEvent(ref Event ev, Part *pPart = null)
 	{
 		ev.time = calculateTimeOfTick(ev.tick);
 
@@ -387,19 +391,31 @@ class Chart
 
 		ptrdiff_t i = (*pEv).GetNextEvent(ev.tick + 1);
 		if (i == -1)
+		{
 			*pEv ~= ev;
+			return pEv.length - 1;
+		}
 		else
+		{
 			*pEv = (*pEv)[0 .. i] ~ ev ~ (*pEv)[i .. $];
+			return i;
+		}
 	}
-	void insertTrackEvent(Track trk, ref Event ev)
+	ptrdiff_t insertTrackEvent(Track trk, ref Event ev)
 	{
 		ev.time = calculateTimeOfTick(ev.tick);
 
 		ptrdiff_t i = trk.notes.GetNextEvent(ev.tick + 1);
 		if (i == -1)
+		{
 			trk.notes ~= ev;
+			return trk.notes.length - 1;
+		}
 		else
+		{
 			trk.notes = trk.notes[0 .. i] ~ ev ~ trk.notes[i .. $];
+			return i;
+		}
 	}
 
 	void removeNote(Track trk, int tick, int key)

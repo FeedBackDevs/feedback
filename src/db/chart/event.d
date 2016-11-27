@@ -593,7 +593,8 @@ ptrdiff_t GetMostRecentEventByTime(Types...)(Event[] events, long time, Types ty
 
 Event[] Between(Event[] events, int startTick, int endTick)
 {
-	assert(endTick >= startTick, "endTick must be greater than startTick");
+	if (startTick > endTick)
+		return null;
 	size_t first = events.GetNextEvent(startTick);
 	size_t last = events.GetNextEvent(endTick+1);
 	if (first == -1)
@@ -606,7 +607,8 @@ Event[] Between(Event[] events, int startTick, int endTick)
 
 Event[] BetweenTimes(Event[] events, long startTime, long endTime)
 {
-	assert(endTime >= startTime, "endTime must be greater than startTime");
+	if (startTime > endTime)
+		return null;
 	size_t first = events.GetNextEventByTime(startTime);
 	size_t last = events.GetNextEventByTime(endTime+1);
 	if (first == -1)
