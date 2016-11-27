@@ -229,6 +229,8 @@ class Game
 		editor.enter();
 	}
 
+	bool inEditor() { return editor && editor.inEditor; }
+
 	void addPlayer(Player player)
 	{
 		players ~= player;

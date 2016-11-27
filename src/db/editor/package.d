@@ -32,6 +32,8 @@ import std.conv : to;
 
 class Editor
 {
+	bool inEditor() const pure nothrow @nogc { return bInEditor; }
+
 	this()
 	{
 		ui = cast(Frame)lua.get!Widget("theme", "editor", "ui");
@@ -456,7 +458,7 @@ class Editor
 				}
 				case MFKey.PageUp:
 				case MFKey.PageDown:
-					{
+				{
 					if (menuState != MenuState.Closed || bPlaying)
 						return true;
 					// how many beats in a measure?
@@ -464,17 +466,46 @@ class Editor
 					return true;
 				}
 				case MFKey.Home:
-				{
-					if (menuState != MenuState.Closed || bPlaying)
-						return true;
-					gotoTick(chart.getLastNoteTick());
-					return true;
-				}
 				case MFKey.End:
 				{
 					if (menuState != MenuState.Closed || bPlaying)
 						return true;
-					gotoTick(0);
+					gotoTick(ev.buttonID == MFKey.End ? 0 : chart.getLastNoteTick());
+					return true;
+				}
+				case MFKey.Hyphen:
+				case MFKey.Equals:
+				{
+					if (menuState != MenuState.Closed || bPlaying)
+						return true;
+
+					auto i = chart.sync.FindEvent(EventType.BPM, offset);
+					if (i == -1)
+					{
+						i = chart.sync.GetMostRecentEvent(offset, EventType.BPM);
+
+						// place BPM change
+						Event e;
+						e.event = EventType.BPM;
+						e.tick = offset;
+						e.time = chart.calculateTimeOfTick(offset);
+						e.bpm.usPerBeat = i != -1 ? chart.sync[i].bpm.usPerBeat : 500_000;
+						chart.sync ~= e;
+						chart.sync.sort;
+
+						// TODO: annoying we have to search for it after sorting the sync track... fixme?
+						i = chart.sync.FindEvent(EventType.BPM, offset);
+					}
+
+					double bpm = 60_000_000.0 / chart.sync[i].bpm.usPerBeat;
+					bpm += (ev.buttonID == MFKey.Hyphen ? -1.0 : 1.0) * (ev.button.shift ? 0.1 : 1.0) * (ev.button.ctrl ? 0.01 : 1.0) * (ev.button.alt ? 10.0 : 1.0);
+					chart.sync[i].bpm.usPerBeat = cast(int)(60_000_000.0 / bpm + 0.5);
+
+//					double bpm = chart.sync[i].bpm.bpm + (ev.buttonID == MFKey.Hyphen ? -1.0 : 1.0) * (ev.button.shift ? 0.1 : 1.0) * (ev.button.ctrl ? 0.01 : 1.0) * (ev.button.alt ? 10.0 : 1.0);
+//					chart.sync[i].bpm.bpm = bpm;
+
+					// TODO: recalculate note times...
+
 					return true;
 				}
 				case MFKey.F1:

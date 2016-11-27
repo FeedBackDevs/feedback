@@ -12,6 +12,7 @@ import db.game.performance;
 import db.renderer;
 import db.library;
 import db.chart;
+import db.tracks.helpers;
 
 import core.stdc.math;
 import std.string;
@@ -323,38 +324,7 @@ class DanceTrack : NoteTrack
 		auto vb = VertexBuffer!vertex(100, MFVertexBufferType.Static, "Hello!");
 */
 
-		MFRect rect = MFRect(0, 0, 1920, 1080);
-		MFView_SetOrtho(&rect);
-
-		auto songEvents = chart.events.BetweenTimes(bottomTime, topTime);
-		foreach (ref e; songEvents)
-		{
-			if (e.event != EventType.Event)
-				continue;
-
-			MFVector pos = GetPosForTime(offset, e.time, RelativePosition.Right);
-
-			MFVector r;
-			MFView_TransformPoint3DTo2D(pos, &r);
-			MFFont_DrawTextAnchored(MFFont_GetDebugFont(), e.text.toStringz, r, MFFontJustify.Bottom_Left, 1920.0f, 30.0f, MFVector.white);
-		}
-
-		auto trackEvents = performer.sequence.notes.BetweenTimes(bottomTime, topTime);
-		foreach (ref e; trackEvents)
-		{
-			if (e.event != EventType.Event)
-				continue;
-
-			MFVector pos = GetPosForTime(offset, e.time, RelativePosition.Left);
-
-			MFVector r;
-			MFView_TransformPoint3DTo2D(pos, &r);
-			MFFont_DrawTextAnchored(MFFont_GetDebugFont(), e.text.toStringz, r, MFFontJustify.Bottom_Right, 1920.0f, 30.0f, MFVector.white);
-		}
-
-		int tick = chart.calculateTickAtTime(offset);
-		MFFont_DrawText2(null, 1920 - 200, 10, 20, MFVector.yellow, ("Time: " ~ to!string(offset/1_000_000.0)).toStringz);
-		MFFont_DrawText2(null, 1920 - 200, 30, 20, MFVector.orange, ("Offset: " ~ to!string(tick/cast(double)chart.resolution)).toStringz);
+		renderEditorText(chart, performer.sequence, this, offset);
 
 		MFView_Pop();
 	}

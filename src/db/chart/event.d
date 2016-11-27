@@ -139,6 +139,7 @@ struct Event
 				break;
 			case "C":
 				event = EventType.Chord;
+				chord = to!int(t.getFront);
 				break;
 			case "NP":
 				event = EventType.NeckPosition;
@@ -189,7 +190,7 @@ struct Event
 		}
 	}
 
-	string toString(int lastTick, string prefix = null, string suffix = null)
+	string toString(bool includeOffset = true)(int lastTick, string prefix = null, string suffix = null)
 	{
 		import std.format : format;
 
@@ -206,42 +207,45 @@ struct Event
 			return format(" l%d", d);
 		}
 
-		enum f = "%s%4d ";
-		int tick = this.tick - lastTick;
+		static if (includeOffset)
+			string f = format("%s%4d ", prefix, this.tick - lastTick);
+		else
+			enum f = null;
+
 		switch (event) with(EventType)
 		{
 			case BPM:
-				return format(f~"B %g%s", prefix, tick, bpm.usPerBeat/1000.0, suffix);
+				return format(f~"B %g%s", bpm.usPerBeat/1000.0, suffix);
 			case Anchor:
-				return format(f~"A %s", prefix, tick, suffix);
+				return format(f~"A %s", suffix);
 			case Freeze:
-				return format(f~"F %g%s", prefix, tick, freeze.usToFreeze/1000.0, suffix);
+				return format(f~"F %g%s", freeze.usToFreeze/1000.0, suffix);
 			case TimeSignature:
-				return format(f~"TS %d/%d%s", prefix, tick, ts.numerator, ts.denominator, suffix);
+				return format(f~"TS %d/%d%s", ts.numerator, ts.denominator, suffix);
 			case Note:
-				return format(f~"N %d%s%s%s", prefix, tick, note.key, fl(flags), dur(duration), suffix);
+				return format(f~"N %d%s%s%s", note.key, fl(flags), dur(duration), suffix);
 			case GuitarNote:
-				return format(f~"G %d:%d%s%s%s", prefix, tick, guitar._string, guitar.fret, fl(flags), dur(duration), suffix);
+				return format(f~"G %d:%d%s%s%s", guitar._string, guitar.fret, fl(flags), dur(duration), suffix);
 			case Lyric:
-				return format(f~"L `%s`%s%s", prefix, tick, text, dur(duration), suffix);
+				return format(f~"L `%s`%s%s", text, dur(duration), suffix);
 			case Special:
-				return format(f~"S %d%s%s", prefix, tick, special, dur(duration), suffix);
+				return format(f~"S %d%s%s", special, dur(duration), suffix);
 			case Event:
-				return format(f~"E `%s`%s%s", prefix, tick, text, dur(duration), suffix);
+				return format(f~"E `%s`%s%s", text, dur(duration), suffix);
 			case Section:
-				return format(f~"SN `%s`%s%s", prefix, tick, text, dur(duration), suffix);
+				return format(f~"SN `%s`%s%s", text, dur(duration), suffix);
 			case DrumAnimation:
-				return format(f~"DA %d%s%s", prefix, tick, drumAnim, dur(duration), suffix);
+				return format(f~"DA %d%s%s", drumAnim, dur(duration), suffix);
 			case Chord:
-				return format(f~"C %s", prefix, tick, suffix);
+				return format(f~"C %d%s", chord, suffix);
 			case NeckPosition:
-				return format(f~"NP %d%s", prefix, tick, position, suffix);
+				return format(f~"NP %d%s", position, suffix);
 			case KeyboardPosition:
-				return format(f~"KP %d%s", prefix, tick, position, suffix);
+				return format(f~"KP %d%s", position, suffix);
 			case Lighting:
-				return format(f~"I `%s`%s", prefix, tick, text, suffix);
+				return format(f~"I `%s`%s", text, suffix);
 			case DirectedCut:
-				return format(f~"DC `%s`%s", prefix, tick, text, suffix);
+				return format(f~"DC `%s`%s", text, suffix);
 			case MIDI:
 				if (midi.type == 0xFF)
 				{
@@ -255,7 +259,87 @@ struct Event
 					assert("todo!");
 				}
 				else
-					return format(f~"M %02x %d %d%s%s", prefix, tick, midi.type|midi.subType, midi.note, midi.velocity, dur(duration), suffix);
+					return format(f~"M %02x %d %d%s%s", midi.type|midi.subType, midi.note, midi.velocity, dur(duration), suffix);
+				return null;
+			default:
+				return null;
+		}
+	}
+
+	string toDisplayString(bool includeOffset = true)()
+	{
+		import std.format : format;
+
+		static string fl(uint f)
+		{
+			if (f == 0)
+				return null;
+			return format(" %x", f);
+		}
+		static string dur(int d)
+		{
+			if (d == 0)
+				return null;
+			return format(" (%d)", d);
+		}
+
+		static if (includeOffset)
+			string f = format("%5d ", this.tick);
+		else
+			enum f = null;
+
+		switch (event) with(EventType)
+		{
+			case BPM:
+			{
+				double bpm = 60_000_000.0 / bpm.usPerBeat;
+				bpm -= bpm % 0.001;
+				return format(f~"BPM: %g", bpm);
+			}
+			case Anchor:
+				return format(f~"A");
+			case Freeze:
+				return format(f~"F: %g", freeze.usToFreeze/1000.0);
+			case TimeSignature:
+				return format(f~"TS: %d/%d", ts.numerator, ts.denominator);
+			case Note:
+				return format(f~"N %d%s%s", note.key, dur(duration), fl(flags));
+			case GuitarNote:
+				return format(f~"G %d:%d%s%s", guitar._string, guitar.fret, dur(duration), fl(flags));
+			case Lyric:
+				return format(f~"\"%s\"%s", text, dur(duration));
+			case Special:
+				return format(f~"S %d%s", special, dur(duration));
+			case Event:
+				return format(f~"%s%s", text, dur(duration));
+			case Section:
+				return format(f~"%s%s", text, dur(duration));
+			case DrumAnimation:
+				return format(f~"DA: %d%s", drumAnim, dur(duration));
+			case Chord:
+				return format(f~"C: %d", chord);
+			case NeckPosition:
+				return format(f~"NP: %d", position);
+			case KeyboardPosition:
+				return format(f~"KP: %d", position);
+			case Lighting:
+				return format(f~"L: %s", text);
+			case DirectedCut:
+				return format(f~"Cut: %s", text);
+			case MIDI:
+				if (midi.type == 0xFF)
+				{
+					// we're missing the data for custom events!
+					assert("todo!");
+					//					return format(f~"M %02x %02x ... %s", prefix, tick, midi.type, midi.subType, ..., suffix);
+				}
+				else if ((midi.type & 0xF) == 0xF)
+				{
+					// sysex messages should format the data into a hex string
+					assert("todo!");
+				}
+				else
+					return format(f~"M: %02x %d %d%s", midi.type|midi.subType, midi.note, midi.velocity, dur(duration));
 				return null;
 			default:
 				return null;
@@ -306,6 +390,15 @@ struct Event
 	struct BPM
 	{
 		int usPerBeat;
+
+//		@property int usPerBeat() const pure nothrow @nogc { return _usPerBeat ? _usPerBeat : cast(int)(60_000_000.0 / _bpm + 0.5); }
+//		@property void usPerBeat(int value) pure nothrow @nogc { _usPerBeat = value; _bpm = 0; }
+//		@property double bpm() const pure nothrow @nogc { return _usPerBeat ? 60_000_000.0 / _usPerBeat : _bpm; }
+//		@property void bpm(double value) pure nothrow @nogc { _bpm = value; _usPerBeat = 0; }
+//
+//	private:
+//		int _usPerBeat;
+//		double _bpm;
 	}
 	struct TimeSig
 	{

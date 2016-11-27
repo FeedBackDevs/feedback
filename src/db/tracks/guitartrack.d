@@ -10,6 +10,7 @@ import db.game.performance;
 import db.renderer;
 import db.library;
 import db.chart;
+import db.tracks.helpers;
 
 import core.stdc.math;
 import std.string;
@@ -263,36 +264,7 @@ class GHGuitar : NoteTrack
 			MFPrimitive_DrawBox(b1, b2, colours[e.note.key], MFMatrix.identity, false);
 		}
 
-
-		// render some overlay stuff
-		MFRect rect = MFRect(0, 0, 1920, 1080);
-		MFView_SetOrtho(&rect);
-
-		auto songEvents = chart.events.BetweenTimes(bottomTime, topTime);
-		foreach (ref e; songEvents)
-		{
-			if (e.event != EventType.Event)
-				continue;
-
-			MFVector pos = GetPosForTime(offset, e.time, RelativePosition.Right);
-
-			MFVector r;
-			MFView_TransformPoint3DTo2D(pos, &r);
-			MFFont_DrawTextAnchored(MFFont_GetDebugFont(), e.text.toStringz, r, MFFontJustify.Bottom_Left, 1920.0f, 30.0f, MFVector.white);
-		}
-
-		auto trackEvents = performer.sequence.notes.BetweenTimes(bottomTime, topTime);
-		foreach (ref e; trackEvents)
-		{
-			if (e.event != EventType.Event)
-				continue;
-
-			MFVector pos = GetPosForTime(offset, e.time, RelativePosition.Left);
-
-			MFVector r;
-			MFView_TransformPoint3DTo2D(pos, &r);
-			MFFont_DrawTextAnchored(MFFont_GetDebugFont(), e.text.toStringz, r, MFFontJustify.Bottom_Right, 1920.0f, 30.0f, MFVector.white);
-		}
+		renderEditorText(chart, performer.sequence, this, offset);
 
 		MFView_Pop();
 	}
