@@ -3,12 +3,18 @@ theme.mainmenu = flow.newScreen("mainmenu")
 local m = theme.mainmenu
 
 function m:onInit(...)
+	self.panel = flow.attachPanel(self, "ui_id", "name")
 end
 function m:onEnter()
 end
 function m:onLeave()
 end
 function m:onInput(ev, inputManager)
+	if self.panel.onInout(ev, inputManager) then
+		return true
+	end
+
+	-- ...
 end
 
 function m:selectPlay()

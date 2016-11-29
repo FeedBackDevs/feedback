@@ -5,6 +5,11 @@ local function loadScreen(filename)
 	flow.registerScreen(screen)
 end
 
+local function loadPanel(filename)
+	local panel = dofile(db.themePath("screens/" .. filename .. ".lua"))
+	flow.registerPanel(panel)
+end
+
 loadScreen("songselect")
 loadScreen("boot")
 loadScreen("mainmenu")
