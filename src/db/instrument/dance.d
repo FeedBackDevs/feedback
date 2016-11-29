@@ -41,7 +41,9 @@ enum DanceNotes
 	DownRight2,
 	Center2,
 	LeftHand2,
-	RightHand2
+	RightHand2,
+	LeftHandBelow2,
+	RightHandBelow2
 }
 
 enum DanceFlags

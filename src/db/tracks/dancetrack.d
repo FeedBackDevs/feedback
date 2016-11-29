@@ -8,6 +8,7 @@ import db.i.scorekeeper;
 import db.inputs.inputdevice;
 import db.i.syncsource;
 import db.instrument;
+import db.instrument.dance : DanceNotes;
 import db.game.performance;
 import db.renderer;
 import db.library;
@@ -285,8 +286,8 @@ class DanceTrack : NoteTrack
 			float noteWidth, noteDepth, noteHeight;
 
 			pos = GetPosForTime(offset, e.time, Lane(key));
-			noteWidth = columnWidth*0.3f;
-			noteDepth = columnWidth*0.3f;
+			noteWidth = columnWidth*0.4f;
+			noteDepth = columnWidth*0.4f;
 			noteHeight = columnWidth*0.2f;
 
 			if (e.duration > 0)
@@ -298,9 +299,64 @@ class DanceTrack : NoteTrack
 				MFPrimitive_DrawBox(b1, b2, MFVector.green, MFMatrix.identity, false);
 			}
 
-			auto b1 = MFVector(pos.x - noteWidth, 0, pos.z - noteDepth);
-			auto b2 = MFVector(pos.x + noteWidth, noteHeight, pos.z + noteDepth);
-			MFPrimitive_DrawBox(b1, b2, MFVector.green, MFMatrix.identity, false);
+			import fuji.fuji : MFDeg2Rad;
+			static immutable float[] rotation = [
+				MFDeg2Rad!float(-90),
+				MFDeg2Rad!float(180),
+				MFDeg2Rad!float(0),
+				MFDeg2Rad!float(90),
+				MFDeg2Rad!float(-45),
+				MFDeg2Rad!float(45),
+				MFDeg2Rad!float(-135),
+				MFDeg2Rad!float(135),
+				MFDeg2Rad!float(0),
+				MFDeg2Rad!float(-45),
+				MFDeg2Rad!float(45),
+				MFDeg2Rad!float(-135),
+				MFDeg2Rad!float(135),
+				MFDeg2Rad!float(-90),
+				MFDeg2Rad!float(180),
+				MFDeg2Rad!float(0),
+				MFDeg2Rad!float(90),
+				MFDeg2Rad!float(-45),
+				MFDeg2Rad!float(45),
+				MFDeg2Rad!float(-135),
+				MFDeg2Rad!float(135),
+				MFDeg2Rad!float(0),
+				MFDeg2Rad!float(-45),
+				MFDeg2Rad!float(45),
+				MFDeg2Rad!float(-135),
+				MFDeg2Rad!float(135)
+			];
+
+			MFPrimitive(PrimType.TriFan | PrimType.Untextured, 0);
+
+			if (e.note.key == DanceNotes.Center || e.note.key == DanceNotes.Center2)
+			{
+				MFBegin(4);
+				MFSetColour(1.0f, 1.0f, 0.0f, 1.0f);
+				MFSetPosition(pos.x - noteWidth, pos.y + 0.01f, pos.z + noteDepth);
+				MFSetPosition(pos.x + noteWidth, pos.y + 0.01f, pos.z + noteDepth);
+				MFSetPosition(pos.x + noteWidth, pos.y + 0.01f, pos.z - noteDepth);
+				MFSetPosition(pos.x - noteWidth, pos.y + 0.01f, pos.z - noteDepth);
+				MFEnd();
+			}
+			else
+			{
+				MFMatrix mat = MFMatrix.identity;
+				mat.rotateY(rotation[e.note.key]);
+				pos.w = 1;
+				mat.setTranslation(pos);
+
+				MFSetMatrix(mat);
+				MFBegin(4);
+				MFSetColour(0.0f, 1.0f, 0.0f, 1.0f);
+				MFSetPosition(0, 0.01f, noteDepth);
+				MFSetPosition(noteWidth, 0.01f, -noteDepth);
+				MFSetPosition(0, 0.01f, -noteDepth*0.5f);
+				MFSetPosition(-noteWidth, 0.01f, -noteDepth);
+				MFEnd();
+			}
 		}
 
 /*
