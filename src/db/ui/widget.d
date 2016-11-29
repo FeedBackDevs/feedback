@@ -417,6 +417,20 @@ class Widget
 	@property inout(Widget)[] children() inout pure nothrow @nogc { return null; }
 	final @property inout(Layout) parent() inout pure nothrow @nogc { return _parent; }
 
+	size_t addChild(Widget child)
+	{
+		logError("Widget is not a container!");
+		return -1;
+	}
+	void removeChild(Widget child)
+	{
+		logError("Widget is not a container!");
+	}
+	void removeChild(size_t child)
+	{
+		logError("Widget is not a container!");
+	}
+
 	final inout(Widget) findChild(const(char)[] id) inout pure nothrow @nogc
 	{
 		auto _children = children;

@@ -47,6 +47,17 @@ class Theme
 		return ui;
 	}
 
+	static LayoutDescriptor loadUiDescriptor(string filename)
+	{
+		LayoutDescriptor desc = new LayoutDescriptor(filename);
+		if (!desc)
+		{
+			MFDebug_Warn(2, "Couldn't load " ~ filename);
+			return null;
+		}
+		return desc;
+	}
+
 	static Theme load(string theme)
 	{
 		import db.lua : doFile;

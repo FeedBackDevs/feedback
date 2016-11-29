@@ -303,6 +303,7 @@ class Game
 
 		dbTable["themePath"] = &Theme.themePath;
 		dbTable["loadUi"] = &Theme.loadUi;
+		dbTable["loadUiDescriptor"] = &Theme.loadUiDescriptor;
 
 		dbTable["library"] = Game.instance.songLibrary;
 

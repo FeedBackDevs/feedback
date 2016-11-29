@@ -63,7 +63,7 @@ class Layout : Widget
 		return _children;
 	}
 
-	final size_t addChild(Widget child)
+	final override size_t addChild(Widget child)
 	{
 		size_t index = _children.length;
 		_children ~= child;
@@ -76,7 +76,7 @@ class Layout : Widget
 		return index;
 	}
 
-	final void removeChild(Widget child)
+	final override void removeChild(Widget child)
 	{
 		foreach (i, c; _children)
 		{
@@ -90,7 +90,7 @@ class Layout : Widget
 		assert(false, "Child does not exist!");
 	}
 
-	final void removeChild(size_t index)
+	final override void removeChild(size_t index)
 	{
 		_children[index].OnLayoutChanged.unsubscribe(&onLayoutDirty);
 
