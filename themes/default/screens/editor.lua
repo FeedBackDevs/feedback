@@ -1,3 +1,4 @@
+-- themes/default/screens/editor.lua
 
 theme.editor = flow.newScreen("editor")
 local m = theme.editor

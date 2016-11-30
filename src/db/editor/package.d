@@ -27,7 +27,7 @@ import fuji.font;
 import fuji.input;
 import fuji.vector;
 import fuji.sound;
-import std.algorithm : max, clamp, canFind, filter, find;
+import std.algorithm : max, clamp, canFind, filter, find, sort;
 import std.range : array, retro;
 import std.conv : to;
 
@@ -610,7 +610,7 @@ class Editor
 						e.time = chart.calculateTimeOfTick(offset);
 						e.bpm.usPerBeat = i != -1 ? chart.sync[i].bpm.usPerBeat : 500_000;
 						chart.sync ~= e;
-						chart.sync.sort;
+						sort(chart.sync);
 
 						// TODO: annoying we have to search for it after sorting the sync track... fixme?
 						i = chart.sync.FindEvent(EventType.BPM, offset);

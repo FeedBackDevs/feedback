@@ -1,3 +1,4 @@
+-- themes/default/screens/ingameoptions.lua
 
 function resumegame()
 	db.getScreen("performance").pause(false)

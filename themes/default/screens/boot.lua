@@ -1,4 +1,4 @@
--- boot.lua
+-- themes/default/screens/boot.lua
 
 theme.boot = flow.newScreen("boot")
 local m = theme.boot
