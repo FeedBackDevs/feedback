@@ -1,3 +1,4 @@
+-- themes/default/screens/performance.lua
 
 theme.performance = flow.newScreen("performance")
 local m = theme.performance

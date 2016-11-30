@@ -1,4 +1,4 @@
--- default/flow.lua
+-- themes/default/flow.lua
 
 local function loadScreen(filename)
 	local screen = dofile(db.themePath("screens/" .. filename .. ".lua"))

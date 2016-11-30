@@ -1,4 +1,4 @@
--- theme.lua
+-- themes/default/theme.lua
 
 print("default theme...")
 

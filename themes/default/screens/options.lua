@@ -1,3 +1,4 @@
+-- themes/default/screens/options.lua
 
 theme.options = flow.newScreen("options")
 local m = theme.options

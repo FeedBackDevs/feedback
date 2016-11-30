@@ -107,8 +107,20 @@ LuaState initLua()
 
 	static void panic(LuaState state, in char[] error)
 	{
-		MFDebug_Error(error);
-		throw new LuaErrorException(error.idup);
+		string message;
+
+		import std.regex : ctRegex, matchFirst;
+		static auto ctr = ctRegex!(`\[string \"[ \t]*--[ \t]*(.+\.lua).*\"\]:([0-9]+):[ \t]*(.+)`);
+		auto r = error.matchFirst(ctr);
+		if (!r.empty)
+			message = format("%s(%s): error : %s", r[1], r[2], r[3]);
+		else
+			message = error.idup;
+
+		MFDebug_Message(message);
+
+		MFDebug_Error("Lua panic!".ptr);
+//		throw new LuaErrorException(message);
 	}
 
 //	lua = new LuaState(&alloc);
@@ -118,7 +130,7 @@ LuaState initLua()
 	lua.openLibs();
 
 	lua["print"] = &luaPrint;
-	lua["error"] = &luaError;
+	lua["logError"] = &luaError;
 	lua["warn"] = &luaWarn;
 	lua["log"] = &luaLog;
 

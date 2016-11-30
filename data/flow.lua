@@ -1,4 +1,4 @@
--- flow.lua
+-- data/flow.lua
 
 flow = {}
 
@@ -14,8 +14,8 @@ flow.activePopups = {}
 
 db.ui:registerUnhandledInputHandler(function(inputManager, ev)
 	-- each popup
-	for popup,_ in pairs(flow.activePopups) do
-		if popup.onInput then
+	for _, popup in pairs(flow.activePopups) do
+		if popup and popup.onInput then
 			if popup:onInput(ev.deref, inputManager) then
 				return true
 			end
@@ -60,7 +60,7 @@ function flow.newPopup(name)
 				self.template = db.loadUiDescriptor(xml)
 			end
 			return self.template
-		end
+		end,
 		["spawn"] = function(self)
 			screen = flow.newScreen(self.name)
 			screen.ui = self.template.spawn()
@@ -197,8 +197,7 @@ function flow.attachPanel(screen, parent_id, panel)
 		end
 	end
 	if not screen then
-		logError("Not a screen!")
-		return nil
+		error("Not a screen!")
 	end
 
 	-- get panel
@@ -210,16 +209,14 @@ function flow.attachPanel(screen, parent_id, panel)
 		end
 	end
 	if not panel then
-		logError("Not a panel!")
-		return nil
+		error("Not a panel!")
 	end
 
 	local attachPoint = screen.ui.findChild(parent_id)
 	if attachPoint then
 		attachPoint.addChild(panel.ui);
 	else
-		logError("Screen does not contain item: " .. parent_id)
-		return nil
+		error("Screen does not contain item: " .. parent_id)
 	end
 
 	return panel
@@ -234,8 +231,7 @@ function flow.showPopup(popup, ...)
 		end
 	end
 	if not popup then
-		logError("Not a popup!")
-		return
+		error("Not a popup!")
 	end
 
 	inst = popup.spawn()
@@ -250,18 +246,21 @@ function flow.showPopup(popup, ...)
 		inst:onEnter()
 	end
 
+	flow.activePopups[inst] = inst
+
 	return inst
 end
 
 function flow.closePopup(popupScreen)
 	if not popupScreen.__is_screen then
-		logError("Not a screen!")
-		return
+		error("Not a screen!")
 	end
 
 	if popupScreen.onLeave then
 		popupScreen:onLeave()
 	end
+
+	flow.activePopups[inst] = nil
 
 	db.ui:removeTopLevelWidget(popupScreen.ui)
 	popupScreen.ui = nil
