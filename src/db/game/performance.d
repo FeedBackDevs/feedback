@@ -28,39 +28,40 @@ import std.signals;
 
 class Performer
 {
-	this(Performance performance, Player player, Track sequence)
+	this(Performance performance, Player player, size_t inputIndex, Track sequence)
 	{
 		this.performance = performance;
 		this.player = player;
+		this.input = &player.parts[inputIndex];
 		this.sequence = sequence;
 
 		// HACK: hardcoded classes for the moment...
 		// Note: note track should be chosen accorting to the instrument type, and player preference for theme/style (GH/RB/Bemani?)
-		if (player.input.part[] == "leadguitar" ||
-			player.input.part[] == "rhythmguitar" ||
-			player.input.part[] == "bass")
+		if (input.part[] == "leadguitar" ||
+			input.part[] == "rhythmguitar" ||
+			input.part[] == "bass")
 		{
-			scoreKeeper = new GuitarScoreKeeper(sequence, player.input.instrument);
+			scoreKeeper = new GuitarScoreKeeper(sequence, input.instrument);
 			noteTrack = new GHGuitar(this);
 		}
-		else if (player.input.part[] == "drums")
+		else if (input.part[] == "drums")
 		{
-			scoreKeeper = new DrumsScoreKeeper(sequence, player.input.instrument);
+			scoreKeeper = new DrumsScoreKeeper(sequence, input.instrument);
 			noteTrack = new GHDrums(this);
 		}
-		else if (player.input.part[] == "keyboard")
+		else if (input.part[] == "keyboard")
 		{
-			scoreKeeper = new KeysScoreKeeper(sequence, player.input.instrument);
+			scoreKeeper = new KeysScoreKeeper(sequence, input.instrument);
 			noteTrack = new KeysTrack(this);
 		}
-		else if (player.input.part[] == "realkeyboard")
+		else if (input.part[] == "realkeyboard")
 		{
-			scoreKeeper = new KeysScoreKeeper(sequence, player.input.instrument);
+			scoreKeeper = new KeysScoreKeeper(sequence, input.instrument);
 			noteTrack = new ProKeysTrack(this);
 		}
-		else if (player.input.part[] == "dance")
+		else if (input.part[] == "dance")
 		{
-			scoreKeeper = new DanceScoreKeeper(sequence, player.input.instrument);
+			scoreKeeper = new DanceScoreKeeper(sequence, input.instrument);
 			noteTrack = new DanceTrack(this);
 		}
 	}
@@ -68,7 +69,7 @@ class Performer
 	void begin(double startTime)
 	{
 		if (scoreKeeper)
-			scoreKeeper.begin(player.input.part);
+			scoreKeeper.begin(input.part);
 	}
 
 	void end()
@@ -98,6 +99,7 @@ class Performer
 	MFRect screenSpace;
 	Performance performance;
 	Player player;
+	Player.Input* input;
 	Track sequence;
 	NoteTrack noteTrack;
 	ScoreKeeper scoreKeeper;
@@ -132,27 +134,30 @@ class Performance
 		performers = null;
 		foreach (p; players)
 		{
-			Track s = song.chart.getTrackForPlayer(p.input.part, p.input.type, p.variation, p.difficulty);
-			if (s)
-				performers ~= new Performer(this, p, s);
-			else
+			foreach (i, playPart; p.parts)
 			{
-				// HACK: find a part the players instrument can play!
-				foreach (part; p.input.instrument.desc.parts)
+				Track s = song.chart.getTrackForPlayer(playPart.part, playPart.type, playPart.variation, playPart.difficulty);
+				if (s)
+					performers ~= new Performer(this, p, i, s);
+				else
 				{
-					// if part == "drums" or "dance", 'type' needs to try a few things...
-					string type = null;
-					if (part[] == "drums")
-						type = "real-drums";
-					else if (part[] == "dance")
-						type = "dance-single";
-
-					s = song.chart.getTrackForPlayer(part, type, p.variation, p.difficulty);
-					if (s)
+					// HACK: find a part the players instrument can play!
+					foreach (part; playPart.instrument.desc.parts)
 					{
-						p.input.part = part;
-						performers ~= new Performer(this, p, s);
-						break;
+						// if part == "drums" or "dance", 'type' needs to try a few things...
+						string type = null;
+						if (part[] == "drums")
+							type = "real-drums";
+						else if (part[] == "dance")
+							type = "dance-single";
+
+						s = song.chart.getTrackForPlayer(part, type, playPart.variation, playPart.difficulty);
+						if (s)
+						{
+							playPart.part = part;
+							performers ~= new Performer(this, p, i, s);
+							break;
+						}
 					}
 				}
 			}
