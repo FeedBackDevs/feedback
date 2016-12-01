@@ -3,7 +3,7 @@
 	<Script src="ingameoptions.lua" />
 	<LinearLayout align="Center" orientation="Vertical">
 		<Label align="TopCenter" text="Game Paused!" text_height="60" text_colour="yellow" />
-		<Button onClick="resumegame" text="Resume" text_height="50" text_colour="white" />
-		<Button onClick="quitsong" text="Quit Song" text_height="50" text_colour="white" />
+		<Button onClick="resumegame()" text="Resume" text_height="50" text_colour="white" />
+		<Button onClick="quitsong()" text="Quit Song" text_height="50" text_colour="white" />
 	</LinearLayout>
 </Frame>

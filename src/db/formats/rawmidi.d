@@ -17,7 +17,7 @@ import std.path;
 import std.range : back;
 import std.string;
 
-bool LoadRawMidi(Song* song, DirEntry file)
+bool LoadRawMidi(Song song, DirEntry file)
 {
 	string path = file.directory ~ "/";
 

@@ -74,6 +74,11 @@ class UiListAdapter(T) : RangeAdapter!(T[])
 	@property UpdateItem onUpdateItem() const { return _onUpdateItem; }
 	@property void onUpdateItem(UpdateItem f) { _onUpdateItem = f; }
 
+	T get(size_t i)
+	{
+		return _range[i - 1];
+	}
+
 @noscript:
 	alias UpdateItem = void delegate(Widget, T);
 	UpdateItem _onUpdateItem;

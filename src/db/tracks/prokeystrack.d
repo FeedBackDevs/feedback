@@ -29,7 +29,7 @@ class ProKeysTrack : NoteTrack
 	{
 		super(performer);
 
-		Song* t = performer.performance.song;
+		Song t = performer.performance.song;
 		Chart chart = t.chart;
 		this.chart = chart;
 

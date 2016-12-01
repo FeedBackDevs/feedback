@@ -19,7 +19,7 @@ import std.path;
 import std.exception;
 import std.conv : to;
 
-bool LoadDWI(Song* song, DirEntry file)
+bool LoadDWI(Song song, DirEntry file)
 {
 	string steps = enforce(MFFileSystem_LoadText(file.filepath).assumeUnique, "");
 
@@ -88,7 +88,7 @@ bool LoadDWI(Song* song, DirEntry file)
 	return true;
 }
 
-bool LoadDWI(Song* song, const(char)[] dwi, string path)
+bool LoadDWI(Song song, const(char)[] dwi, string path)
 {
 	Chart chart = song._chart;
 

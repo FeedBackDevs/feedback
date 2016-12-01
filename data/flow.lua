@@ -29,7 +29,7 @@ db.ui:registerUnhandledInputHandler(function(inputManager, ev)
 		end
 	end
 
-	print(ev.deref.sourceID .. " - " .. ev.deref.device .. "(" .. ev.deref.deviceID .. ") - " .. ev.deref.ev .. ": " .. ev.deref.buttonID)
+--	print(ev.deref.sourceID .. " - " .. ev.deref.device .. "(" .. ev.deref.deviceID .. ") - " .. ev.deref.ev .. ": " .. ev.deref.buttonID)
 
 	-- should return false here, and let the onInput function above digest the message??
 	return true

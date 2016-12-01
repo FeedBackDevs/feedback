@@ -14,6 +14,11 @@ local function loadListItem(filename, list)
 	list.itemDescriptor = db.loadUiDescriptor("screens/items/" .. filename .. ".xml")
 end
 
+loadListItem("player", db.playerlist)
+loadListItem("song", db.library.songlist)
+
+loadPanel("players")
+
 loadScreen("songselect")
 loadScreen("boot")
 loadScreen("mainmenu")
@@ -21,10 +26,6 @@ loadScreen("editor")
 loadScreen("options")
 loadScreen("download")
 loadScreen("performance")
-
-loadPanel("players")
-
-loadListItem("player", db.playerlist)
 
 -- enter main menu
 print("show boot screen...")

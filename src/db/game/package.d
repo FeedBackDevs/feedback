@@ -206,15 +206,10 @@ class Game
 	}
 
 	// performance functions
-	void startPerformance(string song)
+	void startPerformance(Song song)
 	{
-		// HACK: create a performance of the first song in the library
-		Song* pSong = songLibrary.find(song);
-		if (pSong)
-		{
-			performance = new Performance(pSong, players);
-			performance.begin(0);
-		}
+		performance = new Performance(song, players);
+		performance.begin(0);
 	}
 
 	void endPerformance()
@@ -357,15 +352,19 @@ class Game
 		// some data accessors
 		dbTable["ui"] = Game.instance.ui;
 
-		dbTable["cast"] = (string type, Widget w) {
+		dbTable["cast"] = (string type, Object w) {
+			import db.ui.listadapter : ListAdapter;
 			import db.ui.widgets.label : Label;
 			import luad.state;
 
 			auto lua = Game.instance.lua;
 			switch (type)
 			{
+				case "Widget": return lua.wrap(cast(Widget)w);
 				case "Label": return lua.wrap(cast(Label)w);
 //				case "Textbox": return LuaObject(cast(Textbox)w);
+
+				case "ListAdapter": return lua.wrap(cast(ListAdapter)w);
 
 				default:
 					break;

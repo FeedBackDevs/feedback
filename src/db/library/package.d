@@ -1,14 +1,6 @@
 module db.library;
 
-// TODO: remove like, all these imports!
-import fuji.dbg;
-import fuji.heap;
-import fuji.filesystem;
-import fuji.system;
-import fuji.sound;
-import fuji.material;
-
-public import db.chart : Chart;
+public import db.library.song;
 
 import db.formats.ghrbmidi;
 import db.formats.rawmidi;
@@ -19,10 +11,13 @@ import db.formats.ksf;
 import db.formats.bms;
 import db.tools.filetypes;
 import db.tools.enumkvp;
+import db.ui.listadapter : UiListAdapter, ListAdapter;
 
-import luad.base : noscript;
+import fuji.dbg;
+import fuji.filesystem;
+import fuji.system;
 
-import std.string;
+import std.string : translate, strip;
 import std.encoding;
 import std.range;
 import std.path;
@@ -33,199 +28,14 @@ import std.algorithm;
 import std.xml;
 
 
-// music files (many of these may or may not be available for different songs)
-enum Streams
-{
-	Song,			// the backing track (often includes vocals)
-	SongWithCrowd,	// backing track with crowd sing-along (sing-along, for star-power mode/etc.)
-	Vocals,			// discreet vocal track
-	Crowd,			// crowd-sing-along, for star-power/etc.
-	Guitar,
-	Rhythm,
-	Bass,
-	Keys,
-	Drums,			// drums mixed to a single track
-
-	// paths to music for split drums (guitar hero world tour songs split the drums into separate tracks)
-	Kick,
-	Snare,
-	Cymbals,		// all cymbals
-	Toms,			// all toms
-
-	Count
-}
-
-
-struct Song
-{
-	@property Chart chart()
-	{
-		if (!_chart)
-			_chart = new Chart(localChart);
-
-		return _chart;
-	}
-
-	@property string preview() { return _preview; }
-	@property string cover() { return coverImage; }
-
-	@property string path() { return chart.songPath; }
-
-	@property string id() { return chart.id; }
-	@property string name() { return chart.name; }
-	@property string variant() { return chart.variant; }
-	@property string subtitle() { return chart.subtitle; }
-	@property string artist() { return chart.artist; }
-	@property string album() { return chart.album; }
-	@property string year() { return chart.year; }
-	@property string packageName() { return chart.packageName; }
-	@property string charterName() { return chart.charterName; }
-
-	// TODO: tags should be split into an array
-//	@property string tags() { return song.tags; }
-	@property string genre() { return chart.genre; }
-	@property string mediaType() { return chart.mediaType; }
-
-	// TODO: is AA
-//	@property string params() { return song.params; }
-
-	@property int resolution() { return chart.resolution; }
-	@property long startOffset() { return chart.startOffset; }
-
-
-	// TODO: add something to fetch information about the streams...
-
-	void pause(bool bPause)
-	{
-		foreach (s; streams)
-			if (s)
-				MFSound_PauseStream(s, bPause);
-	}
-
-	void seek(double offsetInSeconds)
-	{
-		foreach (s; streams)
-			if (s)
-				MFSound_SeekStream(s, offsetInSeconds);
-	}
-
-	void setVolume(string part, float volume)
-	{
-		// TODO: figure how parts map to playing streams
-	}
-
-	void setPan(string part, float pan)
-	{
-		// TODO: figure how parts map to playing streams
-	}
-
-@noscript:
-	struct Source
-	{
-		struct File
-		{
-			Streams type;
-			string stream;
-		}
-
-		File[] streams;
-
-		void addStream(string filename, Streams type = Streams.Song) { streams ~= File(type, filename); }
-	}
-
-	// TODO: link to archive entry if the chart comes from the archive...
-//	ArchiveEntry archiveEntry;		// reference to the archive entry, if the song is present in the archive...
-
-	string localChart;				// path to local chart file
-
-	// associated data
-	string _preview;				// short preview clip
-	string video;					// background video
-
-	string coverImage;				// cover image
-	string background;				// background image
-	string fretboard;				// custom fretboard graphic
-
-	// audio sources
-	Source[] sources;
-
-	// runtime data
-	Chart _chart;
-
-	MFAudioStream*[Streams.Count] streams;
-	MFVoice*[Streams.Count] voices;
-
-	Material _cover;
-	Material _background;
-	Material _fretboard;
-
-	// methods...
-	~this()
-	{
-		release();
-	}
-
-	Source* addSource()
-	{
-		sources ~= Source();
-		return &sources[$-1];
-	}
-
-	void prepare()
-	{
-		chart.prepare();
-
-		// load audio streams...
-
-		// load song data...
-
-		// TODO: choose a source
-		Source* source = &sources[0];
-
-		// prepare the music streams
-		foreach (ref s; source.streams)
-		{
-			streams[s.type] = MFSound_CreateStream(s.stream.toStringz, MFAudioStreamFlags.QueryLength | MFAudioStreamFlags.AllowSeeking);
-			if (!streams[s.type])
-				continue;
-
-			MFSound_PlayStream(streams[s.type], MFPlayFlags.BeginPaused);
-
-			voices[s.type] = MFSound_GetStreamVoice(streams[s.type]);
-//			MFSound_SetPlaybackRate(voices[i], 1.0f); // TODO: we can use this to speed/slow the song...
-		}
-
-		// load data...
-		if (coverImage)
-			_cover = Material(coverImage);
-		if (background)
-			_background = Material(background);
-		if (fretboard)
-			_fretboard = Material(fretboard);
-	}
-
-	void release()
-	{
-		foreach (ref s; streams)
-		{
-			if (s)
-			{
-				MFSound_DestroyStream(s);
-				s = null;
-			}
-		}
-
-		_cover = null;
-		_background = null;
-		_fretboard = null;
-	}
-}
-
 class SongLibrary
 {
 	this(string filename = null)
 	{
 		load(filename ? filename : "system:cache/library.xml");
+
+		songList = new UiListAdapter!Song(null);
+		songList.updateArray(library.values);
 	}
 
 	void load(string filename)
@@ -245,8 +55,9 @@ class SongLibrary
 			{
 				xml.onStartTag["song"] = (ElementParser xml)
 				{
-					Song song;
 					string id = xml.tag.attr["id"];
+
+					Song song = new Song(id);
 
 					xml.onEndTag["localChart"]	= (in Element e) { song.localChart		= e.text(); };
 					xml.onEndTag["preview"]		= (in Element e) { song._preview		= e.text(); };
@@ -335,14 +146,26 @@ class SongLibrary
 		save();
 	}
 
-	Song* find(const(char)[] name)
+	Song find(const(char)[] name)
 	{
-		return name in library;
+		Song* s = name in library;
+		if (s)
+			return *s;
+		return null;
 	}
 
-	@property string[] songs()
+	Song[string] songs()
 	{
-		return library.keys;
+		return library;
+	}
+
+	@property UiListAdapter!Song songlist()
+	{
+		return songList;
+	}
+	@property ListAdapter songlist_base()
+	{
+		return songList;
 	}
 
 private:
@@ -350,6 +173,8 @@ private:
 	Song[string] library;
 
 	MFFileTime lastScan;
+
+	UiListAdapter!Song songList;
 
 	void scanPath(string path)
 	{
@@ -365,32 +190,34 @@ private:
 			}
 			else if (e.filename.extension.icmp(".chart") == 0 && (e.writeTime > lastScan || e.createTime > lastScan))
 			{
-				Song song;
-				song._chart = new Chart(e.filepath);
+				Chart chart = new Chart(e.filepath);
 
-				if (song._chart.params["source_format"][] == ".chart_1_0")
+				Song song = new Song(chart.id);
+				song._chart = chart;
+
+				if (chart.params["source_format"][] == ".chart_1_0")
 				{
 					string dir = e.directory ~ "/";
 
 					Song.Source source;
-					string* fn = "MusicStream" in song._chart.params;
+					string* fn = "MusicStream" in chart.params;
 					if (fn)
 						source.addStream(dir ~ *fn, Streams.Song);
-					fn = "GuitarStream" in song._chart.params;
+					fn = "GuitarStream" in chart.params;
 					if (fn)
 						source.addStream(dir ~ *fn, Streams.Guitar);
-					fn = "BassStream" in song._chart.params;
+					fn = "BassStream" in chart.params;
 					if (fn)
 						source.addStream(dir ~ *fn, Streams.Bass);
 
 					song.sources ~= source;
 
-					fn = "Fretboard" in song._chart.params;
+					fn = "Fretboard" in chart.params;
 					if (fn)
 						song.fretboard = dir ~ *fn;
 
-					song._chart.saveChart(dir);
-					song.localChart = song._chart.songPath;
+					chart.saveChart(dir);
+					song.localChart = chart.songPath;
 				}
 				else
 				{
@@ -422,7 +249,7 @@ private:
 					}
 				}
 
-				library[song._chart.id] = song;
+				library[chart.id] = song;
 			}
 		}
 
@@ -433,12 +260,12 @@ private:
 			{
 				string dir = file.directory ~ "/";
 
-				Song song;
+				Song song = new Song(null);
 				bool addTrack;
 
 				if (file.filename.icmp("song.ini") == 0)
 				{
-					if (LoadGHRBMidi(&song, file))
+					if (LoadGHRBMidi(song, file))
 						addTrack = true;
 				}
 				else switch (file.filename.extension.toLower)
@@ -454,21 +281,21 @@ private:
 					case ".sm":
 					{
 						// stepmania step file
-						if (LoadSM(&song, file))
+						if (LoadSM(song, file))
 							addTrack = true;
 						break;
 					}
 					case ".ksf":
 					{
 						// kick is up step file (5-panel 'pump it up' steps)
-						if (LoadKSF(&song, file, this))
+						if (LoadKSF(song, file, this))
 							addTrack = true;
 						break;
 					}
 					case ".dwi":
 					{
 						// danci with intensity step file
-						if (LoadDWI(&song, file))
+						if (LoadDWI(song, file))
 							addTrack = true;
 						break;
 					}
@@ -486,7 +313,7 @@ private:
 					case ".gp5":
 					case ".gpx":
 					{
-						if (LoadGuitarPro(&song, file))
+						if (LoadGuitarPro(song, file))
 							addTrack = true;
 						break;
 					}
@@ -495,7 +322,7 @@ private:
 						if (file.filename.icmp("notes.mid") == 0)
 							break;
 						// raw midi file
-						if (LoadRawMidi(&song, file))
+						if (LoadRawMidi(song, file))
 							addTrack = true;
 						break;
 					}
@@ -504,12 +331,14 @@ private:
 
 				if (addTrack)
 				{
+					song._id = song._chart.id;
+
 					// write out a .chart for the converted song
 					song._chart.saveChart(dir);
 					song.localChart = song._chart.songPath;
 
-					if (song._chart.id !in library)
-						library[song._chart.id] = song;
+					if (song.id !in library)
+						library[song.id] = song;
 				}
 			}
 			catch (Exception e)

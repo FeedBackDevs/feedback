@@ -31,7 +31,7 @@ enum DrumsType
 	EightDrums		// 4 drums, 3 cymbals, hihat
 }
 
-bool LoadGHRBMidi(Song* song, DirEntry file)
+bool LoadGHRBMidi(Song song, DirEntry file)
 {
 	Windows1252String ini = cast(Windows1252String)MFFileSystem_Load(file.filepath).assumeUnique;
 

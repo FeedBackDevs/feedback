@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Frame>
+	<script>
+		db.library.songlist.onUpdateItem = function(widget, song)
+			local l = db.cast("Label", widget:findChild("songname"))
+			l.text = song.id
+		end
+	</script>
+	<Label id="songname" align="TopFill" text="blah" text_height="30" text_colour="white" />
+</Frame>

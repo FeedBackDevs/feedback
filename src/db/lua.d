@@ -174,33 +174,10 @@ bool isValidIdentifier(const(char)[] handler)
 
 LuaObject getLuaObject(const(char)[] identifier)
 {
-	auto ident = identifier.strip;
-
-	LuaObject obj;
-
-	// if the string is an identifier
-	if (ident.isValidIdentifier)
-	{
-		// search for lua global
-		LuaTable t = lua.globals;
-		foreach (token; ident.splitter('.'))
-		{
-			if (!t.isNil)
-			{
-				obj = t[token];
-				if (obj.type == LuaType.Table)
-					t = obj.to!LuaTable;
-				else
-					t.release();
-			}
-			else
-			{
-				obj.release();
-				break;
-			}
-		}
-	}
-	return obj;
+	LuaObject[] r = lua.doString("return " ~ identifier);
+	if (r.length > 0)
+		return r[0];
+	return LuaObject();
 }
 
 

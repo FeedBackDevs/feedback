@@ -109,7 +109,7 @@ class Editor
 			play(false);
 
 		// clean up
-		pSong = null;
+		song = null;
 		chart = null;
 		track = null;
 
@@ -196,7 +196,7 @@ class Editor
 
 	Player editorPlayer;
 
-	Song* pSong;
+	Song song;
 	Chart chart;
 	Track track;
 
@@ -626,7 +626,9 @@ class Editor
 //					double bpm = chart.sync[i].bpm.bpm + (ev.buttonID == MFKey.Hyphen ? -1.0 : 1.0) * (ev.button.shift ? 0.1 : 1.0) * (ev.button.ctrl ? 0.01 : 1.0) * (ev.button.alt ? 10.0 : 1.0);
 //					chart.sync[i].bpm.bpm = bpm;
 
-					// TODO: recalculate note times...
+					// TODO: this could be slow... we could recalculate only the current editing track,
+					//       and recalculate all tracks when the user changes track??
+					chart.prepare();
 
 					return true;
 				}
@@ -758,7 +760,7 @@ class Editor
 				menuState = MenuState.NewFile;
 				break;
 			case 1:
-				menuItems = game.songLibrary.songs;
+				menuItems = game.songLibrary.songs().keys;
 				showMenu(menuItems, &songSelect);
 				menuState = MenuState.OpenFile;
 				break;
@@ -972,8 +974,8 @@ class Editor
 		if (bPlaying)
 			play(false);
 
-		pSong = game.songLibrary.find(menuItems[i]);
-		if (!pSong)
+		song = game.songLibrary.find(menuItems[i]);
+		if (!song)
 		{
 			game.performance = null;
 			return;
@@ -983,8 +985,8 @@ class Editor
 		sync.pause(true);
 		sync.reset();
 
-		game.performance = new Performance(pSong, null, sync);
-		chart = pSong.chart;
+		game.performance = new Performance(song, null, sync);
+		chart = song.chart;
 
 		gotoTick(0, true, true);
 		step = 4;

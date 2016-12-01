@@ -15,6 +15,10 @@ function m:onInput(ev, inputManager)
 	  (ev.device == "Gamepad" and ev.buttonID == 8) then -- start
 		-- pass UI to the theme, supplying the input source that pressed start
 		db.createPlayer(ev.pSource)
+
+		theme.masterDevice = ev.device
+		theme.masterDeviceId = ev.deviceID
+
 		self:start()
 		return true
 	end

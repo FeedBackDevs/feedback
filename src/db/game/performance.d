@@ -107,7 +107,7 @@ class Performer
 
 class Performance
 {
-	this(Song* song, Player[] players, SyncSource sync = null)
+	this(Song song, Player[] players, SyncSource sync = null)
 	{
 		bPaused = true;
 
@@ -266,7 +266,7 @@ class Performance
 		MFView_Pop();
 	}
 
-	Song* song;
+	Song song;
 	Performer[] performers;
 	SyncSource sync;
 	long time;

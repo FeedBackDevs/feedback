@@ -21,7 +21,7 @@ import std.string;
 // http://sourceforge.net/p/kguitar/code/HEAD/tree/trunk/kguitar/kguitar/convertgtp.cpp
 // http://sourceforge.net/p/tuxguitar/code/HEAD/tree/trunk/TuxGuitar-gtp/src/org/herac/tuxguitar/io/gtp/GP4InputStream.java#l201
 
-bool LoadGuitarPro(Song* song, DirEntry file)
+bool LoadGuitarPro(Song song, DirEntry file)
 {
 	string path = file.directory ~ "/";
 

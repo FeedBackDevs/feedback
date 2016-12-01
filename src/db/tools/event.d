@@ -89,13 +89,6 @@ void bindEvent(alias event, alias argAdjust = null)(const(char)[] handler, strin
 	alias EventType = typeof(event);
 	EventType.Handler d;
 
-	LuaObject obj = getLuaObject(handler);
-	if (!obj.isNil && obj.type == LuaType.Function)
-	{
-		LuaFunction f = obj.to!LuaFunction;
-		auto ld = new LuaDelegate!(EventType.EventArgs)(f);
-		d = ld.getDelegate;
-	}
 	if (!d)
 	{
 		// HACK: this should be split into multiple functions

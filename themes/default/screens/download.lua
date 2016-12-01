@@ -16,7 +16,13 @@ function m:onInput(ev, inputManager)
 		return true
 	end
 
-	-- ...
+	if ev.ev == "ButtonDown" and theme.isMenuDevice(ev.pSource) then
+		if (ev.device == "Keyboard" and ev.buttonID == 27) or
+		   (ev.device == "Gamepad" and ev.buttonID == 1) then
+			self:exit()
+			return true
+		end
+	end
 end
 
 function m:exit()

@@ -3,21 +3,6 @@
 theme.songselect = flow.newScreen("songselect")
 local m = theme.songselect
 
-
-local function get(item, userdata)
-	local l = Label()
-	l.textColour = Vector.white
-	l.text = item
-	return l
-end
-local function update(item, layout, userdata)
-	layout.text = item
-	print("update layout!")
-end
-hax = {}
-hax.songs = ArrayAdapter(db.library.songs, get, update)
-
-
 function m:onInit(...)
 end
 function m:onEnter()
@@ -31,15 +16,22 @@ function m:onInput(ev, inputManager)
 		return true
 	end
 
-	-- ...
+	if ev.ev == "ButtonDown" and theme.isMenuDevice(ev.pSource) then
+		if (ev.device == "Keyboard" and ev.buttonID == 27) or
+		   (ev.device == "Gamepad" and ev.buttonID == 1) then
+			self:back()
+			return true
+		end
+	end
 end
 
 
 function m:selectSong(index)
 end
 function m:playSong(index)
+
 	if index ~= 0 then
-		local song = db.library.songs[index]
+		local song = db.library.songlist:get(index)
 		db.startPerformance(song)
 
 		flow.pushScreen("performance")

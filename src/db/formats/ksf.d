@@ -17,7 +17,7 @@ import std.exception;
 import std.array;
 import std.conv : to;
 
-bool LoadKSF(Song* song, DirEntry file, SongLibrary library)
+bool LoadKSF(Song song, DirEntry file, SongLibrary library)
 {
 	string steps = enforce(MFFileSystem_LoadText(file.filepath).assumeUnique, "");
 
@@ -37,7 +37,7 @@ bool LoadKSF(Song* song, DirEntry file, SongLibrary library)
 
 	string id = archiveName(artist, songName);
 
-	Song* find = library.find(id);
+	Song find = library.find(id);
 	if (!find)
 	{
 		song._chart = new Chart;

@@ -17,7 +17,7 @@ import std.path;
 import std.exception;
 import std.conv : to;
 
-bool LoadSM(Song* song, DirEntry file)
+bool LoadSM(Song song, DirEntry file)
 {
 	string steps = enforce(MFFileSystem_LoadText(file.filepath).assumeUnique, "");
 
@@ -70,7 +70,7 @@ bool LoadSM(Song* song, DirEntry file)
 	return true;
 }
 
-bool LoadSM(Song* song, const(char)[] sm, string path)
+bool LoadSM(Song song, const(char)[] sm, string path)
 {
 	Chart chart = song._chart;
 	chart.params["source_format"] = ".sm";
