@@ -21,11 +21,19 @@ hax.songs = ArrayAdapter(db.library.songs, get, update)
 function m:onInit(...)
 end
 function m:onEnter()
+	self.panel = flow.attachPanel(self, "playerpanel", "players")
 end
 function m:onLeave()
+	flow.detachPanel(self.panel)
 end
 function m:onInput(ev, inputManager)
+	if self.panel:onInput(ev, inputManager) then
+		return true
+	end
+
+	-- ...
 end
+
 
 function m:selectSong(index)
 end

@@ -1,7 +1,10 @@
 module db.ui.listadapter;
 
+import db.ui.layoutdescriptor;
 import db.ui.widget;
 import db.tools.event;
+
+import luad.base : noscript;
 
 import std.range;
 
@@ -45,7 +48,7 @@ class RangeAdapter(T) : ListAdapter if (isRandomAccessRange!T)
 //		_range.OnChange.unsubscribe(&onTouch);
 	}
 
-	final @property ref inout(T) range() inout { return _range; }
+	final @property inout(T) range() inout { return _range; }
 
 	@property override size_t length() const { return _range.length; }
 
@@ -62,6 +65,67 @@ protected:
 //	void onRemove(ref ET, int item, ref T) { OnRemoveItem(item, this); }
 //	void onTouch(ref ET, int item, ref T)  { OnTouchItem(item, this); }
 }
+
+
+class UiListAdapter(T) : RangeAdapter!(T[])
+{
+	LayoutDescriptor itemDescriptor;
+
+	@property UpdateItem onUpdateItem() const { return _onUpdateItem; }
+	@property void onUpdateItem(UpdateItem f) { _onUpdateItem = f; }
+
+@noscript:
+	alias UpdateItem = void delegate(Widget, T);
+	UpdateItem _onUpdateItem;
+
+	this(T[] array)
+	{
+		super(array);
+	}
+
+	void updateArray(T[] array)
+	{
+		T[] old = _range;
+
+		while (array.length < old.length)
+		{
+			OnRemoveItem(cast(int)(old.length - 1), this);
+			--old.length;
+		}
+
+		_range = array;
+
+		foreach (i; 0 .. array.length)
+		{
+			if (i < old.length)
+			{
+				if (array[i] != old[i])
+					OnTouchItem(cast(int)i, this);
+			}
+			else
+				OnInsertItem(cast(int)i, this);
+		}
+	}
+
+	void touch(int i)
+	{
+		OnTouchItem(i, this);
+	}
+
+protected:
+	override Widget getItemView(int index, ref ET item)
+	{
+		Widget w = itemDescriptor.spawn();
+		_onUpdateItem(w, item);
+		return w;
+	}
+	override void updateItemView(int index, ref ET item, Widget layout)
+	{
+		_onUpdateItem(layout, item);
+	}
+}
+
+
 
 class StringList : RangeAdapter!(string[])
 {

@@ -13,7 +13,7 @@ import std.math : sqrt;
 
 struct InputSource
 {
-	int sourceID;
+	int sourceID = -1;
 
 	MFInputDevice device;
 	int deviceID;

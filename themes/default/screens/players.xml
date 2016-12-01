@@ -1,0 +1,2 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ListBox list="db.playerlist_base" align="Fill" orientation="Horizontal" />

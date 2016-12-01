@@ -14,7 +14,9 @@ function m:onInput(ev, inputManager)
 	  (ev.device == "Keyboard" and (ev.buttonID == 13 or ev.buttonID == 32)) or -- enter or space
 	  (ev.device == "Gamepad" and ev.buttonID == 8) then -- start
 		-- pass UI to the theme, supplying the input source that pressed start
+		db.createPlayer(ev.pSource)
 		self:start()
+		return true
 	end
 end
 

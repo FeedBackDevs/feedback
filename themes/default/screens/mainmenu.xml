@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Frame id="mainmenu" align="Fill" >
+	<Frame id="playerpanel" align="TopFill" height="60" bgcolour="black">
+	</Frame>
 	<LinearLayout align="Center" orientation="Vertical" >
 		<Label align="TopCenter" text="Main Menu" text_height="60" text_colour="yellow" />
 		<Button onClick="theme.mainmenu:selectPlay()" text="Play" text_height="50" text_colour="white" />

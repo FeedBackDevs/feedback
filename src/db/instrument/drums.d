@@ -209,7 +209,7 @@ class Drums : Instrument
 	}
 
 private:
-	float pedalState;
+	float pedalState = 0;
 }
 
 

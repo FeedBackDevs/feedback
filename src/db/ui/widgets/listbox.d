@@ -142,7 +142,7 @@ class Listbox : Layout
 			try
 			{
 				LuaObject obj = getLuaObject(value);
-				list = obj.to!LuaArrayAdaptor;
+				list = obj.to!ListAdapter;
 			}
 			catch (Exception e)
 				MFDebug_Warn(2, "Couldn't bind array '"~value~"'. "~e.msg);

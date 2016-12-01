@@ -157,24 +157,22 @@ protected:
 			if (!icmp(xml.tag.name, "script"))
 			{
 				// load external script...
-				string file = xml.tag.attr["src"];
-				if (file)
+				const(string)* file = "src" in xml.tag.attr;
+				if (file && *file)
 				{
-					string fn = makePath(filepath, file);
+					string fn = makePath(filepath, *file);
 					string source = MFFileSystem_LoadText(fn).assumeUnique;
 					if (source)
 						node.script ~= source;
 				}
-				else
-					MFDebug_Warn(2, "<script> element has no 'src' attribute. Can't load script.".ptr);
 			}
 			else if (!icmp(xml.tag.name, "style"))
 			{
 				// load external script...
-				string file = xml.tag.attr["src"];
-				if (file)
+				const(string)* file = "src" in xml.tag.attr;
+				if (file && *file)
 				{
-//					WidgetStyle style = WidgetStyle.loadStylesFromXML(file);
+//					WidgetStyle style = WidgetStyle.loadStylesFromXML(*file);
 				}
 				else
 					MFDebug_Warn(2, "<style> element has no 'src' attribute. Can't load styles.".ptr);
@@ -185,6 +183,10 @@ protected:
 				if (child)
 					node.children ~= child;
 			}
+		};
+		xml.onEndTag["script"] = (in Element e)
+		{
+			node.script ~= e.text;
 		};
 
 		xml.onPI((string text) {

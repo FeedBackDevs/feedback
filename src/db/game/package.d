@@ -25,6 +25,7 @@ import db.inputs.devicemanager;
 
 import db.ui.inputmanager : InputSource;
 import db.ui.layoutdescriptor;
+import db.ui.listadapter;
 import db.ui.ui;
 import db.ui.widget;
 
@@ -50,6 +51,8 @@ class Game
 		UserInterface.registerWidgets();
 
 		settings.Load();
+
+		playerList = new UiListAdapter!Player(null);
 	}
 
 	void initFileSystem()
@@ -236,7 +239,7 @@ class Game
 	bool inEditor() { return editor && editor.inEditor; }
 
 	// player management
-	bool inputInUse(InputSource *pInput)
+	bool inputInUse(const(InputSource)* pInput)
 	{
 		foreach (player; players)
 		{
@@ -252,7 +255,7 @@ class Game
 		return false;
 	}
 
-	Player createPlayer(InputSource *pInput)
+	Player createPlayer(const(InputSource)* pInput)
 	{
 		import db.inputs.controller;
 
@@ -275,23 +278,9 @@ class Game
 		Player player = new Player(pInput, instrument);
 		players ~= player;
 
+		playerList.updateArray(players);
+
 		return player;
-	}
-
-	Player findPlayerForInput(InputSource *pInput)
-	{
-		foreach (player; players)
-			if (player.pMenuInput == pInput)
-				return player;
-		return null;
-	}
-
-	Player[] getPlayers() { return players; }
-
-
-	void addPlayer(Player player)
-	{
-		players ~= player;
 	}
 
 	void removePlayer(Player player)
@@ -301,10 +290,23 @@ class Game
 			if (p == player)
 			{
 				players = players[0..i] ~ players[i+1..$];
+
+				playerList.updateArray(players);
 				break;
 			}
 		}
 	}
+
+	Player findPlayerForInput(const(InputSource)* pInput)
+	{
+		foreach (player; players)
+			if (player.pMenuInput == pInput)
+				return player;
+		return null;
+	}
+
+	Player[] getPlayers() { return players; }
+
 
 	void luaRegister()
 	{
@@ -336,7 +338,7 @@ class Game
 		registerType!Profile();
 
 		// UI
-		registerType!(LuaArrayAdaptor, "ArrayAdapter")();
+		registerType!(LuaArrayAdapter, "ArrayAdapter")();
 
 		// Widgets
 		registerType!Widget();
@@ -355,6 +357,22 @@ class Game
 		// some data accessors
 		dbTable["ui"] = Game.instance.ui;
 
+		dbTable["cast"] = (string type, Widget w) {
+			import db.ui.widgets.label : Label;
+			import luad.state;
+
+			auto lua = Game.instance.lua;
+			switch (type)
+			{
+				case "Label": return lua.wrap(cast(Label)w);
+//				case "Textbox": return LuaObject(cast(Textbox)w);
+
+				default:
+					break;
+			}
+			return LuaObject();
+		};
+
 		// register some functions with the VM
 		dbTable["quit"] = &Game.instance.quit;
 		dbTable["startEditor"] = &Game.instance.startEditor;
@@ -371,14 +389,13 @@ class Game
 
 		dbTable["inputInUse"] = &Game.instance.inputInUse;
 
+		dbTable["playerlist"] = Game.instance.playerList;
+		dbTable["playerlist_base"] = cast(ListAdapter)Game.instance.playerList;
+
 		dbTable["createPlayer"] = &Game.instance.createPlayer;
+		dbTable["removePlayer"] = &Game.instance.removePlayer;
 		dbTable["findPlayerForInput"] = &Game.instance.findPlayerForInput;
 		dbTable["getPlayers"] = &Game.instance.getPlayers;
-
-		//------
-
-		dbTable["addPlayer"] = &Game.instance.addPlayer;
-		dbTable["removePlayer"] = &Game.instance.removePlayer;
 	}
 
 	//-------------------------------------------------------------------------------------------------------
@@ -400,6 +417,8 @@ class Game
 	Theme theme;
 
 	LuaState lua;
+
+	UiListAdapter!Player playerList;
 
 	// singleton stuff
 	static @property Game instance() { if (_instance is null) _instance = new Game; return _instance; }
