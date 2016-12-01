@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Frame>
+	<script>
+		db.playerlist.onUpdateItem = function(widget, player)
+			local l = db.cast("Label", widget:findChild("playername"))
+			l.text = player.profile.name
+			l.textColour = player.profile.settings.colour
+		end
+	</script>
+	<Label id="playername" align="Fill" text="blah" text_height="60" text_colour="yellow" />
+</Frame>

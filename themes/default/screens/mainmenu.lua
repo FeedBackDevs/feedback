@@ -4,16 +4,17 @@ theme.mainmenu = flow.newScreen("mainmenu")
 local m = theme.mainmenu
 
 function m:onInit(...)
---	self.panel = flow.attachPanel(self, "ui_id", "name")
 end
 function m:onEnter()
+	self.panel = flow.attachPanel(self, "playerpanel", "players")
 end
 function m:onLeave()
+	flow.detachPanel(self.panel)
 end
 function m:onInput(ev, inputManager)
---	if self.panel.onInout(ev, inputManager) then
---		return true
---	end
+	if self.panel:onInput(ev, inputManager) then
+		return true
+	end
 
 	-- ...
 end

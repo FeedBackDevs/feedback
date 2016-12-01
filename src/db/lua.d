@@ -43,7 +43,7 @@ private:
 	LuaFunction d;
 }
 
-class LuaArrayAdaptor : ListAdapter
+class LuaArrayAdapter : ListAdapter
 {
 	this(LuaTable array, LuaFunction getItem, LuaFunction updateItem)
 	{

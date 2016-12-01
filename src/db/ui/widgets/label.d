@@ -117,8 +117,8 @@ protected:
 	Font _font;
 	MFFontJustify _textJustification = MFFontJustify.Top_Left;
 
-	float _textHeight;
-	float _shadowDepth;
+	float _textHeight = 0;
+	float _shadowDepth = 0;
 
 	bool bAutoTextHeight = true;
 

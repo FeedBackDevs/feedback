@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Frame id="options" align="Fill">
+	<Frame id="playerpanel" align="TopFill" height="60" bgcolour="black">
+	</Frame>
 	<LinearLayout align="Center" orientation="Vertical">
 		<Label align="Center" text="Options" text_height="60" text_colour="yellow" />
 		<Button onClick="theme.options:theme()" text="Theme" text_height="50" text_colour="white" />

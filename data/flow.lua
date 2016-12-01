@@ -212,15 +212,32 @@ function flow.attachPanel(screen, parent_id, panel)
 		error("Not a panel!")
 	end
 
-	local attachPoint = screen.ui.findChild(parent_id)
+	local attachPoint = screen.ui:findChild(parent_id)
 	if attachPoint then
-		attachPoint.addChild(panel.ui);
+		attachPoint:addChild(panel.ui);
 	else
 		error("Screen does not contain item: " .. parent_id)
 	end
 
 	return panel
 end
+
+function flow.detachPanel(panel)
+	-- get panel
+	if type(panel) == "string" then
+		panel = flow.panels[panel]
+	else
+		if not panel.__is_screen then
+			panel = nil
+		end
+	end
+	if not panel then
+		error("Not a panel!")
+	end
+
+	panel.ui.parent:removeChild(panel.ui)
+end
+
 
 function flow.showPopup(popup, ...)
 	if type(popup) == "string" then
