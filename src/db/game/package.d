@@ -19,11 +19,13 @@ import db.editor : Editor;
 import db.chart.track : Track;
 import db.settings;
 
+import db.inputs.controller : Controller;
 import db.inputs.inputdevice;
 import db.inputs.devicemanager;
 
-import db.ui.ui;
+import db.ui.inputmanager : InputSource;
 import db.ui.layoutdescriptor;
+import db.ui.ui;
 import db.ui.widget;
 
 import db.lua;
@@ -200,6 +202,7 @@ class Game
 		MFSystem_Quit();
 	}
 
+	// performance functions
 	void startPerformance(string song)
 	{
 		// HACK: create a performance of the first song in the library
@@ -222,6 +225,7 @@ class Game
 		performance.pause(bPause);
 	}
 
+	// editor stuff
 	void startEditor()
 	{
 		if (!editor)
@@ -230,6 +234,60 @@ class Game
 	}
 
 	bool inEditor() { return editor && editor.inEditor; }
+
+	// player management
+	bool inputInUse(InputSource *pInput)
+	{
+		foreach (player; players)
+		{
+			// if it's a players menu controller
+			if (player.pMenuInput == pInput)
+				return true;
+		}
+
+		Controller c = findController(pInput.device, pInput.deviceID);
+		if (c && c.instrument && c.instrument.player)
+			return true;
+
+		return false;
+	}
+
+	Player createPlayer(InputSource *pInput)
+	{
+		import db.inputs.controller;
+
+		Instrument instrument;
+
+		// find a default instrument for the player
+		Controller controller = findController(pInput.device, pInput.deviceID);
+		if (controller && controller.instrument)
+			instrument = controller.instrument;
+		else
+		{
+			// HAX: every input should have an associated instrument. but for now...
+
+			// first available instrument??
+			Instrument[] instruments = getInstruments();
+			if (instruments.length > 0)
+				instrument = instruments[0];
+		}
+
+		Player player = new Player(pInput, instrument);
+		players ~= player;
+
+		return player;
+	}
+
+	Player findPlayerForInput(InputSource *pInput)
+	{
+		foreach (player; players)
+			if (player.pMenuInput == pInput)
+				return player;
+		return null;
+	}
+
+	Player[] getPlayers() { return players; }
+
 
 	void addPlayer(Player player)
 	{
@@ -311,7 +369,14 @@ class Game
 		dbTable["endPerformance"] = &Game.instance.endPerformance;
 		dbTable["pausePerformance"] = &Game.instance.pausePerformance;
 
+		dbTable["inputInUse"] = &Game.instance.inputInUse;
+
+		dbTable["createPlayer"] = &Game.instance.createPlayer;
+		dbTable["findPlayerForInput"] = &Game.instance.findPlayerForInput;
+		dbTable["getPlayers"] = &Game.instance.getPlayers;
+
 		//------
+
 		dbTable["addPlayer"] = &Game.instance.addPlayer;
 		dbTable["removePlayer"] = &Game.instance.removePlayer;
 	}

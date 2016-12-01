@@ -28,34 +28,20 @@ private immutable MFVector[] playerColours =
 
 class Player
 {
-	this(const(InputSource)* pUiInputSource, Instrument instrument)
+	this(const(InputSource)* pInputSource, Instrument instrument, string part = null, string type = null)
 	{
-		pMenuInput = pUiInputSource;
+		pMenuInput = pInputSource;
 
 		if (instrument)
-		{
-			input.instrument = instrument;
-			input.part = instrument.desc.parts[0];
-		}
+			defaultInstrument = instrument;
 		else
 		{
-			Controller controller = findController(pMenuInput.device, pMenuInput.deviceID);
-			if (controller && controller.instrument)
-			{
-				input.instrument = controller.instrument;
-				input.part = controller.instrument.desc.parts[0];
-			}
-			else
-			{
-				// first available instrument??
-				Instrument[] instruments = getInstruments();
-				if (instruments.length > 0)
-				{
-					input.instrument = instruments[0];
-					input.part = instruments[0].desc.parts[0];
-				}
-			}
+			Controller c = findController(pInputSource.device, pInputSource.deviceID);
+			if (c)
+				defaultInstrument = c.instrument;
 		}
+
+		addInstrument(instrument, part, type);
 
 		profile = new Profile();
 		profile.name = "Player " ~ to!string(Game.instance.players.length + 1);
@@ -64,24 +50,56 @@ class Player
 		data = createTable();
 	}
 
+	~this()
+	{
+		foreach (i; parts)
+		{
+			if (i.instrument)
+				i.instrument.player = null;
+			i.instrument = null;
+		}
+	}
+
+	Input* addInstrument(Instrument instrument, string part = null, string type = null)
+	{
+		if (instrument)
+			instrument.player = this;
+
+		if (!part && instrument)
+			part = instrument.desc.parts[0];
+
+		parts ~= Input(instrument, part, type);
+		return &parts[$-1];
+	}
+	void removeInstrument(Instrument instrument)
+	{
+		foreach (i, part; parts)
+		{
+			if (part.instrument == instrument)
+			{
+				part.instrument.player = null;
+				parts = parts[0..i] ~ parts[i+1..$];
+				return;
+			}
+		}
+	}
+
 	Profile profile;
 
 	const(InputSource)* pMenuInput; // perhaps we should have an array of these?
 
+	Instrument defaultInstrument;
+
 	struct Input
 	{
+		Instrument instrument;
 		string part;
 		string type;
-		Instrument instrument;
+
+		string variation;
+		Difficulty difficulty = Difficulty.Easy;
 	}
-	Input input;
-
-	// TODO: I would like to support a feature where a player can play multiple instruments at once
-	// UI would perhaps visualise the instruments available, players would tag themselves onto whichever one(s) they intend to play
-//	Input[] inputs;
-
-	string variation;
-	Difficulty difficulty = Difficulty.Easy;
+	Input[] parts;
 
 	LuaTable data;
 }

@@ -17,11 +17,6 @@ struct InputSource
 
 	MFInputDevice device;
 	int deviceID;
-
-	// HAX: We often have const(InputSource), but we want 'player' to be mutable
-	@property Player player() const { return cast(Player)_player; }
-	@property void player(Player player) const { (cast(InputSource*)&this)._player = player; }
-	private Player _player;
 }
 
 class InputManager

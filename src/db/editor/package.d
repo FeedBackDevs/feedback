@@ -4,6 +4,8 @@ import db.chart;
 import db.game : Game;
 import db.game.performance;
 import db.game.player;
+import db.inputs.controller : Controller;
+import db.inputs.devicemanager : findController;
 import db.instrument.dance : DanceNotes;
 import db.instrument.drums : DrumNotes;
 import db.instrument.guitarcontroller : GuitarNotes;
@@ -90,10 +92,11 @@ class Editor
 
 		// setup editor player
 		InputSource* pKeyboard = Game.instance.ui.findInputSource(MFInputDevice.Keyboard, 0);
-		editorPlayer = new Player(pKeyboard, null);
-		editorPlayer.input.part = "leadguitar";
-		editorPlayer.variation = null;
-		editorPlayer.difficulty = Difficulty.Expert;
+		Controller c = findController(pKeyboard.device, pKeyboard.deviceID);
+
+		editorPlayer = new Player(pKeyboard, c.instrument, "leadguitar");
+		editorPlayer.parts[0].variation = null;
+		editorPlayer.parts[0].difficulty = Difficulty.Expert;
 
 		showMainMenu();
 
@@ -166,16 +169,16 @@ class Editor
 			pos.y += 20;
 			font.drawAnchored(chart.artist, pos, MFFontJustify.Top_Right, rect.width, 20, MFVector.white);
 			pos.y += 30;
-			if (editorPlayer.input.type)
-				font.drawAnchored(editorPlayer.input.type, pos, MFFontJustify.Top_Right, rect.width, 20, MFVector.white);
+			if (editorPlayer.parts[0].type)
+				font.drawAnchored(editorPlayer.parts[0].type, pos, MFFontJustify.Top_Right, rect.width, 20, MFVector.white);
 			else
-				font.drawAnchored(editorPlayer.input.part, pos, MFFontJustify.Top_Right, rect.width, 20, MFVector.white);
+				font.drawAnchored(editorPlayer.parts[0].part, pos, MFFontJustify.Top_Right, rect.width, 20, MFVector.white);
 			pos.y += 20;
-			font.drawAnchored(to!string(editorPlayer.difficulty), pos, MFFontJustify.Top_Right, rect.width, 20, MFVector.white);
-			if (editorPlayer.variation)
+			font.drawAnchored(to!string(editorPlayer.parts[0].difficulty), pos, MFFontJustify.Top_Right, rect.width, 20, MFVector.white);
+			if (editorPlayer.parts[0].variation)
 			{
 				pos.y += 20;
-				font.drawAnchored(editorPlayer.variation, pos, MFFontJustify.Top_Right, rect.width, 20, MFVector.white);
+				font.drawAnchored(editorPlayer.parts[0].variation, pos, MFFontJustify.Top_Right, rect.width, 20, MFVector.white);
 			}
 		}
 	}
@@ -291,7 +294,7 @@ class Editor
 		{
 			game.performance.pause(true);
 
-			gotoTime(sync.now);
+			gotoTime(sync.now, true, true);
 
 			bPlaying = false;
 		}
@@ -345,10 +348,10 @@ class Editor
 
 		track = trk;
 
-		editorPlayer.input.part = trk.part;
-		editorPlayer.input.type = trk.variationType;
-		editorPlayer.variation = trk.variationName;
-		editorPlayer.difficulty = trk.difficulty;
+		editorPlayer.parts[0].part = trk.part;
+		editorPlayer.parts[0].type = trk.variationType;
+		editorPlayer.parts[0].variation = trk.variationName;
+		editorPlayer.parts[0].difficulty = trk.difficulty;
 
 		game.performance.setPlayers((&editorPlayer)[0..1]);
 
@@ -645,18 +648,18 @@ class Editor
 				case MFKey.F8:
 				case MFKey.F9:
 				{
-					if (editorPlayer.input.part[] == "vocals")
+					if (editorPlayer.parts[0].part[] == "vocals")
 						return true;
 
 					endAllHolds();
 
 					// select difficulty
 					Difficulty diff = cast(Difficulty)(Difficulty.Beginner + (ev.buttonID - MFKey.F5));
-					Track trk = chart.getVariation(editorPlayer.input.part, editorPlayer.input.type, editorPlayer.variation).difficulty(diff);
+					Track trk = chart.getVariation(editorPlayer.parts[0].part, editorPlayer.parts[0].type, editorPlayer.parts[0].variation).difficulty(diff);
 					if (!trk)
 					{
 						// if the difficulty doesn't exist, create an empty track...
-						trk = chart.createTrack(editorPlayer.input.part, editorPlayer.input.type, editorPlayer.variation, diff);
+						trk = chart.createTrack(editorPlayer.parts[0].part, editorPlayer.parts[0].type, editorPlayer.parts[0].variation, diff);
 					}
 
 					// change the track
@@ -882,7 +885,7 @@ class Editor
 			Variation* pVariation = pPart.variation(selectedType, selectedVariation);
 
 			// select nearest difficulty
-			Difficulty diff = pVariation.nearestDifficulty(editorPlayer.difficulty);
+			Difficulty diff = pVariation.nearestDifficulty(editorPlayer.parts[0].difficulty);
 
 			// if there are no tracks yet
 			if (diff == Difficulty.Unknown)
@@ -943,7 +946,7 @@ class Editor
 			else
 				selectedVariation = menuItems[i];
 
-			Difficulty diff = selectedPart[] == "vocals" ? Difficulty.Expert : editorPlayer.difficulty;
+			Difficulty diff = selectedPart[] == "vocals" ? Difficulty.Expert : editorPlayer.parts[0].difficulty;
 
 			if (selectedPart[] == "drums")
 			{

@@ -3,6 +3,7 @@ module db.instrument;
 import db.i.syncsource;
 import db.inputs.inputdevice;
 import db.lua : noscript;
+import db.game.player : Player;
 
 import fuji.dbg : debugLog;
 
@@ -46,6 +47,8 @@ abstract class Instrument
 
 	InputDevice device;
 	uint features;
+
+	Player player; // TODO: should there be a reference to game.player in the instrument?
 
 	@property long inputTime() const { return device.inputTime; }
 
