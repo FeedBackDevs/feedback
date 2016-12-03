@@ -28,25 +28,6 @@ class Theme
 		return MFFileSystem_ResolveSystemPath("system:themes/default/" ~ filename).idup;
 	}
 
-	static Widget loadUi(string filename)
-	{
-		LayoutDescriptor desc = new LayoutDescriptor(filename);
-		if (!desc)
-		{
-			MFDebug_Warn(2, "Couldn't load " ~ filename);
-			return null;
-		}
-
-		Widget ui = desc.spawn();
-		if (!ui)
-		{
-			MFDebug_Warn(2, "Couldn't spawn ui for " ~ filename);
-			return null;
-		}
-
-		return ui;
-	}
-
 	static LayoutDescriptor loadUiDescriptor(string filename)
 	{
 		LayoutDescriptor desc = new LayoutDescriptor(filename);

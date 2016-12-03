@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Frame id="options" align="Fill">
-	<Frame id="playerpanel" align="TopFill" height="60" bgcolour="black">
+	<Frame id="playerpanel" align="TopFill" height="60" background_colour="black">
 	</Frame>
 	<LinearLayout align="Center" orientation="Vertical">
 		<Label align="Center" text="Options" text_height="60" text_colour="yellow" />
-		<Button onClick="theme.options:theme()" text="Theme" text_height="50" text_colour="white" />
-		<Button onClick="theme.options:input()" text="Input Devices" text_height="50" text_colour="white" />
-		<Button onClick="theme.options:latency()" text="Latency Compensation" text_height="50" text_colour="white" />
-		<Button onClick="theme.options:exit()" text="Back" text_height="50" text_colour="white" />
+		<Button onClick="screen:theme()" text="Theme" text_height="50" text_colour="white" />
+		<Button onClick="screen:input()" text="Input Devices" text_height="50" text_colour="white" />
+		<Button onClick="screen:latency()" text="Latency Compensation" text_height="50" text_colour="white" />
+		<Button onClick="screen:exit()" text="Back" text_height="50" text_colour="white" />
 	</LinearLayout>
 </Frame>

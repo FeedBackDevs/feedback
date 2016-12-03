@@ -35,6 +35,11 @@ db.ui:registerUnhandledInputHandler(function(inputManager, ev)
 	return true
 end)
 
+function flow.createMetatable(t)
+	t._G = _G
+	setmetatable(t, {__index = _G})
+	return t
+end
 
 function flow.newScreen(name)
 	return {
@@ -43,7 +48,8 @@ function flow.newScreen(name)
 		["loadUi"] = function(self)
 			if not self.ui then
 				local xml = "screens/" .. self.name .. ".xml"
-				self.ui = db.loadUi(xml)
+				local desc = db.loadUiDescriptor(xml)
+				self.ui = desc:spawnWithEnvironment(flow.createMetatable({ ["screen"] = self }), nil)
 			end
 			return self.ui
 		end
@@ -56,14 +62,19 @@ function flow.newPopup(name)
 		["name"] = name,
 		["loadUiDesc"] = function(self)
 			if not self.template then
-				local xml = "screens/" .. self.name .. ".xml"
+				local xml = "screens/popups/" .. self.name .. ".xml"
 				self.template = db.loadUiDescriptor(xml)
 			end
 			return self.template
 		end,
 		["spawn"] = function(self)
-			screen = flow.newScreen(self.name)
-			screen.ui = self.template.spawn()
+			local screen = flow.newScreen(self.name)
+			if self.onNewInstance then
+				for k,v in pairs(self:onNewInstance()) do
+					screen[k] = v
+				end
+			end
+			screen.ui = self.template:spawnWithEnvironment(flow.createMetatable({ ["screen"] = screen }), nil)
 			return screen
 		end
 	}
@@ -137,6 +148,7 @@ local function doPushScreen(push, screen, ...)
 	end
 
 	db.ui:addTopLevelWidget(enterScreen.ui)
+	enterScreen.ui:lower()
 
 	if enterScreen.onEnter then
 		enterScreen:onEnter()
@@ -251,13 +263,14 @@ function flow.showPopup(popup, ...)
 		error("Not a popup!")
 	end
 
-	inst = popup.spawn()
+	local inst = popup:spawn()
 
 	if inst.onInit then
-		int:onInit(arg)
+		inst:onInit(arg)
 	end
 
 	db.ui:addTopLevelWidget(inst.ui)
+	inst.ui:raise()
 
 	if inst.onEnter then
 		inst:onEnter()
@@ -277,7 +290,7 @@ function flow.closePopup(popupScreen)
 		popupScreen:onLeave()
 	end
 
-	flow.activePopups[inst] = nil
+	flow.activePopups[popupScreen] = nil
 
 	db.ui:removeTopLevelWidget(popupScreen.ui)
 	popupScreen.ui = nil

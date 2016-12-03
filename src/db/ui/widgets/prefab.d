@@ -43,7 +43,7 @@ class Prefab : Frame
 		if (prefab.length >= 4 && !icmp(prefab[$-4..$], ".xml"))
 		{
 			LayoutDescriptor desc = new LayoutDescriptor(prefab);
-			addChild(desc.spawn());
+			desc.spawn(this);
 		}
 		else
 		{

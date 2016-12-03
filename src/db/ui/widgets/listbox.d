@@ -152,9 +152,9 @@ class Listbox : Layout
 		else if (!icmp(property, "hoverSelect"))
 			flags = (flags & ~Flags.HoverSelect) | (getBoolFromString(value) ? Flags.HoverSelect : 0);
 		else if (!icmp(property, "onSelChanged"))
-			bindEvent!(OnSelChanged, (int i, Widget w) => tuple!(int, Widget)(i + 1, w))(value, "local item, widget = ...");
+			bindEvent!(OnSelChanged, (int i, Widget w) => tuple!(int, Widget)(i + 1, w))(value, "local item, widget = ...", getEnvironment());
 		else if (!icmp(property, "onClick"))
-			bindEvent!(OnClick, (int i, Widget w) => tuple!(int, Widget)(i + 1, w))(value, "local item, widget = ...");
+			bindEvent!(OnClick, (int i, Widget w) => tuple!(int, Widget)(i + 1, w))(value, "local item, widget = ...", getEnvironment());
 		else
 			super.setProperty(property, value);
 	}

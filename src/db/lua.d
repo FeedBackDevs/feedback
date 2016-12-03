@@ -172,9 +172,14 @@ bool isValidIdentifier(const(char)[] handler)
 	return true;
 }
 
-LuaObject getLuaObject(const(char)[] identifier)
+LuaObject getLuaObject(const(char)[] identifier, LuaTable* environment = null)
 {
-	LuaObject[] r = lua.doString("return " ~ identifier);
+	LuaFunction f = lua.loadString("return " ~ identifier);
+
+	if (environment)
+		f.setEnvironment(*environment);
+
+	LuaObject[] r = f();
 	if (r.length > 0)
 		return r[0];
 	return LuaObject();

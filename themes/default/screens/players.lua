@@ -13,6 +13,13 @@ function m:onInput(ev, inputManager)
 	if ev.ev == "ButtonDown" and
 	  ((ev.device == "Keyboard" and (ev.buttonID == 13 or ev.buttonID == 32)) or -- enter or space
 	  (ev.device == "Gamepad" and ev.buttonID == 8)) then -- start
+
+		local player = db.playerForInput(ev.pSource)
+		if player ~= nil then
+			flow.showPopup("playeropts", player)
+			return true
+		end
+
 		-- pass UI to the theme, supplying the input source that pressed start
 		if not db.inputInUse(ev.pSource) then
 			db.createPlayer(ev.pSource)

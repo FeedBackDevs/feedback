@@ -377,7 +377,6 @@ class Game
 		dbTable["startEditor"] = &Game.instance.startEditor;
 
 		dbTable["themePath"] = &Theme.themePath;
-		dbTable["loadUi"] = &Theme.loadUi;
 		dbTable["loadUiDescriptor"] = &Theme.loadUiDescriptor;
 
 		dbTable["library"] = Game.instance.songLibrary;
@@ -387,6 +386,7 @@ class Game
 		dbTable["pausePerformance"] = &Game.instance.pausePerformance;
 
 		dbTable["inputInUse"] = &Game.instance.inputInUse;
+		dbTable["playerForInput"] = &Game.instance.findPlayerForInput;
 
 		dbTable["playerlist"] = Game.instance.playerList;
 		dbTable["playerlist_base"] = cast(ListAdapter)Game.instance.playerList;

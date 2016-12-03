@@ -84,7 +84,7 @@ private:
 	Handler[] _subscribers;
 }
 
-void bindEvent(alias event, alias argAdjust = null)(const(char)[] handler, string entry = null)
+void bindEvent(alias event, alias argAdjust = null)(const(char)[] handler, string entry = null, LuaTable* environment = null)
 {
 	alias EventType = typeof(event);
 	EventType.Handler d;
@@ -104,7 +104,12 @@ void bindEvent(alias event, alias argAdjust = null)(const(char)[] handler, strin
 		// treat the text as lua code
 		try
 		{
-			auto ld = new LuaDelegate!(EventType.EventArgs)(entry ? entry ~ "\n" ~ handler : "local arg = {...}\n" ~ handler);
+			LuaFunction f = lua.loadString(entry ? entry ~ "\n" ~ handler : "local arg = {...}\n" ~ handler);
+
+			if (environment)
+				f.setEnvironment(*environment);
+
+			auto ld = new LuaDelegate!(EventType.EventArgs)(f);
 			d = ld.getDelegate;
 		}
 		catch (Exception e)

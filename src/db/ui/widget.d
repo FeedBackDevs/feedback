@@ -346,40 +346,40 @@ class Widget
 			case "align":
 				layoutJustification = getEnumValue!Justification(value); break;
 			case "onenabledchanged":
-				bindEvent!OnEnabledChanged(value); break;
+				bindEvent!OnEnabledChanged(value, null, getEnvironment()); break;
 			case "onvisibilitychanged":
-				bindEvent!OnVisibilityChanged(value); break;
+				bindEvent!OnVisibilityChanged(value, null, getEnvironment()); break;
 			case "onlayoutchanged":
-				bindEvent!OnLayoutChanged(value); break;
+				bindEvent!OnLayoutChanged(value, null, getEnvironment()); break;
 			case "onmove":
-				bindEvent!OnMove(value); break;
+				bindEvent!OnMove(value, null, getEnvironment()); break;
 			case "onresize":
-				bindEvent!OnResize(value); break;
+				bindEvent!OnResize(value, null, getEnvironment()); break;
 			case "onfocuschanged":
-				bindEvent!OnFocusChanged(value); break;
+				bindEvent!OnFocusChanged(value, null, getEnvironment()); break;
 			case "ondown":
 				clickable = true;
-				bindEvent!OnDown(value); break;
+				bindEvent!OnDown(value, null, getEnvironment()); break;
 			case "onup":
 				clickable = true;
-				bindEvent!OnUp(value); break;
+				bindEvent!OnUp(value, null, getEnvironment()); break;
 			case "ontap":
 				clickable = true;
-				bindEvent!OnTap(value); break;
+				bindEvent!OnTap(value, null, getEnvironment()); break;
 			case "ondrag":
 				dragable = true;
-				bindEvent!OnDrag(value); break;
+				bindEvent!OnDrag(value, null, getEnvironment()); break;
 			case "onhover":
 				hoverable = true;
-				bindEvent!OnHover(value); break;
+				bindEvent!OnHover(value, null, getEnvironment()); break;
 			case "onhoverover":
 				hoverable = true;
-				bindEvent!OnHoverOver(value); break;
+				bindEvent!OnHoverOver(value, null, getEnvironment()); break;
 			case "onhoverout":
 				hoverable = true;
-				bindEvent!OnHoverOut(value); break;
+				bindEvent!OnHoverOut(value, null, getEnvironment()); break;
 			case "oncharacter":
-				bindEvent!OnCharacter(value); break;
+				bindEvent!OnCharacter(value, null, getEnvironment()); break;
 			default:
 			{
 				if (setRenderProperty(property, value, this))
@@ -405,13 +405,17 @@ class Widget
 
 	// widgets may have a lua table for app-specific data
 	// we make this a property so that we don't allocate tables for widgets where it's never used
-	@property LuaTable data()
-	{
-		if (_data.isNil)
-			_data = createTable();
-		return _data;
-	}
+	@property inout(LuaTable) environment() inout { return _environment; }
+	@property void environment(LuaTable env) { _environment = env; }
 
+	LuaTable* getEnvironment()
+	{
+		if (!_environment.isNil)
+			return &_environment;
+		if (_parent)
+			return _parent.getEnvironment();
+		return null;
+	}
 
 	// support widget hierarchy
 	@property inout(Widget)[] children() inout pure nothrow @nogc { return null; }
@@ -547,7 +551,7 @@ class Widget
 	bool bMatrixDirty = true;
 	bool bInvMatrixDirty = true;
 
-	LuaTable _data;
+	LuaTable _environment;
 
 	final @property void parent(Layout parent) pure nothrow @nogc { _parent = parent; }
 

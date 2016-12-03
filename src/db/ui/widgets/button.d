@@ -66,7 +66,7 @@ class Button : Label
 			case "button_flags":
 				buttonFlags = getBitfieldValue!ButtonFlags(value); break;
 			case "onclick":
-				bindEvent!OnClick(value); break;
+				bindEvent!OnClick(value, null, getEnvironment()); break;
 			default:
 				super.setProperty(property, value);
 		}

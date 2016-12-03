@@ -5,6 +5,11 @@ local function loadScreen(filename)
 	flow.registerScreen(screen)
 end
 
+local function loadPopup(filename)
+	local popup = dofile(db.themePath("screens/popups/" .. filename .. ".lua"))
+	flow.registerPopup(popup)
+end
+
 local function loadPanel(filename)
 	local panel = dofile(db.themePath("screens/" .. filename .. ".lua"))
 	flow.registerPanel(panel)
@@ -26,6 +31,8 @@ loadScreen("editor")
 loadScreen("options")
 loadScreen("download")
 loadScreen("performance")
+
+loadPopup("playeropts")
 
 -- enter main menu
 print("show boot screen...")

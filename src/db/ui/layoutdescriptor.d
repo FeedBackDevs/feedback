@@ -1,6 +1,7 @@
 module db.ui.layoutdescriptor;
 
 import db.game;
+import db.lua : lua;
 import db.ui.ui;
 import db.ui.widget;
 import db.ui.widgetstyle;
@@ -18,7 +19,10 @@ import std.ascii;
 import std.range;
 import std.string;
 
+import luad.base : nil;
 import luad.state;
+import luad.table : LuaTable;
+import luad.lfunction : LuaFunction;
 
 class LayoutDescriptor
 {
@@ -62,10 +66,17 @@ public:
 	}
 
 
-	Widget spawn()
+	Widget spawn(Widget parent = null)
 	{
 		if (root)
-			return spawn(root);
+			return spawn(root, parent, null);
+		return null;
+	}
+
+	Widget spawnWithEnvironment(LuaTable environment, Widget parent = null)
+	{
+		if (root)
+			return spawn(root, parent, &environment);
 		return null;
 	}
 
@@ -90,44 +101,61 @@ protected:
 
 	Node* root;
 
-	Widget spawn(Node* node)
+	Widget spawn(Node* node, Widget parent, LuaTable* environment)
 	{
 		// create widget
 		Widget widget = UserInterface.createWidget(node.type);
 		if (!widget)
 			return null;
 
-		// apply properties
-		bool isPrefab = cast(Prefab)widget !is null;
-		foreach (ref a; node.attributes)
+		// set the environment, if there was one
+		if (environment)
+			widget.environment = *environment;
+
+		// assign to parent
+		if (parent)
+			parent.addChild(widget);
+
+		try
 		{
-			string value = a.value;
-
-			// HAX: paths need to be corrected relative to the location of the source
-			if (isPrefab && a.property[] == "prefab")
-				value = makePath(filepath, value);
-
-			widget.setProperty(a.property, value);
-		}
-
-		// execute script
-		if (node.script)
-		{
-			try
-				Game.instance.lua.doString(node.script);
-			catch (Exception e)
-				MFDebug_Warn(2, "Script error: " ~ e.msg);
-		}
-
-		// spawn children
-		foreach (c; node.children)
-		{
-			Widget child = spawn(c);
-			if (child)
+			// apply properties
+			bool isPrefab = cast(Prefab)widget !is null;
+			foreach (ref a; node.attributes)
 			{
-				Layout layout = cast(Layout)widget;
-				layout.addChild(child);
+				string value = a.value;
+
+				// HAX: paths need to be corrected relative to the location of the source
+				if (isPrefab && a.property[] == "prefab")
+					value = makePath(filepath, value);
+
+				widget.setProperty(a.property, value);
 			}
+
+			// spawn children
+			foreach (c; node.children)
+				spawn(c, widget, null);
+
+			// execute script
+			if (node.script)
+			{
+				try
+				{
+					LuaFunction f = Game.instance.lua.loadString(node.script);
+					LuaTable* env = widget.getEnvironment();
+					if (env)
+						f.setEnvironment(*env);
+					f.call();
+				}
+				catch (Exception e)
+					MFDebug_Warn(2, "Script error: " ~ e.msg);
+			}
+		}
+		catch (Exception e)
+		{
+			// construction failed, remove broken child...
+			if (parent)
+				parent.removeChild(widget);
+			return null;
 		}
 
 		return widget;

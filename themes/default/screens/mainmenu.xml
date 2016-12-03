@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Frame id="mainmenu" align="Fill" >
-	<Frame id="playerpanel" align="TopFill" height="60" bgcolour="black">
+	<Frame id="playerpanel" align="TopFill" height="60" background_colour="black">
 	</Frame>
 	<LinearLayout align="Center" orientation="Vertical" >
 		<Label align="TopCenter" text="Main Menu" text_height="60" text_colour="yellow" />
-		<Button onClick="theme.mainmenu:selectPlay()" text="Play" text_height="50" text_colour="white" />
-		<Button onClick="theme.mainmenu:selectDownload()" text="Download Songs" text_height="50" text_colour="white" />
-		<Button onClick="theme.mainmenu:selectEditor()" text="Editor" text_height="50" text_colour="white" />
-		<Button onClick="theme.mainmenu:selectSettings()" text="Settings" text_height="50" text_colour="white" />
-		<Button onClick="theme.mainmenu:selectExit()" text="Exit" text_height="50" text_colour="white" />
+		<Button onClick="screen:selectPlay()" text="Play" text_height="50" text_colour="white" />
+		<Button onClick="screen:selectDownload()" text="Download Songs" text_height="50" text_colour="white" />
+		<Button onClick="screen:selectEditor()" text="Editor" text_height="50" text_colour="white" />
+		<Button onClick="screen:selectSettings()" text="Settings" text_height="50" text_colour="white" />
+		<Button onClick="screen:selectExit()" text="Exit" text_height="50" text_colour="white" />
 	</LinearLayout>
 </Frame>

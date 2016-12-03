@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Frame align="Center" background_colour="black">
+	<LinearLayout orientation="Vertical">
+		<Label align="Center" text="Options" text_height="40" text_colour="yellow" />
+		<Button onClick="" text="Profile Settings" text_height="25" text_colour="white" />
+		<Button onClick="" text="Cloose Instruments" text_height="25" text_colour="white" />
+		<Button onClick="" text="Difficulty" text_height="25" text_colour="white" />
+		<Button onClick="screen:close()" text="Close" text_height="25" text_colour="white" />
+	</LinearLayout>
+</Frame>

@@ -102,7 +102,7 @@ class Textbox : Widget
 			case "type":
 				type = getEnumValue!(StringEntryLogic.StringType)(value); break;
 			case "onChanged":
-				bindEvent!OnChanged(value); break;
+				bindEvent!OnChanged(value, null, getEnvironment()); break;
 			default:
 				super.setProperty(property, value);
 		}
