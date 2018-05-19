@@ -1,4 +1,4 @@
-require "monodevelop"
+--require "monodevelop"
 require "d"
 
 solution "FeedBack"
@@ -10,7 +10,7 @@ solution "FeedBack"
 	end
 
 	-- include the fuji project...
-	local linkFujiDirectly = not os.is("linux") or true
+	local linkFujiDirectly = not os.istarget("linux") or true
 	if linkFujiDirectly then
 --		fujiDll = true
 		dofile  "fuji/Fuji/Project/fujiproj.lua"
@@ -21,7 +21,8 @@ solution "FeedBack"
 	project "LuaD"
 		language "C++"
 		kind "StaticLib"
-		flags { "StaticRuntime", "OmitDefaultLibrary" }
+		staticruntime "On"
+		flags { "OmitDefaultLibrary" }
 
 		-- setup paths --
 		files { "LuaD/luad/**.d" }

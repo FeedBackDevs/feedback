@@ -262,7 +262,7 @@ class MIDIFile
 	void WriteText(string filename)
 	{
 		import std.conv;
-		import std.digest.digest;
+		import std.digest;
 
 		string file = .format("MIDI\r\nformat = %d\r\nresolution = %d\r\n", format, ticksPerBeat);
 		foreach (i, t; tracks)
